@@ -13,7 +13,8 @@ import (
 func main() {
 	// ApiCall()
 	EstablishSKCDBConn()
-	getAllCards()
+	// getAllCards()
+	getMaterialSuggestions("35809262")
 }
 
 func ApiCall() {
