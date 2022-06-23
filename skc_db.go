@@ -7,9 +7,9 @@ import (
 )
 
 type Card struct {
-	CardID     string `db:"card_number"`
-	CardName   string `db:"card_name"`
-	CardEffect string `db:"card_effect"`
+	CardID     string `db:"card_number" json:"cardID"`
+	CardName   string `db:"card_name" json:"cardName"`
+	CardEffect string `db:"card_effect" json:"cardEffect"`
 }
 
 var (

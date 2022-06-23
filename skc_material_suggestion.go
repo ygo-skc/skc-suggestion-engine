@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-func GetMaterialSuggestions(cardID string) error {
+func GetMaterialSuggestionsForCard(cardID string) error {
 	desiredCard := FindDesiredCardInDB(cardID)
 
 	materials := strings.SplitAfter(desiredCard.CardEffect, "\n")
