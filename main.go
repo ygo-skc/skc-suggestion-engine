@@ -15,6 +15,17 @@ func main() {
 	EstablishSKCDBConn()
 	// getAllCards()
 	GetMaterialSuggestions("35809262")
+	SetupMultiplexer()
+}
+
+func SetupMultiplexer() {
+	http.HandleFunc("/api/v1/materials/", func(res http.ResponseWriter, req *http.Request) {
+		fmt.Fprint(res, "Supp")
+	})
+
+	if err := http.ListenAndServe("localhost:8081", nil); err != nil {
+		log.Fatalln("There was an error starting server: ", err)
+	}
 }
 
 func ApiCall() {
