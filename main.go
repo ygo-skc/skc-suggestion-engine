@@ -14,7 +14,7 @@ func main() {
 	// ApiCall()
 	EstablishSKCDBConn()
 	// getAllCards()
-	getMaterialSuggestions("35809262")
+	GetMaterialSuggestions("35809262")
 }
 
 func ApiCall() {
