@@ -16,9 +16,8 @@ import (
 func main() {
 	// ApiCall()
 	db.EstablishSKCDBConn()
-	// getAllCards()
-	db.GetMaterialSuggestionsForCard("35809262")
 	api.SetupMultiplexer()
+	// getAllCards()
 }
 
 func ApiCall() {
