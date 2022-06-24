@@ -1,16 +1,12 @@
-package main
+package db
 
 import (
 	"database/sql"
 	"fmt"
 	"log"
-)
 
-type Card struct {
-	CardID     string `db:"card_number" json:"cardID"`
-	CardName   string `db:"card_name" json:"cardName"`
-	CardEffect string `db:"card_effect" json:"cardEffect"`
-}
+	"github.com/ygo-skc/skc-suggestion-engine/contracts"
+)
 
 var (
 	SKCDBConn *sql.DB
@@ -35,7 +31,7 @@ func getAllCards() {
 	defer rows.Close()
 
 	for rows.Next() {
-		var card Card
+		var card contracts.Card
 		err := rows.Scan(&card.CardID, &card.CardName)
 
 		if err != nil {

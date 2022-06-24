@@ -8,25 +8,28 @@ import (
 	"net/http"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/ygo-skc/skc-suggestion-engine/api"
+	"github.com/ygo-skc/skc-suggestion-engine/contracts"
+	"github.com/ygo-skc/skc-suggestion-engine/db"
 )
 
 func main() {
 	// ApiCall()
-	EstablishSKCDBConn()
+	db.EstablishSKCDBConn()
 	// getAllCards()
-	GetMaterialSuggestionsForCard("35809262")
-	SetupMultiplexer()
+	db.GetMaterialSuggestionsForCard("35809262")
+	api.SetupMultiplexer()
 }
 
 func ApiCall() {
-	res, err := http.Get(SkcBaseUrl + CardInfoEndpoint)
+	res, err := http.Get(contracts.SkcBaseUrl + contracts.CardInfoEndpoint)
 	if err != nil {
 		log.Fatalln("There was an error fetching info: ", err)
 	}
 
 	defer res.Body.Close()
 	body, _ := ioutil.ReadAll(res.Body)
-	var cardInfoResponse CardInfoResponse
+	var cardInfoResponse contracts.CardInfoResponse
 	json.Unmarshal(body, &cardInfoResponse)
 
 	fmt.Println("Name of card: ", cardInfoResponse.CardName)

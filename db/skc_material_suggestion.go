@@ -1,9 +1,11 @@
-package main
+package db
 
 import (
 	"fmt"
 	"log"
 	"strings"
+
+	"github.com/ygo-skc/skc-suggestion-engine/contracts"
 )
 
 func GetMaterialSuggestionsForCard(cardID string) error {
@@ -18,8 +20,8 @@ func GetMaterialSuggestionsForCard(cardID string) error {
 	return nil
 }
 
-func FindDesiredCardInDB(cardID string) Card {
-	var card Card
+func FindDesiredCardInDB(cardID string) contracts.Card {
+	var card contracts.Card
 	err := SKCDBConn.QueryRow("SELECT card_number, card_name, card_effect FROM cards WHERE card_number = ?", cardID).Scan(&card.CardID, &card.CardName, &card.CardEffect)
 
 	if err != nil {

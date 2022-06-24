@@ -1,4 +1,4 @@
-package main
+package contracts
 
 type CardInfoResponse struct {
 	CardID        string `json:"cardID"`
