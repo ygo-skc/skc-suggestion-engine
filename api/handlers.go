@@ -40,11 +40,17 @@ func GetMaterialString(card contracts.Card) (string, error) {
 func GetMaterials(materialString string) []contracts.Card {
 	tokens := quotedString.FindAllString(materialString, -1)
 
-	var materials []contracts.Card
+	materials := map[string]contracts.Card{}
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
-		materials = append(materials, db.FindDesiredCardInDBUsingName(token))
+		card := db.FindDesiredCardInDBUsingName(token)
+		materials[card.CardID] = card
 	}
 
-	return materials
+	// TODO: can this be done better?
+	values := make([]contracts.Card, 0, len(materials))
+	for _, v := range materials {
+		values = append(values, v)
+	}
+	return values
 }
