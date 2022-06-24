@@ -6,9 +6,11 @@ import (
 )
 
 func SetupMultiplexer() {
-	http.HandleFunc("/api/v1/suggestions/materials", GetMaterialSuggestionsHandler)
+	mux := http.NewServeMux()
 
-	if err := http.ListenAndServe("localhost:9000", nil); err != nil {
+	mux.HandleFunc("/api/v1/suggestions/materials", GetMaterialSuggestionsHandler)
+
+	if err := http.ListenAndServe("localhost:9000", mux); err != nil {
 		log.Fatalln("There was an error starting server: ", err)
 	}
 }
