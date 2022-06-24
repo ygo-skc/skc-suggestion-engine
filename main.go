@@ -21,7 +21,7 @@ func main() {
 func SetupMultiplexer() {
 	http.HandleFunc("/api/v1/suggestions/materials", GetMaterialSuggestions)
 
-	if err := http.ListenAndServe("localhost:8081", nil); err != nil {
+	if err := http.ListenAndServe("localhost:9000", nil); err != nil {
 		log.Fatalln("There was an error starting server: ", err)
 	}
 }
