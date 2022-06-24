@@ -3,14 +3,16 @@ package api
 import (
 	"log"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 func SetupMultiplexer() {
-	mux := http.NewServeMux()
+	router := mux.NewRouter()
 
-	mux.HandleFunc("/api/v1/suggestions/materials", GetMaterialSuggestionsHandler)
+	router.HandleFunc("/api/v1/suggestions/materials/{cardID:[0-9]{8}}", GetMaterialSuggestionsHandler).Methods(http.MethodGet)
 
-	if err := http.ListenAndServe("localhost:9000", mux); err != nil {
+	if err := http.ListenAndServe("localhost:9000", router); err != nil {
 		log.Fatalln("There was an error starting server: ", err)
 	}
 }
