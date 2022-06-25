@@ -19,7 +19,7 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	cardToGetSuggestionsFor, _ := db.FindDesiredCardInDBUsingID(cardID)
+	cardToGetSuggestionsFor, _ := db.FindDesiredCardInDBUsingID(cardID) // TODO: handle error
 	materialString, _ := GetMaterialString(cardToGetSuggestionsFor)
 	cards := GetMaterials(materialString)
 
@@ -43,7 +43,7 @@ func GetMaterials(materialString string) []contracts.Card {
 	materials := map[string]contracts.Card{}
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
-		card := db.FindDesiredCardInDBUsingName(token)
+		card, _ := db.FindDesiredCardInDBUsingName(token) // TODO: handle error
 		materials[card.CardID] = card
 	}
 

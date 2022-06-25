@@ -1,8 +1,6 @@
 package db
 
 import (
-	"log"
-
 	"github.com/ygo-skc/skc-suggestion-engine/contracts"
 )
 
@@ -21,13 +19,11 @@ func FindDesiredCardInDBUsingID(cardID string) (contracts.Card, error) {
 	return card, nil
 }
 
-func FindDesiredCardInDBUsingName(cardName string) contracts.Card {
+func FindDesiredCardInDBUsingName(cardName string) (contracts.Card, error) {
 	var card contracts.Card
-	err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).Scan(&card.CardID, &card.CardName, &card.CardEffect)
-
-	if err != nil { // TODO: This should be updated to bubble up the err
-		log.Fatalln("Error occurred while fetching info for card w/ name: ", cardName, err)
+	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).Scan(&card.CardID, &card.CardName, &card.CardEffect); err != nil {
+		return card, err
 	}
 
-	return card
+	return card, nil
 }
