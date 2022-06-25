@@ -19,7 +19,7 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	cardToGetSuggestionsFor := db.FindDesiredCardInDB(cardID)
+	cardToGetSuggestionsFor, _ := db.FindDesiredCardInDBUsingID(cardID)
 	materialString, _ := GetMaterialString(cardToGetSuggestionsFor)
 	cards := GetMaterials(materialString)
 

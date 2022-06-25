@@ -14,10 +14,8 @@ import (
 )
 
 func main() {
-	// ApiCall()
 	db.EstablishSKCDBConn()
 	api.SetupMultiplexer()
-	// getAllCards()
 }
 
 func ApiCall() {
