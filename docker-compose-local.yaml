@@ -1,0 +1,19 @@
+version: "3.9"
+
+services:
+  skc-suggestion-enging:
+    image: golang:1.18.3-bullseye
+    command: go run .
+    working_dir: /app
+    ports:
+      - "9000:9000"
+    volumes:
+      - "./:/app"
+    restart: always
+    networks:
+      - skc-network
+
+networks:
+  skc-network:
+    name: skc-network
+    driver: bridge
