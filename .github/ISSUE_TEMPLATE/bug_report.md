@@ -1,13 +1,14 @@
 ---
-name: Bug report
+name: Bug Report
 about: Create a report to help us improve
-title: ''
-labels: ''
+title: 'Bug: '
+labels: 'bug'
 assignees: ''
 
 ---
 
 # Feature Request
+
 ## Description
 [//]: # (A clear and concise description of what the bug is.)
 

@@ -33,6 +33,8 @@ labels:
     color: CC0000
   - name: feature
     color: 336699
+  - name: question
+    color: ffd426
 
 # Collaborators: give specific users access to this repository.
 collaborators:
