@@ -5,6 +5,8 @@ const (
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
 
+// Uses card ID to find instance of card.
+// Returns error if no instance of card ID as found in DB.
 func FindDesiredCardInDBUsingID(cardID string) (Card, error) {
 	var card Card
 
@@ -15,6 +17,8 @@ func FindDesiredCardInDBUsingID(cardID string) (Card, error) {
 	return card, nil
 }
 
+// Uses card name to find instance of card.
+// Returns error if no instance of card name as found in DB.
 func FindDesiredCardInDBUsingName(cardName string) (Card, error) {
 	var card Card
 

@@ -1,3 +1,4 @@
+// Core package used to configure skc-suggestion-engine api and its endpoints.
 package api
 
 import (
@@ -7,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
+// Configures routes and starts the application server.
 func SetupMultiplexer() {
 	router := mux.NewRouter()
 

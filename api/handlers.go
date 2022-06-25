@@ -16,9 +16,11 @@ type APIError struct {
 }
 
 var (
-	quotedString = regexp.MustCompile("\"[^., ].*?\"")
+	quotedStringRegex = regexp.MustCompile("\"[^., ].*?\"")
 )
 
+// Handler that will be used by material suggestion endpoint.
+// Will retrieve fusion, synchro, etc materials if they are explicitly mentioned by name and their name exists in the DB.
 func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
@@ -39,6 +41,7 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
+// Uses new line as delimiter to split card effect. Materials are found in the first token.
 func GetMaterialString(card db.Card) (string, error) {
 	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
 
@@ -49,8 +52,10 @@ func GetMaterialString(card db.Card) (string, error) {
 	return effectTokens[0], nil
 }
 
+// Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
+// If a direct name reference is found in the DB, then it is returned as a suggestion.
 func GetMaterials(materialString string) []db.Card {
-	tokens := quotedString.FindAllString(materialString, -1)
+	tokens := quotedStringRegex.FindAllString(materialString, -1)
 
 	materials := map[string]db.Card{}
 	for _, token := range tokens {
