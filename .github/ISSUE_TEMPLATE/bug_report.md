@@ -18,12 +18,11 @@ assignees: ''
 3. Scroll down to '....'
 4. See error
 
-## Expected behavior
+## Importance
 [//]: # (A clear and concise description of what you expected to happen.)
 - [X] Can take it or leave it
 - [ ] Its important but not a must
 - [ ] Without this feature, this project is worthless
-
 
 ## Screenshots
 [//]: # (If applicable, add screenshots to help explain your problem.)
