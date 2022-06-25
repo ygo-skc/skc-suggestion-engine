@@ -1,4 +1,4 @@
-package main
+package skc_api
 
 type CardInfoResponse struct {
 	CardID        string `json:"cardID"`
