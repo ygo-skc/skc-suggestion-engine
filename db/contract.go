@@ -7,6 +7,6 @@ type Card struct {
 	CardAttribute  string `db:"card_attribute" json:"cardAttribute"`
 	CardEffect     string `db:"card_effect" json:"cardEffect"`
 	MonsterType    string `db:"monster_type" json:"monsterType"`
-	MonsterAttack  int32  `db:"monster_attack" json:"monsterAttack"`
-	MonsterDefense int32  `db:"monster_defense" json:"monsterDefense"`
+	MonsterAttack  uint16 `db:"monster_attack" json:"monsterAttack"`
+	MonsterDefense uint16 `db:"monster_defense" json:"monsterDefense"`
 }
