@@ -12,7 +12,7 @@ assignees: ''
 [//]: # (A clear and concise description of what the bug is.)
 
 ## Steps To Reproduce
-Steps to reproduce the behavior:
+[//]: # (Use template before or briefly describe how you got the error/bug,)
 1. Go to '...'
 2. Click on '....'
 3. Scroll down to '....'
@@ -21,7 +21,7 @@ Steps to reproduce the behavior:
 ## Expected behavior
 [//]: # (A clear and concise description of what you expected to happen.)
 - [X] Can take it or leave it
-= [ ] Its important but not a must
+- [ ] Its important but not a must
 - [ ] Without this feature, this project is worthless
 
 
