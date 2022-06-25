@@ -1,20 +1,22 @@
 ---
-name: Feature request
+name: Feature Request
 about: Suggest an idea for this project
-title: ''
-labels: ''
+title: 'Feature Request: '
+labels: 'feature'
 assignees: ''
 
 ---
 
-**Is your feature request related to a problem? Please describe.**
-A clear and concise description of what the problem is. Ex. I'm always frustrated when [...]
+# Feature Request
 
-**Describe the solution you'd like**
-A clear and concise description of what you want to happen.
+## Description
+[//]: # (Describe the new feature you want added as concise as possible.)
 
-**Describe alternatives you've considered**
-A clear and concise description of any alternative solutions or features you've considered.
+## Why?
+[//]: # (Why should the feature be added? What will users gain from this?)
 
-**Additional context**
-Add any other context or screenshots about the feature request here.
+## Importance
+[//]: # (How important is it that this repo contains this feature?)
+- [X] Can take it or leave it
+- [ ] Its important but not a must
+- [ ] Without this feature, this project is worthless
