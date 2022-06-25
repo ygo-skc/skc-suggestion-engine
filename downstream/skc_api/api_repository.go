@@ -2,7 +2,6 @@ package skc_api
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -19,8 +18,8 @@ func ApiCall() {
 	var cardInfoResponse CardInfoResponse
 	json.Unmarshal(body, &cardInfoResponse)
 
-	fmt.Println("Name of card: ", cardInfoResponse.CardName)
-	fmt.Println("Name of card: ", cardInfoResponse.CardID)
-	fmt.Println("Name of card: ", cardInfoResponse.CardAttribute)
-	fmt.Println("Name of card: ", cardInfoResponse.CardEffect)
+	log.Println("Name of card: ", cardInfoResponse.CardName)
+	log.Println("Name of card: ", cardInfoResponse.CardID)
+	log.Println("Name of card: ", cardInfoResponse.CardAttribute)
+	log.Println("Name of card: ", cardInfoResponse.CardEffect)
 }
