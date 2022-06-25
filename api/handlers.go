@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
@@ -10,6 +11,10 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 )
 
+type APIError struct {
+	Message string `json:"message"`
+}
+
 var (
 	quotedString = regexp.MustCompile("\"[^., ].*?\"")
 )
@@ -17,13 +22,21 @@ var (
 func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
+	log.Println("Getting suggested materials for card:", cardID)
 
-	cardToGetSuggestionsFor, _ := db.FindDesiredCardInDBUsingID(cardID) // TODO: handle error
-	materialString, _ := GetMaterialString(cardToGetSuggestionsFor)
-	cards := GetMaterials(materialString)
+	if cardToGetSuggestionsFor, err := db.FindDesiredCardInDBUsingID(cardID); err != nil {
+		res.Header().Add("Content-Type", "application/json")
+		res.WriteHeader(http.StatusNotFound)
 
-	res.Header().Add("Content-Type", "application/json")
-	json.NewEncoder(res).Encode(cards)
+		json.NewEncoder(res).Encode(APIError{Message: "Cannot find card using ID " + cardID})
+	} else {
+		materialString, _ := GetMaterialString(cardToGetSuggestionsFor)
+		cards := GetMaterials(materialString)
+		log.Println("Found", len(cards), "unique materials")
+
+		res.Header().Add("Content-Type", "application/json")
+		json.NewEncoder(res).Encode(cards)
+	}
 }
 
 func GetMaterialString(card db.Card) (string, error) {
@@ -42,8 +55,12 @@ func GetMaterials(materialString string) []db.Card {
 	materials := map[string]db.Card{}
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
-		card, _ := db.FindDesiredCardInDBUsingName(token) // TODO: handle error
-		materials[card.CardID] = card
+
+		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
+			log.Println("Could not find the full name", token, "in DB. Potentially an archetype?")
+		} else {
+			materials[card.CardID] = card
+		}
 	}
 
 	// TODO: can this be done better?
