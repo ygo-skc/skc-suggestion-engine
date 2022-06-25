@@ -17,5 +17,5 @@ assignees: ''
 ## Importance
 [//]: # (How important is it that this repo contains this feature?)
 - [X] Can take it or leave it
-= [ ] Its important but not a must
+- [ ] Its important but not a must
 - [ ] Without this feature, this project is worthless
