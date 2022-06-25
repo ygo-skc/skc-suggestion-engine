@@ -13,6 +13,6 @@ func SetupMultiplexer() {
 	router.HandleFunc("/api/v1/suggestions/materials/{cardID:[0-9]{8}}", GetMaterialSuggestionsHandler).Methods(http.MethodGet)
 
 	if err := http.ListenAndServe("localhost:9000", router); err != nil {
-		log.Fatalln("There was an error starting server: ", err)
+		log.Fatalln("There was an error starting api server: ", err)
 	}
 }
