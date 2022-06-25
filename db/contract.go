@@ -1,4 +1,4 @@
-package contracts
+package db
 
 type Card struct {
 	CardID     string `db:"card_number" json:"cardID"`
