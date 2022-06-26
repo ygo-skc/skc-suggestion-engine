@@ -1,10 +1,12 @@
 package api
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"log"
 	"net/http"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -16,7 +18,8 @@ type APIError struct {
 }
 
 var (
-	quotedStringRegex = regexp.MustCompile("\"[^., ].*?\"")
+	quotedStringRegex            = regexp.MustCompile("\"[^., ].*?\"")
+	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
 )
 
 // Handler that will be used by material suggestion endpoint.
@@ -74,4 +77,28 @@ func GetMaterials(materialString string) []db.Card {
 		values = append(values, v)
 	}
 	return values
+}
+
+func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
+	name, list := req.FormValue("name"), req.FormValue("list")
+	log.Println("Creating new deck list named", name, "and contents (base64)", list)
+
+	if decodedList, err := base64.StdEncoding.DecodeString(list); err != nil {
+		// TODO: Handle err
+	} else {
+		list = string(decodedList)
+	}
+
+	tokens := deckListCardAndQuantityRegex.FindAllString(list, -1)
+	var deckList = map[string]int{}
+	for _, token := range tokens {
+		t := strings.Split(strings.ToLower(token), "x")
+		quantity, _ := strconv.Atoi(t[0])
+		cardID := t[1]
+		deckList[cardID] = quantity
+	}
+	log.Println(deckList)
+
+	res.Header().Add("Content-Type", "application/json")
+	json.NewEncoder(res).Encode("good")
 }
