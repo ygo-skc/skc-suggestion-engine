@@ -81,11 +81,11 @@ func GetMaterials(materialString string) []db.Card {
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	name, list := req.FormValue("name"), req.FormValue("list")
-	log.Println("Creating new deck list named", name, "and contents (base64)", list)
+	log.Println("Creating new deck list named", name, "and list contents (in base64)", list)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
-	if decodedList, err := base64.StdEncoding.DecodeString("@@"); err != nil {
+	if decodedList, err := base64.StdEncoding.DecodeString(list); err != nil {
 		log.Println("Could not decode card list input from user. Is it in base64? String causing issues:", list, ". Error", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
