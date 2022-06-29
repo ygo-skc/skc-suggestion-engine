@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+	"sort"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -65,10 +66,12 @@ func GetMaterials(materialString string) []db.Card {
 		}
 	}
 
-	// TODO: can this be done better?
-	values := make([]db.Card, 0, len(materials))
+	uniqueMaterials := make([]db.Card, 0, len(materials))
 	for _, v := range materials {
-		values = append(values, v)
+		uniqueMaterials = append(uniqueMaterials, v)
 	}
-	return values
+	sort.SliceStable(uniqueMaterials, func(i, j int) bool {
+		return uniqueMaterials[i].CardName < uniqueMaterials[j].CardName // sorting alphabetically from a-z
+	})
+	return uniqueMaterials
 }
