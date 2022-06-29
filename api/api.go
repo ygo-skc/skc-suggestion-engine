@@ -8,6 +8,10 @@ import (
 	"github.com/gorilla/mux"
 )
 
+type APIError struct {
+	Message string `json:"message"`
+}
+
 // Configures routes and starts the application server.
 func SetupMultiplexer() {
 	router := mux.NewRouter()
