@@ -44,7 +44,6 @@ func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (map[string]Card, e
 		}
 	}
 
-	log.Println(cardData)
 	return cardData, nil
 }
 
