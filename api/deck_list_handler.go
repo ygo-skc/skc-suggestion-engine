@@ -7,6 +7,8 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/ygo-skc/skc-suggestion-engine/db"
 )
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
@@ -25,27 +27,32 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		list = string(decodedList)
 	}
 
-	if _, err := transformDeckListStringToMap(list); err != nil {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(APIError{Message: "Decoded card list not formatted correctly."})
-	}
+	_, cardIDList := transformDeckListStringToMap(list)
 
-	json.NewEncoder(res).Encode("good")
+	if cardData, err := db.FindDesiredCardInDBUsingMultipleCardIDs(cardIDList); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(res).Encode(APIError{Message: "Error occurred while validating deck list."})
+	} else {
+		json.NewEncoder(res).Encode(cardData)
+	}
 }
 
 // Transforms decoded deck list into a map that can be parsed easier.
 // The map will use the cardID as key and number of copies in the deck as value.
-func transformDeckListStringToMap(list string) (map[string]int, error) {
+func transformDeckListStringToMap(list string) (map[string]int, []string) {
 	tokens := deckListCardAndQuantityRegex.FindAllString(list, -1)
 
-	var deckList = map[string]int{}
+	deckList := map[string]int{}
+	cards := []string{}
 	for _, token := range tokens {
 		splitToken := strings.Split(strings.ToLower(token), "x")
 		quantity, _ := strconv.Atoi(splitToken[0])
 		cardID := splitToken[1]
+
 		deckList[cardID] = quantity
+		cards = append(cards, cardID)
 	}
 
 	log.Println("Parsed decoded deck list", deckList)
-	return deckList, nil
+	return deckList, cards
 }
