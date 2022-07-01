@@ -10,6 +10,10 @@ services:
     volumes:
       - "./:/app"
     restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 80m
     networks:
       - skc-network
     environment:
