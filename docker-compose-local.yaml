@@ -6,12 +6,14 @@ services:
     command: go run .
     working_dir: /app
     ports:
-      - "9000:9000"
+      - "9001:9000"
     volumes:
       - "./:/app"
     restart: always
     networks:
       - skc-network
+    environment:
+      - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_docker
 
 networks:
   skc-network:
