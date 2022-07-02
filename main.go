@@ -10,5 +10,7 @@ import (
 func main() {
 	env.LoadEnv()
 	db.EstablishSKCDBConn()
+	db.EstablishSKCSuggestionEngineDBConn()
+	db.Test()
 	api.SetupMultiplexer()
 }
