@@ -1,10 +1,11 @@
 package db
 
-import (
-	"go.mongodb.org/mongo-driver/bson"
-)
+import "log"
 
-func Test() {
-	doc := bson.D{{"title", "Record of a Shriveled Datum"}, {"text", "No bytes, no problem. Just insert a document, in MongoDB"}}
-	skcSuggestionEngineDeckListCollection.InsertOne(ctx, doc)
+func InsertDeckList(deckList DeckList) {
+	if res, err := skcSuggestionEngineDeckListCollection.InsertOne(ctx, deckList); err != nil {
+		log.Println("Error inserting new deck list to DB", err)
+	} else {
+		log.Println("Successfully inserted new deck list, ID:", res.InsertedID)
+	}
 }

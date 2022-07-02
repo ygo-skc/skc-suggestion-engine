@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"log"
-	"time"
 
 	"github.com/ygo-skc/skc-suggestion-engine/env"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -36,7 +35,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine", err)
 	}
 
-	ctx, _ = context.WithTimeout(context.Background(), 2*time.Second)
+	ctx = context.Background()
 
 	if err = client.Connect(ctx); err != nil {
 		log.Fatal("Error connecting to skc-suggestion-engine DB", err)

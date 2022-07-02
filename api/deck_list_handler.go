@@ -13,22 +13,23 @@ import (
 )
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
-	name, list := req.FormValue("name"), req.FormValue("list")
-	log.Println("Creating new deck list named", name, "and list contents (in base64)", list)
+	name, encodedList := req.FormValue("name"), req.FormValue("list")
+	log.Println("Creating new deck list named", name, "and list contents (in base64)", encodedList)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
-	if decodedList, err := base64.StdEncoding.DecodeString(list); err != nil {
-		log.Println("Could not decode card list input from user. Is it in base64? String causing issues:", list, ". Error", err)
+	var decodedList string
+	if decodedListBytes, err := base64.StdEncoding.DecodeString(encodedList); err != nil {
+		log.Println("Could not decode card list input from user. Is it in base64? String causing issues:", encodedList, ". Error", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(APIError{Message: "Deck list not encoded correctly."})
 		return
 	} else {
-		list = string(decodedList)
+		decodedList = string(decodedListBytes)
 	}
 
-	if cardCopiesInDeck, idsForCardsInDeckList, err := transformDeckListStringToMap(list); err != nil {
+	if cardCopiesInDeck, idsForCardsInDeckList, err := transformDeckListStringToMap(decodedList); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(APIError{Message: "Deck list contains multiple instance of same card. Make sure each row contains a unique cardID."})
 	} else {
@@ -37,6 +38,8 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 			json.NewEncoder(res).Encode(APIError{Message: "Error occurred while validating deck list."})
 		} else {
 			validateDeckList(cardCopiesInDeck, idsForCardsInDeckList, deckListDataFromDB)
+			// Adding new deck list, fully validate before insertion
+			db.InsertDeckList(db.DeckList{Name: name, ListContent: encodedList})
 			json.NewEncoder(res).Encode(deckListDataFromDB)
 		}
 	}

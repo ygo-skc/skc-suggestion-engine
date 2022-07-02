@@ -10,3 +10,8 @@ type Card struct {
 	MonsterAttack  uint16 `db:"monster_attack" json:"monsterAttack"`
 	MonsterDefense uint16 `db:"monster_defense" json:"monsterDefense"`
 }
+
+type DeckList struct {
+	Name        string `bson:"name"`
+	ListContent string `bson:"contents"`
+}
