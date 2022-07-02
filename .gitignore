@@ -25,3 +25,6 @@ settings.json
 
 # Mac
 .DS_Store
+
+# Environment Files
+.env*
