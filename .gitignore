@@ -28,3 +28,6 @@ settings.json
 
 # Environment Files
 .env*
+
+# Certs
+certs/*
