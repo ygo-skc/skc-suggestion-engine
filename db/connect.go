@@ -41,5 +41,5 @@ func EstablishSKCSuggestionEngineDBConn() {
 		log.Fatal("Error connecting to skc-suggestion-engine DB", err)
 	}
 
-	skcSuggestionEngineDeckListCollection = client.Database("skc-suggestions").Collection("deck-list")
+	skcSuggestionEngineDeckListCollection = client.Database("suggestions").Collection("deckList")
 }
