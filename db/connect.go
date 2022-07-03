@@ -3,6 +3,7 @@ package db
 import (
 	"context"
 	"database/sql"
+	"fmt"
 	"log"
 
 	"github.com/ygo-skc/skc-suggestion-engine/env"
@@ -19,7 +20,8 @@ var (
 
 // Connect to SKC database.
 func EstablishSKCDBConn() {
-	dataSourceName := env.EnvMap["SKC_DB_USER"] + ":" + env.EnvMap["SKC_DB_PWD"] + "@tcp(" + env.EnvMap["SKC_DB_URI"] + ")/" + env.EnvMap["SKC_DB_NAME"]
+	uri := "%s:%s@tcp(%s)/%s"
+	dataSourceName := fmt.Sprintf(uri, env.EnvMap["SKC_DB_USER"], env.EnvMap["SKC_DB_PWD"], env.EnvMap["SKC_DB_URI"], env.EnvMap["SKC_DB_NAME"])
 
 	var err error
 	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
@@ -28,10 +30,17 @@ func EstablishSKCDBConn() {
 }
 
 func EstablishSKCSuggestionEngineDBConn() {
-	uri := "mongodb+srv://skc-suggestion-engine-e.rfait.mongodb.net/?authSource=%24external&authMechanism=MONGODB-X509&retryWrites=true&w=majority&tlsCertificateKeyFile=./certs/skc-suggestion-engine-db.pem"
+	certificateKeyFilePath := "./certs/skc-suggestion-engine-db.pem"
+	uri := "mongodb+srv://skc-suggestion-engine-e.rfait.mongodb.net/?tlsCertificateKeyFile=%s"
+	uri = fmt.Sprintf(uri, certificateKeyFilePath)
+
+	credential := options.Credential{
+		AuthMechanism: "MONGODB-X509",
+	}
+
 	var err error
 
-	if client, err = mongo.NewClient(options.Client().ApplyURI(uri)); err != nil {
+	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(15).SetMaxPoolSize(25)); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine", err)
 	}
 
