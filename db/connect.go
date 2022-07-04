@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
+	"time"
 
 	"github.com/ygo-skc/skc-suggestion-engine/env"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -14,7 +15,6 @@ import (
 var (
 	skcDBConn                             *sql.DB
 	client                                *mongo.Client
-	ctx                                   context.Context
 	skcSuggestionEngineDeckListCollection *mongo.Collection
 )
 
@@ -40,13 +40,11 @@ func EstablishSKCSuggestionEngineDBConn() {
 
 	var err error
 
-	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(15).SetMaxPoolSize(25)); err != nil {
+	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(15).SetMaxPoolSize(25).SetConnectTimeout(1 * time.Second)); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine", err)
 	}
 
-	ctx = context.Background()
-
-	if err = client.Connect(ctx); err != nil {
+	if err = client.Connect(context.TODO()); err != nil {
 		log.Fatal("Error connecting to skc-suggestion-engine DB", err)
 	}
 

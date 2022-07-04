@@ -39,7 +39,7 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		} else {
 			validateDeckList(cardCopiesInDeck, idsForCardsInDeckList, deckListDataFromDB)
 			// Adding new deck list, fully validate before insertion
-			db.InsertDeckList(db.DeckList{Name: name, ListContent: encodedList})
+			db.InsertDeckList(db.DeckList{Name: name, ListContent: encodedList, Tags: []string{}})
 			json.NewEncoder(res).Encode(deckListDataFromDB)
 		}
 	}
