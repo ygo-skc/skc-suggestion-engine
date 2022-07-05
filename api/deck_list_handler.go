@@ -9,12 +9,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
-)
-
-var (
-	validate = validator.New()
 )
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
@@ -24,7 +19,7 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	d := db.DeckList{Name: name, ListContent: encodedList, Tags: tags}
-	if err := validate.Struct(d); err != nil {
+	if err := v.Struct(d); err != nil {
 		log.Println("There was an error validating input:", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)

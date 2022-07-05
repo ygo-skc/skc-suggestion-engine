@@ -19,7 +19,7 @@ type Card struct {
 
 type DeckList struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Name        string             `bson:"name" validate:"required,matches=^[a-zA-Z0-9\s]+$"`
+	Name        string             `bson:"name" validate:"required,decklistname"`
 	ListContent string             `bson:"contents" validate:"required,base64"`
 	VideoUrl    string             `bson:"videoUrl" validate:"omitempty,url"`
 	Tags        []string           `bson:"tags" validate:"required"`
