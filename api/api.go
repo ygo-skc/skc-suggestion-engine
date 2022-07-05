@@ -17,7 +17,7 @@ func SetupMultiplexer() {
 	router := mux.NewRouter()
 
 	router.HandleFunc("/api/v1/suggestions/materials/{cardID:[0-9]{8}}", GetMaterialSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
-	router.HandleFunc("/api/v1/suggestions/deck", SubmitNewDeckList).Methods(http.MethodPost).Queries("list", "{list}").Queries("name", "{name}").Name("Deck List Submission")
+	router.HandleFunc("/api/v1/suggestions/deck", SubmitNewDeckList).Methods(http.MethodPost).Queries("list", "{list}").Queries("name", "{name}").Queries("tags", "{tags}").Name("Deck List Submission")
 	//
 
 	log.Println("Starting server in port 9000")

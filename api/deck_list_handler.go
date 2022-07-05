@@ -9,25 +9,31 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 )
 
+var (
+	validate = validator.New()
+)
+
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
-	name, encodedList := req.FormValue("name"), req.FormValue("list")
+	name, encodedList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
 	log.Println("Creating new deck list named", name, "and list contents (in base64)", encodedList)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
-	var decodedList string
-	if decodedListBytes, err := base64.StdEncoding.DecodeString(encodedList); err != nil {
-		log.Println("Could not decode card list input from user. Is it in base64? String causing issues:", encodedList, ". Error", err)
+	d := db.DeckList{Name: name, ListContent: encodedList, Tags: tags}
+	if err := validate.Struct(d); err != nil {
+		log.Println("There was an error validating input:", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(APIError{Message: "Deck list not encoded correctly."})
+		json.NewEncoder(res).Encode(APIError{Message: err.Error()})
 		return
-	} else {
-		decodedList = string(decodedListBytes)
 	}
+
+	decodedListBytes, _ := base64.StdEncoding.DecodeString(encodedList)
+	decodedList := string(decodedListBytes)
 
 	if cardCopiesInDeck, idsForCardsInDeckList, err := transformDeckListStringToMap(decodedList); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
@@ -39,7 +45,7 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		} else {
 			validateDeckList(cardCopiesInDeck, idsForCardsInDeckList, deckListDataFromDB)
 			// Adding new deck list, fully validate before insertion
-			db.InsertDeckList(db.DeckList{Name: name, ListContent: encodedList, Tags: []string{}})
+			db.InsertDeckList(d)
 			json.NewEncoder(res).Encode(deckListDataFromDB)
 		}
 	}
@@ -58,7 +64,7 @@ func transformDeckListStringToMap(list string) (map[string]int, []string, error)
 		cardID := splitToken[1]
 
 		if _, isPresent := cardCopiesInDeck[cardID]; isPresent {
-			log.Println("Deck list contains same cardID -", cardID, "- in multiple rows")
+			log.Println("Deck list contains same cardID -", cardID, "- in multiple rows. Ensure only one occurrence of card and submit again.")
 			return nil, nil, errors.New("422")
 		}
 		cardCopiesInDeck[cardID] = quantity

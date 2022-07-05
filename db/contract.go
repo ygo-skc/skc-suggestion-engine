@@ -19,10 +19,10 @@ type Card struct {
 
 type DeckList struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Name        string             `bson:"name"`
-	ListContent string             `bson:"contents"`
-	VideoUrl    string             `bson:"videoUrl"`
-	Tags        []string           `bson:"tags"`
+	Name        string             `bson:"name" validate:"required,matches=^[a-zA-Z0-9\s]+$"`
+	ListContent string             `bson:"contents" validate:"required,base64"`
+	VideoUrl    string             `bson:"videoUrl" validate:"omitempty,url"`
+	Tags        []string           `bson:"tags" validate:"required"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
