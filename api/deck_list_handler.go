@@ -11,50 +11,57 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
-	name, encodedList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
-	log.Println("Creating new deck list named", name, "and list contents (in base64)", encodedList)
+	deckListName, encodedDeckList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
+	deckList := db.DeckList{Name: deckListName, ListContent: encodedDeckList, Tags: tags}
+	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckListName, encodedDeckList)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
-	d := db.DeckList{Name: name, ListContent: encodedList, Tags: tags}
-	if err := v.Struct(d); err != nil {
-		messages := []string{}
+	// validate and handle validation error messages
+	if err := v.Struct(deckList); err != nil {
+		errMessages := []string{}
 		for _, e := range err.(validator.ValidationErrors) {
-			messages = append(messages, e.Translate(translator))
+			errMessages = append(errMessages, e.Translate(translator))
 		}
-		message := strings.Join(messages, " ")
-		log.Println("There were", len(messages), "errors while validating input. Errors:", message)
+
+		message := strings.Join(errMessages, " ")
+		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(APIError{Message: message})
+		json.NewEncoder(res).Encode(util.APIError{Message: message})
 		return
 	}
 
-	decodedListBytes, _ := base64.StdEncoding.DecodeString(encodedList)
-	decodedList := string(decodedListBytes)
+	decodedListBytes, _ := base64.StdEncoding.DecodeString(encodedDeckList)
+	decodedList := string(decodedListBytes) // decoded string of list contents
 
-	if cardCopiesInDeck, idsForCardsInDeckList, err := transformDeckListStringToMap(decodedList); err != nil {
+	var cardCopiesInDeck map[string]int
+	var idsForCardsInDeckList []string
+	var err util.APIError
+	if cardCopiesInDeck, idsForCardsInDeckList, err = transformDeckListStringToMap(decodedList); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(APIError{Message: "Deck list contains multiple instance of same card. Make sure each row contains a unique cardID."})
-	} else {
-		if deckListDataFromDB, err := db.FindDesiredCardInDBUsingMultipleCardIDs(idsForCardsInDeckList); err != nil {
-			res.WriteHeader(http.StatusInternalServerError)
-			json.NewEncoder(res).Encode(APIError{Message: "Error occurred while validating deck list."})
-		} else {
-			validateDeckList(cardCopiesInDeck, idsForCardsInDeckList, deckListDataFromDB)
-			// Adding new deck list, fully validate before insertion
-			db.InsertDeckList(d)
-			json.NewEncoder(res).Encode(deckListDataFromDB)
-		}
+		json.NewEncoder(res).Encode(err)
 	}
+
+	var deckListDataFromDB map[string]db.Card
+	if deckListDataFromDB, err = db.FindDesiredCardInDBUsingMultipleCardIDs(idsForCardsInDeckList); err.Message != "" {
+		res.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(res).Encode(err)
+	}
+
+	validateDeckList(cardCopiesInDeck, idsForCardsInDeckList, deckListDataFromDB)
+	// Adding new deck list, fully validate before insertion
+	db.InsertDeckList(deckList)
+	json.NewEncoder(res).Encode(deckListDataFromDB)
 }
 
 // Transforms decoded deck list into a map that can be parsed easier.
 // The map will use the cardID as key and number of copies in the deck as value.
-func transformDeckListStringToMap(list string) (map[string]int, []string, error) {
+func transformDeckListStringToMap(list string) (map[string]int, []string, util.APIError) {
 	tokens := deckListCardAndQuantityRegex.FindAllString(list, -1)
 
 	cardCopiesInDeck := map[string]int{}
@@ -65,15 +72,15 @@ func transformDeckListStringToMap(list string) (map[string]int, []string, error)
 		cardID := splitToken[1]
 
 		if _, isPresent := cardCopiesInDeck[cardID]; isPresent {
-			log.Println("Deck list contains same cardID -", cardID, "- in multiple rows. Ensure only one occurrence of card and submit again.")
-			return nil, nil, errors.New("422")
+			log.Printf("Deck list contains multiple instances of the same card {%s}.", cardID)
+			return nil, nil, util.APIError{Message: "Deck list contains multiple instance of same card. Make sure a cardID appears only once in the deck list."}
 		}
 		cardCopiesInDeck[cardID] = quantity
 		cards = append(cards, cardID)
 	}
 
-	log.Println("Parsed decoded deck list", cardCopiesInDeck)
-	return cardCopiesInDeck, cards, nil
+	log.Println("Decoded deck list, decoded contents:", cardCopiesInDeck)
+	return cardCopiesInDeck, cards, util.APIError{}
 }
 
 func validateDeckList(cardCopiesInDeck map[string]int, idsForCardsInDeckList []string, deckListDataFromDB map[string]db.Card) error {

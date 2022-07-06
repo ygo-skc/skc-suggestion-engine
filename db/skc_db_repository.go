@@ -3,6 +3,8 @@ package db
 import (
 	"log"
 	"strings"
+
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 const (
@@ -22,7 +24,7 @@ func FindDesiredCardInDBUsingID(cardID string) (Card, error) {
 	return card, nil
 }
 
-func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (map[string]Card, error) {
+func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (map[string]Card, util.APIError) {
 	args := make([]interface{}, len(cards))
 	for index, cardId := range cards {
 		args[index] = cardId
@@ -31,20 +33,20 @@ func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (map[string]Card, e
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (?"+strings.Repeat(",?", len(args)-1)+")", args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
-		return nil, err
+		return nil, util.APIError{Message: "Database could not be reached."}
 	} else {
 		for rows.Next() {
 			var card Card
 			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
 				log.Println("Error transforming row to Card object from SKC DB while using 1 or more CardIDs", err)
-				return nil, err
+				return nil, util.APIError{Message: "Error parsing data from DB."}
 			}
 
 			cardData[card.CardID] = card
 		}
 	}
 
-	return cardData, nil
+	return cardData, util.APIError{}
 }
 
 // Uses card name to find instance of card.
