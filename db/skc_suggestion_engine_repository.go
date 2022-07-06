@@ -4,9 +4,11 @@ import (
 	"context"
 	"log"
 	"time"
+
+	"github.com/ygo-skc/skc-suggestion-engine/contract"
 )
 
-func InsertDeckList(deckList DeckList) {
+func InsertDeckList(deckList contract.DeckList) {
 	deckList.CreatedAt = time.Now()
 	deckList.UpdatedAt = deckList.CreatedAt
 
