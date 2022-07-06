@@ -1,4 +1,4 @@
-package env
+package util
 
 import (
 	"log"
@@ -13,7 +13,7 @@ const (
 	ENV_VARIABLE_NAME string = "SKC_SUGGESTION_ENGINE_DOT_ENV_FILE"
 )
 
-func LoadEnv() {
+func init() {
 	EnvMap = ConfigureEnv()
 }
 

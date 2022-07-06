@@ -7,7 +7,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/env"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
@@ -21,7 +21,7 @@ var (
 // Connect to SKC database.
 func EstablishSKCDBConn() {
 	uri := "%s:%s@tcp(%s)/%s"
-	dataSourceName := fmt.Sprintf(uri, env.EnvMap["SKC_DB_USER"], env.EnvMap["SKC_DB_PWD"], env.EnvMap["SKC_DB_URI"], env.EnvMap["SKC_DB_NAME"])
+	dataSourceName := fmt.Sprintf(uri, util.EnvMap["SKC_DB_USER"], util.EnvMap["SKC_DB_PWD"], util.EnvMap["SKC_DB_URI"], util.EnvMap["SKC_DB_NAME"])
 
 	var err error
 	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
