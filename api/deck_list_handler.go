@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/contract"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
@@ -21,18 +20,9 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
-	// validate and handle validation error messages
-	if err := util.V.Struct(deckList); err != nil {
-		errMessages := []string{}
-		for _, e := range err.(validator.ValidationErrors) {
-			errMessages = append(errMessages, e.Translate(util.Translator))
-		}
-
-		message := strings.Join(errMessages, " ")
-		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
-
+	if err := deckList.Validate(); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(util.APIError{Message: message})
+		json.NewEncoder(res).Encode(err)
 		return
 	}
 

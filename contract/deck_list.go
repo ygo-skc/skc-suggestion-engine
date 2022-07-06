@@ -3,8 +3,11 @@ package contract
 import (
 	"errors"
 	"log"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -16,6 +19,23 @@ type DeckList struct {
 	Tags        []string           `bson:"tags" validate:"required"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+// validate and handle validation error messages
+func (dl DeckList) Validate() util.APIError {
+	if err := util.V.Struct(dl); err != nil {
+		errMessages := []string{}
+		for _, e := range err.(validator.ValidationErrors) {
+			errMessages = append(errMessages, e.Translate(util.Translator))
+		}
+
+		message := strings.Join(errMessages, " ")
+		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
+
+		return util.APIError{Message: message}
+	}
+
+	return util.APIError{}
 }
 
 type DeckListContents map[string]Card
