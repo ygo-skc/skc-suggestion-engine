@@ -22,10 +22,10 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	// validate and handle validation error messages
-	if err := v.Struct(deckList); err != nil {
+	if err := util.V.Struct(deckList); err != nil {
 		errMessages := []string{}
 		for _, e := range err.(validator.ValidationErrors) {
-			errMessages = append(errMessages, e.Translate(translator))
+			errMessages = append(errMessages, e.Translate(util.Translator))
 		}
 
 		message := strings.Join(errMessages, " ")

@@ -40,7 +40,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 
 	var err error
 
-	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(15).SetMaxPoolSize(25).SetConnectTimeout(1 * time.Second)); err != nil {
+	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(40).SetMaxPoolSize(75).SetConnectTimeout(1 * time.Second)); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine", err)
 	}
 
