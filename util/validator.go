@@ -16,13 +16,6 @@ var (
 )
 
 func init() {
-	setupTranslators()
-	V.RegisterValidation("decklistname", func(fl validator.FieldLevel) bool {
-		return len(deckListName.FindAllString(fl.Field().String(), -1)) > 0
-	})
-}
-
-func setupTranslators() {
 	enTranslator := en.New()
 	uni := ut.New(enTranslator, enTranslator)
 
@@ -32,6 +25,19 @@ func setupTranslators() {
 		log.Fatal("translator not found")
 	}
 
+	configureTranslations()
+	configureCustomValidators()
+}
+
+// Add custom validators to handle validation scenarios not supported out of the box.
+func configureCustomValidators() {
+	V.RegisterValidation("decklistname", func(fl validator.FieldLevel) bool {
+		return len(deckListName.FindAllString(fl.Field().String(), -1)) > 0
+	})
+}
+
+// Add translations for errors so messages are more informative.
+func configureTranslations() {
 	V.RegisterTranslation("decklistname", Translator, func(ut ut.Translator) error {
 		return ut.Add("decklistname", "Field {0} can only contain letters, numbers and spaces.", true) // see universal-translator for details
 	}, func(ut ut.Translator, fe validator.FieldError) string {

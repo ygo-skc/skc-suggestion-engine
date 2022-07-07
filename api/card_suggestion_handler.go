@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/ygo-skc/skc-suggestion-engine/contract"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
@@ -42,7 +42,7 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 // Uses new line as delimiter to split card effect. Materials are found in the first token.
-func GetMaterialString(card contract.Card) (string, error) {
+func GetMaterialString(card model.Card) (string, error) {
 	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
 
 	if len(effectTokens) < 2 {
@@ -54,10 +54,10 @@ func GetMaterialString(card contract.Card) (string, error) {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func GetMaterials(materialString string) []contract.Card {
+func GetMaterials(materialString string) []model.Card {
 	tokens := quotedStringRegex.FindAllString(materialString, -1)
 
-	materials := map[string]contract.Card{}
+	materials := map[string]model.Card{}
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
 
@@ -68,7 +68,7 @@ func GetMaterials(materialString string) []contract.Card {
 		}
 	}
 
-	uniqueMaterials := make([]contract.Card, 0, len(materials))
+	uniqueMaterials := make([]model.Card, 0, len(materials))
 	for _, v := range materials {
 		uniqueMaterials = append(uniqueMaterials, v)
 	}

@@ -5,10 +5,10 @@ import (
 	"log"
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/contract"
+	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
-func InsertDeckList(deckList contract.DeckList) {
+func InsertDeckList(deckList model.DeckList) {
 	deckList.CreatedAt = time.Now()
 	deckList.UpdatedAt = deckList.CreatedAt
 
@@ -16,8 +16,8 @@ func InsertDeckList(deckList contract.DeckList) {
 	defer cancel()
 
 	if res, err := skcSuggestionEngineDeckListCollection.InsertOne(ctx, deckList); err != nil {
-		log.Println("Error inserting new deck list to DB", err)
+		log.Println("Error inserting new deck list into DB", err)
 	} else {
-		log.Println("Successfully inserted new deck list, ID:", res.InsertedID)
+		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
 	}
 }

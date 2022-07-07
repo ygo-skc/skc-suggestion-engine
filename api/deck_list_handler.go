@@ -8,14 +8,14 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ygo-skc/skc-suggestion-engine/contract"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	deckListName, encodedDeckList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
-	deckList := contract.DeckList{Name: deckListName, ListContent: encodedDeckList, Tags: tags}
+	deckList := model.DeckList{Name: deckListName, ListContent: encodedDeckList, Tags: tags}
 	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckListName, encodedDeckList)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
@@ -29,14 +29,14 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	decodedListBytes, _ := base64.StdEncoding.DecodeString(encodedDeckList)
 	decodedList := string(decodedListBytes) // decoded string of list contents
 
-	var deckListBreakdown contract.DeckListBreakdown
+	var deckListBreakdown model.DeckListBreakdown
 	var err util.APIError
 	if deckListBreakdown, err = transformDeckListStringToMap(decodedList); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
 	}
 
-	var deckListContents contract.DeckListContents
+	var deckListContents model.DeckListContents
 	if deckListContents, err = db.FindDesiredCardInDBUsingMultipleCardIDs(deckListBreakdown.CardIDs); err.Message != "" {
 		res.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(res).Encode(err)
@@ -51,7 +51,7 @@ func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 // Transforms decoded deck list into a map that can be parsed easier.
 // The map will use the cardID as key and number of copies in the deck as value.
-func transformDeckListStringToMap(list string) (contract.DeckListBreakdown, util.APIError) {
+func transformDeckListStringToMap(list string) (model.DeckListBreakdown, util.APIError) {
 	tokens := deckListCardAndQuantityRegex.FindAllString(list, -1)
 
 	cardCopiesInDeck := map[string]int{}
@@ -63,12 +63,12 @@ func transformDeckListStringToMap(list string) (contract.DeckListBreakdown, util
 
 		if _, isPresent := cardCopiesInDeck[cardID]; isPresent {
 			log.Printf("Deck list contains multiple instances of the same card {%s}.", cardID)
-			return contract.DeckListBreakdown{}, util.APIError{Message: "Deck list contains multiple instance of same card. Make sure a cardID appears only once in the deck list."}
+			return model.DeckListBreakdown{}, util.APIError{Message: "Deck list contains multiple instance of same card. Make sure a cardID appears only once in the deck list."}
 		}
 		cardCopiesInDeck[cardID] = quantity
 		cards = append(cards, cardID)
 	}
 
 	log.Println("Decoded deck list, decoded contents:", cardCopiesInDeck)
-	return contract.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, util.APIError{}
+	return model.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, util.APIError{}
 }
