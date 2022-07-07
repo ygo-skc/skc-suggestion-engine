@@ -74,8 +74,8 @@ func (dls DeckListContents) Validate(cardCopiesInDeck map[string]int, idsForCard
 
 	numMainDeckCards := len(mainDeckCards)
 	if numMainDeckCards < 40 || numMainDeckCards > 60 {
-		log.Println("Main deck cannot contain less than 40 cards and no more than 60 cards. Found", numMainDeckCards)
-		return util.APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(numMainDeckCards)}
+		log.Printf("Main deck cannot contain less than 40 cards and no more than 60 cards. Found %d.", numMainDeckCards)
+		return util.APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(numMainDeckCards) + "."}
 	}
 
 	return util.APIError{}

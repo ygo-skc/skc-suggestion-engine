@@ -18,6 +18,11 @@ var (
 	skcSuggestionEngineDeckListCollection *mongo.Collection
 )
 
+const (
+	minPoolSize = 20
+	maxPoolSize = 40
+)
+
 // Connect to SKC database.
 func EstablishSKCDBConn() {
 	uri := "%s:%s@tcp(%s)/%s"
@@ -27,6 +32,9 @@ func EstablishSKCDBConn() {
 	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
 		log.Fatalln("Error occurred while trying to establish DB connection: ", err)
 	}
+
+	skcDBConn.SetMaxIdleConns(minPoolSize)
+	skcDBConn.SetMaxOpenConns(maxPoolSize)
 }
 
 func EstablishSKCSuggestionEngineDBConn() {
@@ -40,7 +48,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 
 	var err error
 
-	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(40).SetMaxPoolSize(75).SetConnectTimeout(1 * time.Second)); err != nil {
+	if client, err = mongo.NewClient(options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(minPoolSize).SetMaxPoolSize(maxPoolSize).SetConnectTimeout(1 * time.Second)); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine", err)
 	}
 

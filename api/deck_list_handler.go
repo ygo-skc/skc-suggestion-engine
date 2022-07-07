@@ -73,6 +73,6 @@ func transformDeckListStringToMap(list string) (model.DeckListBreakdown, util.AP
 		cards = append(cards, cardID)
 	}
 
-	log.Println("Decoded deck list, decoded contents:", cardCopiesInDeck)
+	log.Println("Decoded deck list contents:", cardCopiesInDeck)
 	return model.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, util.APIError{}
 }
