@@ -1,8 +1,8 @@
 package model
 
 import (
-	"errors"
 	"log"
+	"strconv"
 	"strings"
 	"time"
 
@@ -19,6 +19,13 @@ type DeckList struct {
 	Tags        []string           `bson:"tags" validate:"required"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
+}
+
+type DeckListContents map[string]Card
+
+type DeckListBreakdown struct {
+	CardQuantity map[string]int
+	CardIDs      []string
 }
 
 // validate and handle validation error messages
@@ -38,24 +45,38 @@ func (dl DeckList) Validate() util.APIError {
 	return util.APIError{}
 }
 
-type DeckListContents map[string]Card
-type DeckListBreakdown struct {
-	CardQuantity map[string]int
-	CardIDs      []string
-}
-
-func (dls DeckListContents) Validate(cardCopiesInDeck map[string]int, idsForCardsInDeckList []string) error {
+func (dls DeckListContents) Validate(cardCopiesInDeck map[string]int, idsForCardsInDeckList []string) util.APIError {
 	invalidIDs := []string{}
+	mainDeckCards := []string{}
+	extraDeckCards := []string{}
 	for _, cardID := range idsForCardsInDeckList {
 		if _, isPresent := dls[cardID]; !isPresent {
 			invalidIDs = append(invalidIDs, cardID)
+		} else {
+			if dls[cardID].isExtraDeckMonster() {
+				extraDeckCards = append(extraDeckCards, dls[cardID].CardID)
+			} else {
+				mainDeckCards = append(mainDeckCards, dls[cardID].CardID)
+			}
 		}
 	}
 
 	if len(invalidIDs) > 0 {
 		log.Println("Deck list contains card(s) that were not found in skc DB. All cards not found in DB:", invalidIDs)
-		return errors.New("422")
+		return util.APIError{Message: "Found cards in deck list that are not yet in the database. Remove the cards before submitting again. Cards not found " + strings.Join(invalidIDs, ", ")}
 	}
 
-	return nil
+	numExtraDeckCards := len(extraDeckCards)
+	if numExtraDeckCards > 15 {
+		log.Println("Extra deck cannot contain more than 15 cards. Found", numExtraDeckCards)
+		return util.APIError{Message: "Too many extra deck cards found in deck list. Found " + strconv.Itoa(numExtraDeckCards)}
+	}
+
+	numMainDeckCards := len(mainDeckCards)
+	if numMainDeckCards < 40 || numMainDeckCards > 60 {
+		log.Println("Main deck cannot contain less than 40 cards and no more than 60 cards. Found", numMainDeckCards)
+		return util.APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(numMainDeckCards)}
+	}
+
+	return util.APIError{}
 }
