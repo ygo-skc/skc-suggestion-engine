@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	skcDBConn                             *sql.DB
-	client                                *mongo.Client
-	skcSuggestionEngineDeckListCollection *mongo.Collection
+	skcDBConn       *sql.DB
+	client          *mongo.Client
+	skcSuggestionDB *mongo.Database
 )
 
 const (
@@ -56,5 +56,5 @@ func EstablishSKCSuggestionEngineDBConn() {
 		log.Fatal("Error connecting to skc-suggestion-engine DB", err)
 	}
 
-	skcSuggestionEngineDeckListCollection = client.Database("suggestions").Collection("deckList")
+	skcSuggestionDB = client.Database("suggestions")
 }
