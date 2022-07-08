@@ -9,9 +9,20 @@ import (
 )
 
 const (
+	queryDBVersion         string = "SELECT VERSION()"
 	queryCardUsingCardID   string = "SELECT card_number, card_name, card_effect FROM cards WHERE card_number = ?"
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
+
+// Get version of MYSQL being used.
+func GetVersion() (string, error) {
+	var version string
+	if err := skcDBConn.QueryRow(queryDBVersion).Scan(&version); err != nil {
+		return version, err
+	}
+
+	return version, nil
+}
 
 // Uses card ID to find instance of card.
 // Returns error if no instance of card ID as found in DB.
