@@ -21,7 +21,7 @@ var (
 
 // Handler that will be used by material suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials if they are explicitly mentioned by name and their name exists in the DB.
-func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+func getMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 	log.Println("Getting suggested materials for card:", cardID)
@@ -32,8 +32,8 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(util.APIError{Message: "Cannot find card using ID " + cardID})
 	} else {
-		materialString, _ := GetMaterialString(cardToGetSuggestionsFor)
-		cards := GetMaterials(materialString)
+		materialString, _ := getMaterialString(cardToGetSuggestionsFor)
+		cards := getMaterials(materialString)
 		log.Println("Found", len(cards), "unique materials")
 
 		res.Header().Add("Content-Type", "application/json")
@@ -42,7 +42,7 @@ func GetMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 // Uses new line as delimiter to split card effect. Materials are found in the first token.
-func GetMaterialString(card model.Card) (string, error) {
+func getMaterialString(card model.Card) (string, error) {
 	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
 
 	if len(effectTokens) < 2 {
@@ -54,7 +54,7 @@ func GetMaterialString(card model.Card) (string, error) {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func GetMaterials(materialString string) []model.Card {
+func getMaterials(materialString string) []model.Card {
 	tokens := quotedStringRegex.FindAllString(materialString, -1)
 
 	materials := map[string]model.Card{}

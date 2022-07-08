@@ -13,7 +13,7 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
-func SubmitNewDeckList(res http.ResponseWriter, req *http.Request) {
+func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	deckListName, encodedDeckList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
 	deckList := model.DeckList{Name: deckListName, ListContent: encodedDeckList, Tags: tags}
 	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckListName, encodedDeckList)
