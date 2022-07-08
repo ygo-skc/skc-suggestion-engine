@@ -15,9 +15,10 @@ sftp -i ~/.ssh/skc-server.pem "${user}@${server}" << EOF
 	cd $dirOnServer
 	put docker-compose.yaml
 	put -r api/
+	put -r certs/
 	put -r db/
-	put -r downstream/
-	put -r env/
+	put -r model/
+	put -r util/
 	put main.go
 	put go.mod
 	put go.sum
