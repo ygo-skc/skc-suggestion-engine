@@ -25,3 +25,9 @@ settings.json
 
 # Mac
 .DS_Store
+
+# Environment Files
+.env*
+
+# Certs
+certs/*
