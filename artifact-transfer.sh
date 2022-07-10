@@ -9,6 +9,8 @@ fi
 
 ssh -i ~/.ssh/skc-server.pem "${user}@${server}" << EOF
 	mkdir $dirOnServer
+	cd $dirOnServer
+	rm -r *
 EOF
 
 sftp -i ~/.ssh/skc-server.pem "${user}@${server}" << EOF
