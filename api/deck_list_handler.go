@@ -42,11 +42,11 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err)
 	}
 
-	if err := deckListContents.Validate(deckListBreakdown.CardQuantity, deckListBreakdown.CardIDs); err.Message != "" {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
-		return
-	}
+	// if err := deckListContents.Validate(deckListBreakdown.CardQuantity, deckListBreakdown.CardIDs); err.Message != "" {
+	// 	res.WriteHeader(http.StatusUnprocessableEntity)
+	// 	json.NewEncoder(res).Encode(err)
+	// 	return
+	// }
 
 	// Adding new deck list, fully validate before insertion
 	db.InsertDeckList(deckList)

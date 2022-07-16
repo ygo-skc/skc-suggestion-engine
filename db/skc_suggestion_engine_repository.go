@@ -32,7 +32,7 @@ func InsertDeckList(deckList model.DeckList) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if res, err := skcSuggestionDB.Collection("deckList").InsertOne(ctx, deckList); err != nil {
+	if res, err := skcSuggestionDB.Collection("deckLists").InsertOne(ctx, deckList); err != nil {
 		log.Println("Error inserting new deck list into DB", err)
 	} else {
 		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
