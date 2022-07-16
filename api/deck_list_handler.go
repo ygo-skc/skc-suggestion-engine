@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"strconv"
@@ -14,9 +15,16 @@ import (
 )
 
 func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
-	deckListName, encodedDeckList, tags := req.FormValue("name"), req.FormValue("list"), strings.Split(req.FormValue("tags"), ",")
-	deckList := model.DeckList{Name: deckListName, ListContent: encodedDeckList, Tags: tags}
-	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckListName, encodedDeckList)
+
+	var deckList model.DeckList
+
+	if b, err := ioutil.ReadAll(req.Body); err != nil {
+		log.Println("Error occurred while reading the request body.")
+	} else {
+		json.Unmarshal(b, &deckList)
+	}
+
+	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ListContent)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
@@ -26,7 +34,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	decodedListBytes, _ := base64.StdEncoding.DecodeString(encodedDeckList)
+	decodedListBytes, _ := base64.StdEncoding.DecodeString(deckList.ListContent)
 	decodedList := string(decodedListBytes) // decoded string of list contents
 
 	var deckListBreakdown model.DeckListBreakdown
