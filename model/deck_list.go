@@ -13,10 +13,10 @@ import (
 
 type DeckList struct {
 	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Name        string             `bson:"name" validate:"required,decklistname"`
-	ListContent string             `bson:"contents" validate:"required,base64"`
+	Name        string             `bson:"name" json:"name" validate:"required,decklistname"`
+	ListContent string             `bson:"contents" json:"listContent" validate:"required,base64"`
 	VideoUrl    string             `bson:"videoUrl" validate:"omitempty,url"`
-	Tags        []string           `bson:"tags" validate:"required"`
+	Tags        []string           `bson:"tags" json:"tags" validate:"required"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
