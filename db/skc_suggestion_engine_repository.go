@@ -38,3 +38,14 @@ func InsertDeckList(deckList model.DeckList) {
 		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
 	}
 }
+
+func XXX(traffic model.TrafficAnalysis) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, traffic); err != nil {
+		log.Println("Error inserting new deck list into DB", err)
+	} else {
+		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
+	}
+}
