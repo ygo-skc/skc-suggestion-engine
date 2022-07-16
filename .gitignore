@@ -31,3 +31,6 @@ settings.json
 
 # Certs
 certs/*
+
+# Other Senseitve Files
+data/*.BIN
