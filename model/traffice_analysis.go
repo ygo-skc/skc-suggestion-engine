@@ -15,7 +15,8 @@ type TrafficAnalysis struct {
 }
 
 type TrafficSource struct {
-	Name string `bson:"name" json:"name"`
+	SystemName string `bson:"systemName" json:"systemName"`
+	Version    string `bson:"version" json:"version"`
 }
 
 type UserData struct {
@@ -35,7 +36,7 @@ type Resource struct {
 }
 
 type TrafficAnalysisInput struct {
-	IP               string   `json:"ip" validate:"ipv4"`
-	SourceName       string   `json:"sourceName"`
-	ResourceUtilized Resource `json:"resourceUtilized"`
+	IP               string        `json:"ip" validate:"ipv4"`
+	Source           TrafficSource `json:"source"`
+	ResourceUtilized Resource      `json:"resourceUtilized"`
 }

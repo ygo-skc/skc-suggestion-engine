@@ -39,13 +39,13 @@ func InsertDeckList(deckList model.DeckList) {
 	}
 }
 
-func XXX(traffic model.TrafficAnalysis) {
+func InsertTrafficData(traffic model.TrafficAnalysis) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
 	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, traffic); err != nil {
-		log.Println("Error inserting new deck list into DB", err)
+		log.Println("Error inserting traffic data into DB", err)
 	} else {
-		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
+		log.Println("Successfully inserted traffic data into DB, ID:", res.InsertedID)
 	}
 }

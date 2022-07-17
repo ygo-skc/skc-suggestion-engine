@@ -37,9 +37,10 @@ func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 
 	location := model.Location{Zip: ipData.Zipcode, City: ipData.City, Country: ipData.Country_short}
 	userData := model.UserData{Location: location, IP: body.IP}
-	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: body.ResourceUtilized}
+	source := model.TrafficSource{SystemName: body.Source.SystemName, Version: body.Source.Version}
+	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: body.ResourceUtilized, Source: source}
 
-	db.XXX(trafficAnalysis)
+	db.InsertTrafficData(trafficAnalysis)
 
 	res.WriteHeader(http.StatusOK)
 }
