@@ -7,30 +7,28 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ip2location/ip2location-go/v9"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
-var (
-	ipDB *ip2location.DB
-)
-
-func init() {
-	var err error
-	ipDB, err = ip2location.OpenDB("./data/IPv4-DB.BIN")
-
-	if err != nil {
-		log.Fatalln("Could not load IP DB file...")
-	}
-}
-
 func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 	log.Println("Adding new traffic record...")
+	res.Header().Add("Content-Type", "application/json") // prepping res headers
+
+	if err := verifyApiKey(req.Header); err.Message != "" {
+		res.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(res).Encode(err)
+		return
+	}
+
 	var body model.TrafficAnalysisInput
 
 	if b, err := ioutil.ReadAll(req.Body); err != nil {
 		log.Println("Error occurred while reading the request body.")
+
+		res.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(res).Encode(model.APIError{Message: "Body could not be deserialize body."})
+		return
 	} else {
 		json.Unmarshal(b, &body)
 	}
@@ -42,4 +40,6 @@ func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: body.ResourceUtilized}
 
 	db.XXX(trafficAnalysis)
+
+	res.WriteHeader(http.StatusOK)
 }

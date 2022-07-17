@@ -11,7 +11,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 var (
@@ -30,7 +29,7 @@ func getMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("Content-Type", "application/json")
 		res.WriteHeader(http.StatusNotFound)
 
-		json.NewEncoder(res).Encode(util.APIError{Message: "Cannot find card using ID " + cardID})
+		json.NewEncoder(res).Encode(model.APIError{Message: "Cannot find card using ID " + cardID})
 	} else {
 		materialString, _ := getMaterialString(cardToGetSuggestionsFor)
 		cards := getMaterials(materialString)
