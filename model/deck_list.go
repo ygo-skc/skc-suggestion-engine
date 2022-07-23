@@ -12,14 +12,16 @@ import (
 )
 
 type DeckList struct {
-	ID          primitive.ObjectID `bson:"_id,omitempty"`
-	Name        string             `bson:"name" json:"name" validate:"required,decklistname"`
-	ListContent string             `bson:"contents" json:"listContent" validate:"required,base64"`
-	VideoUrl    string             `bson:"videoUrl" validate:"omitempty,url"`
-	DeckMascots []string           `bson:"deckMascots" json:"deckMascots" validate:"omitempty,deckmascots"`
-	Tags        []string           `bson:"tags" json:"tags" validate:"required"`
-	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
-	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
+	ID                primitive.ObjectID `bson:"_id,omitempty"`
+	Name              string             `bson:"name" json:"name" validate:"required,decklistname"`
+	ListContent       string             `bson:"contents" json:"listContent" validate:"required,base64"`
+	VideoUrl          string             `bson:"videoUrl" validate:"omitempty,url"`
+	DeckMascots       []string           `bson:"deckMascots" json:"deckMascots" validate:"omitempty,deckmascots"`
+	NumMainDeckCards  int                `bson:"numMainDeckCards" json:"numMainDeckCards"`
+	NumExtraDeckCards int                `bson:"numExtraDeckCards" json:"numExtraDeckCards"`
+	Tags              []string           `bson:"tags" json:"tags" validate:"required"`
+	CreatedAt         time.Time          `bson:"createdAt" json:"createdAt"`
+	UpdatedAt         time.Time          `bson:"updatedAt" json:"updatedAt"`
 }
 
 type DeckListContents map[string]Card
@@ -31,8 +33,8 @@ type DeckListBreakdown struct {
 	AllCards          DeckListContents
 	MainDeck          DeckListContents
 	ExtraDeck         DeckListContents
-	numMainDeckCards  int
-	numExtraDeckCards int
+	NumMainDeckCards  int
+	NumExtraDeckCards int
 }
 
 // validate and handle validation error messages
@@ -72,8 +74,8 @@ func (dlb *DeckListBreakdown) Sort() {
 		}
 	}
 
-	dlb.numMainDeckCards = numMainDeckCards
-	dlb.numExtraDeckCards = numExtraDeckCards
+	dlb.NumMainDeckCards = numMainDeckCards
+	dlb.NumExtraDeckCards = numExtraDeckCards
 }
 
 func (dlb DeckListBreakdown) Validate() APIError {
@@ -83,15 +85,15 @@ func (dlb DeckListBreakdown) Validate() APIError {
 	}
 
 	// validate extra deck has correct number of cards
-	if dlb.numExtraDeckCards > 15 {
-		log.Println("Extra deck cannot contain more than 15 cards. Found", dlb.numExtraDeckCards)
-		return APIError{Message: "Too many extra deck cards found in deck list. Found " + strconv.Itoa(dlb.numExtraDeckCards)}
+	if dlb.NumExtraDeckCards > 15 {
+		log.Println("Extra deck cannot contain more than 15 cards. Found", dlb.NumExtraDeckCards)
+		return APIError{Message: "Too many extra deck cards found in deck list. Found " + strconv.Itoa(dlb.NumExtraDeckCards)}
 	}
 
 	// validate main deck has correct number of cards
-	if dlb.numMainDeckCards < 40 || dlb.numMainDeckCards > 60 {
-		log.Printf("Main deck cannot contain less than 40 cards and no more than 60 cards. Found %d.", dlb.numMainDeckCards)
-		return APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(dlb.numMainDeckCards) + "."}
+	if dlb.NumMainDeckCards < 40 || dlb.NumMainDeckCards > 60 {
+		log.Printf("Main deck cannot contain less than 40 cards and no more than 60 cards. Found %d.", dlb.NumMainDeckCards)
+		return APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(dlb.NumMainDeckCards) + "."}
 	}
 
 	return APIError{}

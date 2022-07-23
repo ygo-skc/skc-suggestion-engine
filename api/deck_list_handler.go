@@ -61,6 +61,8 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Adding new deck list, fully validate before insertion
+	deckList.NumMainDeckCards = deckListBreakdown.NumMainDeckCards
+	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
 	db.InsertDeckList(deckList)
 	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new deck list: " + deckList.Name})
 }
