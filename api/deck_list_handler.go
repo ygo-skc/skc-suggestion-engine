@@ -58,7 +58,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	// Adding new deck list, fully validate before insertion
 	db.InsertDeckList(deckList)
-	json.NewEncoder(res).Encode(deckListContents)
+	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new deck list: " + deckList.Name})
 }
 
 // Transforms decoded deck list into a map that can be parsed easier.
@@ -81,6 +81,5 @@ func transformDeckListStringToMap(list string) (model.DeckListBreakdown, model.A
 		cards = append(cards, cardID)
 	}
 
-	log.Println("Decoded deck list contents:", cardCopiesInDeck)
 	return model.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, model.APIError{}
 }
