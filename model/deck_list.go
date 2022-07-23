@@ -2,6 +2,7 @@ package model
 
 import (
 	"log"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -27,14 +28,16 @@ type DeckList struct {
 type DeckListContents map[string]Card
 
 type DeckListBreakdown struct {
-	CardQuantity      map[string]int
-	CardIDs           []string
-	InvalidIDs        []string
-	AllCards          DeckListContents
-	MainDeck          DeckListContents
-	ExtraDeck         DeckListContents
-	NumMainDeckCards  int
-	NumExtraDeckCards int
+	CardQuantity           map[string]int
+	CardIDs                []string
+	InvalidIDs             []string
+	AllCards               DeckListContents
+	MainDeck               DeckListContents
+	ExtraDeck              DeckListContents
+	MainDeckCardIDsSorted  []string
+	ExtraDeckCardIDsSorted []string
+	NumMainDeckCards       int
+	NumExtraDeckCards      int
 }
 
 // validate and handle validation error messages
@@ -76,24 +79,42 @@ func (dlb *DeckListBreakdown) Sort() {
 
 	dlb.NumMainDeckCards = numMainDeckCards
 	dlb.NumExtraDeckCards = numExtraDeckCards
+
+	dlb.MainDeckCardIDsSorted = sortDeckUsingName(dlb.MainDeck)
+	dlb.ExtraDeckCardIDsSorted = sortDeckUsingName(dlb.ExtraDeck)
 }
 
-func (dlb DeckListBreakdown) ListStringCleanup() {
+func sortDeckUsingName(dlc DeckListContents) []string {
+	sortedIDs := make([]string, 0, len(dlc))
+
+	for id := range dlc {
+		sortedIDs = append(sortedIDs, id)
+	}
+	sort.SliceStable(sortedIDs, func(i, j int) bool {
+		return dlc[sortedIDs[i]].CardName < dlc[sortedIDs[j]].CardName
+	})
+
+	return sortedIDs
+}
+
+func (dlb DeckListBreakdown) ListStringCleanup() string {
 	formattedDLS := "Main Deck\n"
 
-	for cardID, card := range dlb.MainDeck {
-		quantity := dlb.CardQuantity[cardID]
-		formattedDLS += strconv.Itoa(quantity) + "x" + cardID + "|" + card.CardName + "\n"
+	for _, cardID := range dlb.MainDeckCardIDsSorted {
+		formattedDLS += formattedLine(dlb.MainDeck, cardID, dlb.CardQuantity[cardID])
 	}
 
 	formattedDLS += "\nExtra Deck\n"
 
-	for cardID, card := range dlb.ExtraDeck {
-		quantity := dlb.CardQuantity[cardID]
-		formattedDLS = formattedDLS + strconv.Itoa(quantity) + "x" + cardID + "|" + card.CardName + "\n"
+	for _, cardID := range dlb.ExtraDeckCardIDsSorted {
+		formattedDLS += formattedLine(dlb.ExtraDeck, cardID, dlb.CardQuantity[cardID])
 	}
 
-	log.Println(formattedDLS)
+	return formattedDLS
+}
+
+func formattedLine(dlc DeckListContents, cardID string, quantity int) string {
+	return strconv.Itoa(quantity) + "x" + cardID + "|" + dlc[cardID].CardName + "\n"
 }
 
 func (dlb DeckListBreakdown) Validate() APIError {

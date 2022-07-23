@@ -22,7 +22,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		json.Unmarshal(b, &deckList)
 	}
 
-	log.Printf("Client submitting new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ListContent)
+	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ListContent)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
@@ -53,7 +53,6 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	deckListBreakdown.AllCards = allCards
 	deckListBreakdown.Sort()
-	deckListBreakdown.ListStringCleanup()
 
 	if err := deckListBreakdown.Validate(); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
@@ -62,6 +61,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Adding new deck list, fully validate before insertion
+	deckList.ListContent = base64.StdEncoding.EncodeToString([]byte(deckListBreakdown.ListStringCleanup()))
 	deckList.NumMainDeckCards = deckListBreakdown.NumMainDeckCards
 	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
 	db.InsertDeckList(deckList)
