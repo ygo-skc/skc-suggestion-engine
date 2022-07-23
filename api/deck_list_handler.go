@@ -26,6 +26,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
+	// object validation
 	if err := deckList.Validate(); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
@@ -43,14 +44,17 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var deckListContents model.DeckListContents
-	if deckListContents, err = db.FindDesiredCardInDBUsingMultipleCardIDs(deckListBreakdown.CardIDs); err.Message != "" {
+	var allCards model.DeckListContents
+	if allCards, err = db.FindDesiredCardInDBUsingMultipleCardIDs(deckListBreakdown.CardIDs); err.Message != "" {
 		res.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(res).Encode(err)
 		return
 	}
 
-	if err := deckListContents.Validate(deckListBreakdown.CardQuantity, deckListBreakdown.CardIDs); err.Message != "" {
+	deckListBreakdown.AllCards = allCards
+	deckListBreakdown.Sort()
+
+	if err := deckListBreakdown.Validate(); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
 		return

@@ -25,8 +25,14 @@ type DeckList struct {
 type DeckListContents map[string]Card
 
 type DeckListBreakdown struct {
-	CardQuantity map[string]int
-	CardIDs      []string
+	CardQuantity      map[string]int
+	CardIDs           []string
+	InvalidIDs        []string
+	AllCards          DeckListContents
+	MainDeck          DeckListContents
+	ExtraDeck         DeckListContents
+	numMainDeckCards  int
+	numExtraDeckCards int
 }
 
 // validate and handle validation error messages
@@ -46,40 +52,46 @@ func (dl DeckList) Validate() APIError {
 	return APIError{}
 }
 
-func (dls DeckListContents) Validate(cardCopiesInDeck map[string]int, idsForCardsInDeckList []string) APIError {
-	invalidIDs := []string{}
-	mainDeckCards := []string{}
-	extraDeckCards := []string{}
+func (dlb *DeckListBreakdown) Sort() {
+	dlb.MainDeck = map[string]Card{}
+	dlb.ExtraDeck = map[string]Card{}
 	numMainDeckCards := 0
 	numExtraDeckCards := 0
 
-	for _, cardID := range idsForCardsInDeckList {
-		if _, isPresent := dls[cardID]; !isPresent {
-			invalidIDs = append(invalidIDs, cardID)
+	for _, cardID := range dlb.CardIDs {
+		if _, isPresent := dlb.AllCards[cardID]; !isPresent {
+			dlb.InvalidIDs = append(dlb.InvalidIDs, cardID)
 		} else {
-			if dls[cardID].isExtraDeckMonster() {
-				extraDeckCards = append(extraDeckCards, dls[cardID].CardID)
-				numExtraDeckCards += cardCopiesInDeck[cardID]
+			if dlb.AllCards[cardID].isExtraDeckMonster() {
+				dlb.ExtraDeck[cardID] = dlb.AllCards[cardID]
+				numExtraDeckCards += dlb.CardQuantity[cardID]
 			} else {
-				mainDeckCards = append(mainDeckCards, dls[cardID].CardID)
-				numMainDeckCards += cardCopiesInDeck[cardID]
+				dlb.MainDeck[cardID] = dlb.AllCards[cardID]
+				numMainDeckCards += dlb.CardQuantity[cardID]
 			}
 		}
 	}
 
-	if len(invalidIDs) > 0 {
-		log.Println("Deck list contains card(s) that were not found in skc DB. All cards not found in DB:", invalidIDs)
-		return APIError{Message: "Found cards in deck list that are not yet in the database. Remove the cards before submitting again. Cards not found " + strings.Join(invalidIDs, ", ")}
+	dlb.numMainDeckCards = numMainDeckCards
+	dlb.numExtraDeckCards = numExtraDeckCards
+}
+
+func (dlb DeckListBreakdown) Validate() APIError {
+	if len(dlb.InvalidIDs) > 0 {
+		log.Println("Deck list contains card(s) that were not found in skc DB. All cards not found in DB:", dlb.InvalidIDs)
+		return APIError{Message: "Found cards in deck list that are not yet in the database. Remove the cards before submitting again. Cards not found " + strings.Join(dlb.InvalidIDs, ", ")}
 	}
 
-	if numExtraDeckCards > 15 {
-		log.Println("Extra deck cannot contain more than 15 cards. Found", numExtraDeckCards)
-		return APIError{Message: "Too many extra deck cards found in deck list. Found " + strconv.Itoa(numExtraDeckCards)}
+	// validate extra deck has correct number of cards
+	if dlb.numExtraDeckCards > 15 {
+		log.Println("Extra deck cannot contain more than 15 cards. Found", dlb.numExtraDeckCards)
+		return APIError{Message: "Too many extra deck cards found in deck list. Found " + strconv.Itoa(dlb.numExtraDeckCards)}
 	}
 
-	if numMainDeckCards < 40 || numMainDeckCards > 60 {
-		log.Printf("Main deck cannot contain less than 40 cards and no more than 60 cards. Found %d.", numMainDeckCards)
-		return APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(numMainDeckCards) + "."}
+	// validate main deck has correct number of cards
+	if dlb.numMainDeckCards < 40 || dlb.numMainDeckCards > 60 {
+		log.Printf("Main deck cannot contain less than 40 cards and no more than 60 cards. Found %d.", dlb.numMainDeckCards)
+		return APIError{Message: "Main deck cannot contain less than 40 cards and cannot contain more than 60 cards. Found " + strconv.Itoa(dlb.numMainDeckCards) + "."}
 	}
 
 	return APIError{}
