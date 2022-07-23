@@ -1,6 +1,7 @@
 package model
 
 import (
+	"fmt"
 	"log"
 	"sort"
 	"strconv"
@@ -114,7 +115,7 @@ func (dlb DeckListBreakdown) ListStringCleanup() string {
 }
 
 func formattedLine(dlc DeckListContents, cardID string, quantity int) string {
-	return strconv.Itoa(quantity) + "x" + cardID + "|" + dlc[cardID].CardName + "\n"
+	return fmt.Sprintf("%dx%s|%s\n", quantity, cardID, dlc[cardID].CardName)
 }
 
 func (dlb DeckListBreakdown) Validate() APIError {
