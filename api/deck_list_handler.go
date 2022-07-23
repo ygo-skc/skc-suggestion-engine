@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
@@ -22,7 +23,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		json.Unmarshal(b, &deckList)
 	}
 
-	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ListContent)
+	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ContentB64)
 
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
@@ -33,7 +34,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	decodedListBytes, _ := base64.StdEncoding.DecodeString(deckList.ListContent)
+	decodedListBytes, _ := base64.StdEncoding.DecodeString(deckList.ContentB64)
 	decodedList := string(decodedListBytes) // decoded string of list contents
 
 	var deckListBreakdown model.DeckListBreakdown
@@ -61,7 +62,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// Adding new deck list, fully validate before insertion
-	deckList.ListContent = base64.StdEncoding.EncodeToString([]byte(deckListBreakdown.ListStringCleanup()))
+	deckList.ContentB64 = base64.StdEncoding.EncodeToString([]byte(deckListBreakdown.ListStringCleanup()))
 	deckList.NumMainDeckCards = deckListBreakdown.NumMainDeckCards
 	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
 	db.InsertDeckList(deckList)
@@ -89,4 +90,10 @@ func transformDeckListStringToMap(list string) (model.DeckListBreakdown, model.A
 	}
 
 	return model.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, model.APIError{}
+}
+
+func getDeckList(res http.ResponseWriter, req *http.Request) {
+	pathVars := mux.Vars(req)
+	deckID := pathVars["deckID"]
+	log.Println("Getting content for deck w/ ID:", deckID)
 }
