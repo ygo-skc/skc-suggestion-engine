@@ -137,12 +137,18 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 		deckListBreakdown = *dlb
 	}
 
-	content := make([]model.Content, 0, len(deckListBreakdown.AllCards))
-	for _, card := range deckListBreakdown.AllCards {
-		content = append(content, model.Content{Card: card, Quantity: deckListBreakdown.CardQuantity[card.CardID]})
+	deckListBreakdown.Sort()
+	mainDeckContent := make([]model.Content, 0, len(deckListBreakdown.MainDeck))
+	for _, card := range deckListBreakdown.MainDeck {
+		mainDeckContent = append(mainDeckContent, model.Content{Card: card, Quantity: deckListBreakdown.CardQuantity[card.CardID]})
 	}
+	deckList.MainDeck = &mainDeckContent
 
-	deckList.Content = &content
+	extraDeck := make([]model.Content, 0, len(deckListBreakdown.ExtraDeck))
+	for _, card := range deckListBreakdown.ExtraDeck {
+		extraDeck = append(extraDeck, model.Content{Card: card, Quantity: deckListBreakdown.CardQuantity[card.CardID]})
+	}
+	deckList.ExtraDeck = &extraDeck
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(deckList)
