@@ -12,7 +12,7 @@ import (
 var (
 	V                 = validator.New()
 	Translator        ut.Translator
-	deckListNameRegex = regexp.MustCompile("^[a-zA-Z0-9 ]*$")
+	deckListNameRegex = regexp.MustCompile("^[a-zA-Z0-9 !-@]*$")
 	cardIDRegex       = regexp.MustCompile("[0-9]{8}")
 )
 
@@ -56,7 +56,7 @@ func configureCustomValidators() {
 // Add translations for errors so messages are more informative.
 func configureTranslations() {
 	V.RegisterTranslation("decklistname", Translator, func(ut ut.Translator) error {
-		return ut.Add("decklistname", "Field {0} can only contain letters, numbers and spaces.", true) // see universal-translator for details
+		return ut.Add("decklistname", "Field {0} can only contain letters, numbers, spaces and the following special characters: @-!.", true) // see universal-translator for details
 	}, func(ut ut.Translator, fe validator.FieldError) string {
 		t, _ := ut.T("decklistname", fe.Field())
 		return t
