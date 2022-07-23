@@ -38,21 +38,18 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	decodedList := string(decodedListBytes) // decoded string of list contents
 
 	var deckListBreakdown model.DeckListBreakdown
-	var err model.APIError
-	if deckListBreakdown, err = transformDeckListStringToMap(decodedList); err.Message != "" {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
-		return
+	if dlb, err := getBreakdown(decodedList); err != nil {
+		if err.Message == "Could not transform to map" {
+			res.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(res).Encode(err)
+		} else if err.Message == "Could not access DB" {
+			res.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(res).Encode(err)
+		}
+	} else {
+		deckListBreakdown = *dlb
 	}
 
-	var allCards model.DeckListContents
-	if allCards, err = db.FindDesiredCardInDBUsingMultipleCardIDs(deckListBreakdown.CardIDs); err.Message != "" {
-		res.WriteHeader(http.StatusInternalServerError)
-		json.NewEncoder(res).Encode(err)
-		return
-	}
-
-	deckListBreakdown.AllCards = allCards
 	deckListBreakdown.Sort()
 
 	if err := deckListBreakdown.Validate(); err.Message != "" {
@@ -67,6 +64,23 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
 	db.InsertDeckList(deckList)
 	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new deck list: " + deckList.Name})
+}
+
+func getBreakdown(dl string) (*model.DeckListBreakdown, *model.APIError) {
+	var dlb model.DeckListBreakdown
+	var err model.APIError
+
+	if dlb, err = transformDeckListStringToMap(dl); err.Message != "" {
+		return nil, &model.APIError{Message: "Could not transform to map"}
+	}
+
+	var allCards model.DeckListContents
+	if allCards, err = db.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
+		return nil, &model.APIError{Message: "Could not access DB"}
+	}
+
+	dlb.AllCards = allCards
+	return &dlb, nil
 }
 
 // Transforms decoded deck list into a map that can be parsed easier.
@@ -96,4 +110,40 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	deckID := pathVars["deckID"]
 	log.Println("Getting content for deck w/ ID:", deckID)
+
+	res.Header().Add("Content-Type", "application/json") // prepping res headers
+
+	var deckList *model.DeckList
+	var err *model.APIError
+	if deckList, err = db.GetDeckList(deckID); err != nil {
+		res.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(res).Encode(err)
+		return
+	}
+
+	decodedListBytes, _ := base64.StdEncoding.DecodeString(deckList.ContentB64)
+	decodedList := string(decodedListBytes) // decoded string of list contents
+
+	var deckListBreakdown model.DeckListBreakdown
+	if dlb, err := getBreakdown(decodedList); err != nil {
+		if err.Message == "Could not transform to map" {
+			res.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(res).Encode(err)
+		} else if err.Message == "Could not access DB" {
+			res.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(res).Encode(err)
+		}
+	} else {
+		deckListBreakdown = *dlb
+	}
+
+	content := make([]model.Content, 0, len(deckListBreakdown.AllCards))
+	for _, card := range deckListBreakdown.AllCards {
+		content = append(content, model.Content{Card: card, Quantity: deckListBreakdown.CardQuantity[card.CardID]})
+	}
+
+	deckList.Content = &content
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(deckList)
 }

@@ -2,11 +2,13 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 func GetSkcSuggestionDBVersion() (string, error) {
@@ -38,6 +40,24 @@ func InsertDeckList(deckList model.DeckList) {
 		log.Println("Error inserting new deck list into DB", err)
 	} else {
 		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
+	}
+}
+
+func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
+	if objectId, err := primitive.ObjectIDFromHex(deckID); err != nil {
+		log.Println("Invalid Object ID.")
+		return nil, &model.APIError{Message: "Object ID used for deck list was not valid."}
+	} else {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+
+		var dl model.DeckList
+		if err := skcSuggestionDB.Collection("deckLists").FindOne(ctx, bson.M{"_id": objectId}).Decode(&dl); err != nil {
+			log.Println(fmt.Sprintf("Error retrieving deck list w/ ID %s", deckID), err)
+			return nil, &model.APIError{Message: "Requested deck list not found in DB."}
+		} else {
+			return &dl, nil
+		}
 	}
 }
 

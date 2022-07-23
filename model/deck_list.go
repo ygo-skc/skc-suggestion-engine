@@ -24,7 +24,12 @@ type DeckList struct {
 	Tags              []string           `bson:"tags" json:"tags" validate:"required"`
 	CreatedAt         time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt         time.Time          `bson:"updatedAt" json:"updatedAt"`
-	Content           *[]Card            `bson:"omitempty" json:"content"`
+	Content           *[]Content         `bson:"omitempty" json:"content"`
+}
+
+type Content struct {
+	Quantity int  `bson:"omitempty" json:"quantity"`
+	Card     Card `bson:"omitempty" json:"card"`
 }
 
 type DeckListContents map[string]Card
