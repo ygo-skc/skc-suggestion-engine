@@ -16,6 +16,7 @@ type DeckList struct {
 	Name        string             `bson:"name" json:"name" validate:"required,decklistname"`
 	ListContent string             `bson:"contents" json:"listContent" validate:"required,base64"`
 	VideoUrl    string             `bson:"videoUrl" validate:"omitempty,url"`
+	DeckMascots []string           `bson:"deckMascots" json:"deckMascots" validate:"omitempty,deckmascots"`
 	Tags        []string           `bson:"tags" json:"tags" validate:"required"`
 	CreatedAt   time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt   time.Time          `bson:"updatedAt" json:"updatedAt"`
