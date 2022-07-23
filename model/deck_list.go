@@ -78,6 +78,24 @@ func (dlb *DeckListBreakdown) Sort() {
 	dlb.NumExtraDeckCards = numExtraDeckCards
 }
 
+func (dlb DeckListBreakdown) ListStringCleanup() {
+	formattedDLS := "Main Deck\n"
+
+	for cardID, card := range dlb.MainDeck {
+		quantity := dlb.CardQuantity[cardID]
+		formattedDLS += strconv.Itoa(quantity) + "x" + cardID + "|" + card.CardName + "\n"
+	}
+
+	formattedDLS += "\nExtra Deck\n"
+
+	for cardID, card := range dlb.ExtraDeck {
+		quantity := dlb.CardQuantity[cardID]
+		formattedDLS = formattedDLS + strconv.Itoa(quantity) + "x" + cardID + "|" + card.CardName + "\n"
+	}
+
+	log.Println(formattedDLS)
+}
+
 func (dlb DeckListBreakdown) Validate() APIError {
 	if len(dlb.InvalidIDs) > 0 {
 		log.Println("Deck list contains card(s) that were not found in skc DB. All cards not found in DB:", dlb.InvalidIDs)

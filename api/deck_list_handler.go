@@ -53,6 +53,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	deckListBreakdown.AllCards = allCards
 	deckListBreakdown.Sort()
+	deckListBreakdown.ListStringCleanup()
 
 	if err := deckListBreakdown.Validate(); err.Message != "" {
 		res.WriteHeader(http.StatusUnprocessableEntity)
