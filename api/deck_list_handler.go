@@ -60,6 +60,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	// Adding new deck list, fully validate before insertion
 	deckList.ContentB64 = base64.StdEncoding.EncodeToString([]byte(deckListBreakdown.ListStringCleanup()))
+	deckList.UniqueCards = deckListBreakdown.CardIDs
 	deckList.NumMainDeckCards = deckListBreakdown.NumMainDeckCards
 	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
 	db.InsertDeckList(deckList)

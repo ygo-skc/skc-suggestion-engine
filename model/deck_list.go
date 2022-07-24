@@ -18,6 +18,7 @@ type DeckList struct {
 	Name              string             `bson:"name" json:"name" validate:"required,decklistname"`
 	ContentB64        string             `bson:"content" json:"listContent" validate:"required,base64"`
 	VideoUrl          string             `bson:"videoUrl" validate:"omitempty,url"`
+	UniqueCards       []string           `bson:"uniqueCards" json:"uniqueCards" validate:"omitempty"`
 	DeckMascots       []string           `bson:"deckMascots" json:"deckMascots" validate:"omitempty,deckmascots"`
 	NumMainDeckCards  int                `bson:"numMainDeckCards" json:"numMainDeckCards"`
 	NumExtraDeckCards int                `bson:"numExtraDeckCards" json:"numExtraDeckCards"`
