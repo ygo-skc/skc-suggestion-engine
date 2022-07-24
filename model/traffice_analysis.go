@@ -1,8 +1,12 @@
 package model
 
 import (
+	"log"
+	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -15,8 +19,8 @@ type TrafficAnalysis struct {
 }
 
 type TrafficSource struct {
-	SystemName string `bson:"systemName" json:"systemName"`
-	Version    string `bson:"version" json:"version"`
+	SystemName string `bson:"systemName" json:"systemName" validate:"systemname"`
+	Version    string `bson:"version" json:"version" validate:"systemversion"`
 }
 
 type UserData struct {
@@ -31,12 +35,27 @@ type Location struct {
 }
 
 type Resource struct {
-	Name  string `bson:"name" json:"name"`
-	Value string `bson:"value" json:"value"`
+	Name  string `bson:"name" json:"name" validate:"required"`
+	Value string `bson:"value" json:"value" validate:"required"`
 }
 
 type TrafficAnalysisInput struct {
-	IP               string        `json:"ip" validate:"ipv4"`
-	Source           TrafficSource `json:"source"`
-	ResourceUtilized Resource      `json:"resourceUtilized"`
+	IP               string         `json:"ip" validate:"ipv4"`
+	Source           *TrafficSource `json:"source" validate:"required"`
+	ResourceUtilized *Resource      `json:"resourceUtilized" validate:"required"`
+}
+
+func (tai TrafficAnalysisInput) Validate() *APIError {
+	if err := util.V.Struct(tai); err != nil {
+		errMessages := []string{}
+		for _, e := range err.(validator.ValidationErrors) {
+			errMessages = append(errMessages, e.Translate(util.Translator))
+		}
+
+		message := strings.Join(errMessages, " ")
+		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
+
+		return &APIError{Message: message}
+	}
+	return nil
 }

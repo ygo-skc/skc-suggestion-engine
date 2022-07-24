@@ -25,23 +25,22 @@ func init() {
 	apiKey = util.EnvMap["API_KEY"]
 
 	// init IP DB
-	var err error
-	ipDB, err = ip2location.OpenDB("./data/IPv4-DB.BIN")
-
-	if err != nil {
+	if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 		log.Fatalln("Could not load IP DB file...")
+	} else {
+		ipDB = ip
 	}
 }
 
-func verifyApiKey(headers http.Header) model.APIError {
+func verifyApiKey(headers http.Header) *model.APIError {
 	key := headers.Get("API-Key")
 
 	if key != apiKey {
 		log.Println("Client is using incorrect API Key.")
-		return model.APIError{Message: "Request has incorrect or missing API Key."}
+		return &model.APIError{Message: "Request has incorrect or missing API Key."}
 	}
 
-	return model.APIError{}
+	return nil
 }
 
 // Configures routes and starts the application server.

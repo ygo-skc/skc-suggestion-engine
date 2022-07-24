@@ -10,10 +10,12 @@ import (
 )
 
 var (
-	V                 = validator.New()
-	Translator        ut.Translator
-	deckListNameRegex = regexp.MustCompile("^[a-zA-Z0-9 !-@]*$")
-	cardIDRegex       = regexp.MustCompile("[0-9]{8}")
+	V                  = validator.New()
+	Translator         ut.Translator
+	deckListNameRegex  = regexp.MustCompile("^[a-zA-Z0-9 !-@]*$")
+	cardIDRegex        = regexp.MustCompile("[0-9]{8}")
+	systemNameRegex    = regexp.MustCompile("^[a-zA-Z0-9 -]*$")
+	systemVersionRegex = regexp.MustCompile(`^([1-9]\d*|0)(\.(([1-9]\d*)|0)){2,3}$`)
 )
 
 func init() {
@@ -50,6 +52,14 @@ func configureCustomValidators() {
 		}
 
 		return true
+	})
+
+	V.RegisterValidation("systemname", func(fl validator.FieldLevel) bool {
+		return len(systemNameRegex.FindAllString(fl.Field().String(), -1)) > 0
+	})
+
+	V.RegisterValidation("systemversion", func(fl validator.FieldLevel) bool {
+		return len(systemVersionRegex.FindAllString(fl.Field().String(), -1)) > 0
 	})
 }
 
