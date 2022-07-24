@@ -56,7 +56,11 @@ func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 		source := model.TrafficSource{SystemName: trafficData.Source.SystemName, Version: trafficData.Source.Version}
 		trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: *trafficData.ResourceUtilized, Source: source}
 
-		db.InsertTrafficData(trafficAnalysis)
+		if err := db.InsertTrafficData(trafficAnalysis); err != nil {
+			res.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(res).Encode(err)
+			return
+		}
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new traffic data."})

@@ -61,13 +61,18 @@ func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 	}
 }
 
-func InsertTrafficData(traffic model.TrafficAnalysis) {
+func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
+	log.Printf("Inserting traffic data for resource %v and system %v.", ta.ResourceUtilized, ta.Source)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, traffic); err != nil {
+	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, ta); err != nil {
 		log.Println("Error inserting traffic data into DB", err)
+
+		return &model.APIError{Message: "Error occurred while attempting to insert new traffic data."}
 	} else {
 		log.Println("Successfully inserted traffic data into DB, ID:", res.InsertedID)
 	}
+
+	return nil
 }
