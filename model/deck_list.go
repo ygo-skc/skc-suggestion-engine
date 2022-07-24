@@ -37,16 +37,14 @@ type Content struct {
 type DeckListContents map[string]Card
 
 type DeckListBreakdown struct {
-	CardQuantity           map[string]int
-	CardIDs                []string
-	InvalidIDs             []string
-	AllCards               DeckListContents
-	MainDeck               DeckListContents
-	ExtraDeck              DeckListContents
-	MainDeckCardIDsSorted  []string
-	ExtraDeckCardIDsSorted []string
-	NumMainDeckCards       int
-	NumExtraDeckCards      int
+	CardQuantity      map[string]int
+	CardIDs           []string
+	InvalidIDs        []string
+	AllCards          DeckListContents
+	MainDeck          []Card
+	ExtraDeck         []Card
+	NumMainDeckCards  int
+	NumExtraDeckCards int
 }
 
 // validate and handle validation error messages
@@ -67,8 +65,8 @@ func (dl DeckList) Validate() APIError {
 }
 
 func (dlb *DeckListBreakdown) Sort() {
-	dlb.MainDeck = map[string]Card{}
-	dlb.ExtraDeck = map[string]Card{}
+	dlb.MainDeck = []Card{}
+	dlb.ExtraDeck = []Card{}
 	numMainDeckCards := 0
 	numExtraDeckCards := 0
 
@@ -77,10 +75,10 @@ func (dlb *DeckListBreakdown) Sort() {
 			dlb.InvalidIDs = append(dlb.InvalidIDs, cardID)
 		} else {
 			if dlb.AllCards[cardID].isExtraDeckMonster() {
-				dlb.ExtraDeck[cardID] = dlb.AllCards[cardID]
+				dlb.ExtraDeck = append(dlb.ExtraDeck, dlb.AllCards[cardID])
 				numExtraDeckCards += dlb.CardQuantity[cardID]
 			} else {
-				dlb.MainDeck[cardID] = dlb.AllCards[cardID]
+				dlb.MainDeck = append(dlb.MainDeck, dlb.AllCards[cardID])
 				numMainDeckCards += dlb.CardQuantity[cardID]
 			}
 		}
@@ -89,41 +87,34 @@ func (dlb *DeckListBreakdown) Sort() {
 	dlb.NumMainDeckCards = numMainDeckCards
 	dlb.NumExtraDeckCards = numExtraDeckCards
 
-	dlb.MainDeckCardIDsSorted = sortDeckUsingName(dlb.MainDeck)
-	dlb.ExtraDeckCardIDsSorted = sortDeckUsingName(dlb.ExtraDeck)
+	sortDeckUsingName(&dlb.MainDeck)
+	sortDeckUsingName(&dlb.ExtraDeck)
 }
 
-func sortDeckUsingName(dlc DeckListContents) []string {
-	sortedIDs := make([]string, 0, len(dlc))
-
-	for id := range dlc {
-		sortedIDs = append(sortedIDs, id)
-	}
-	sort.SliceStable(sortedIDs, func(i, j int) bool {
-		return dlc[sortedIDs[i]].CardName < dlc[sortedIDs[j]].CardName
+func sortDeckUsingName(cards *[]Card) {
+	sort.SliceStable(*cards, func(i, j int) bool {
+		return (*cards)[i].CardName > (*cards)[j].CardName
 	})
-
-	return sortedIDs
 }
 
 func (dlb DeckListBreakdown) ListStringCleanup() string {
 	formattedDLS := "Main Deck\n"
 
-	for _, cardID := range dlb.MainDeckCardIDsSorted {
-		formattedDLS += formattedLine(dlb.MainDeck, cardID, dlb.CardQuantity[cardID])
+	for _, card := range dlb.MainDeck {
+		formattedDLS += formattedLine(card, dlb.CardQuantity[card.CardID])
 	}
 
 	formattedDLS += "\nExtra Deck\n"
 
-	for _, cardID := range dlb.ExtraDeckCardIDsSorted {
-		formattedDLS += formattedLine(dlb.ExtraDeck, cardID, dlb.CardQuantity[cardID])
+	for _, card := range dlb.ExtraDeck {
+		formattedDLS += formattedLine(card, dlb.CardQuantity[card.CardID])
 	}
 
 	return formattedDLS
 }
 
-func formattedLine(dlc DeckListContents, cardID string, quantity int) string {
-	return fmt.Sprintf("%dx%s|%s\n", quantity, cardID, dlc[cardID].CardName)
+func formattedLine(card Card, quantity int) string {
+	return fmt.Sprintf("%dx%s|%s\n", quantity, card.CardID, card.CardName)
 }
 
 func (dlb DeckListBreakdown) Validate() APIError {
