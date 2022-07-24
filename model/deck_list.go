@@ -93,7 +93,7 @@ func (dlb *DeckListBreakdown) Sort() {
 
 func sortDeckUsingName(cards *[]Card) {
 	sort.SliceStable(*cards, func(i, j int) bool {
-		return (*cards)[i].CardName > (*cards)[j].CardName
+		return (*cards)[i].CardName < (*cards)[j].CardName
 	})
 }
 
