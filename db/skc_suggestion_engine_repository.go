@@ -8,6 +8,7 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 func GetSkcSuggestionDBVersion() (string, error) {
@@ -57,6 +58,26 @@ func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 		} else {
 			return &dl, nil
 		}
+	}
+}
+
+func GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIError) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	opts := options.Find().SetProjection(bson.D{{"name", 1}})
+
+	if cursor, err := skcSuggestionDB.Collection("deckLists").Find(ctx, bson.M{"uniqueCards": bson.M{"$in": cardIDs}}, opts); err != nil {
+		log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)
+		return nil, &model.APIError{Message: "Could not get deck lists."}
+	} else {
+		var dl []model.DeckList
+		if err := cursor.All(ctx, &dl); err != nil {
+			log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)
+			return nil, &model.APIError{Message: "Could not get deck lists."}
+		}
+
+		return &dl, nil
 	}
 }
 

@@ -36,6 +36,8 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		materialString, _ := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 		s.NamedMaterials = getMaterials(materialString)
 
+		s.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
+
 		res.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(res).Encode(s)
 	}
@@ -55,7 +57,11 @@ func getMaterials(materialString string) *[]model.Card {
 		return uniqueMaterials[i].CardName < uniqueMaterials[j].CardName // sorting alphabetically from a-z
 	})
 
-	return &uniqueMaterials
+	if len(uniqueMaterials) < 1 {
+		return nil
+	} else {
+		return &uniqueMaterials
+	}
 }
 
 func isolateReferences(materialString string) (map[string]model.Card, []string) {
