@@ -61,7 +61,7 @@ func getMaterials(materialString string) []model.Card {
 		token = strings.ReplaceAll(token, "\"", "")
 
 		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
-			log.Println("Could not find the full name", token, "in DB. Potentially an archetype?")
+			log.Printf("Could not find the full name %s in DB. Potentially an archetype?", token)
 		} else {
 			materials[card.CardID] = card
 		}

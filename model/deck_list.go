@@ -56,7 +56,7 @@ func (dl DeckList) Validate() APIError {
 		}
 
 		message := strings.Join(errMessages, " ")
-		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
+		log.Printf("There were %d errors while validating input. Errors: %s", len(errMessages), message)
 
 		return APIError{Message: message}
 	}

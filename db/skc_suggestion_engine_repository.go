@@ -2,7 +2,6 @@ package db
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"time"
 
@@ -53,7 +52,7 @@ func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 
 		var dl model.DeckList
 		if err := skcSuggestionDB.Collection("deckLists").FindOne(ctx, bson.M{"_id": objectId}).Decode(&dl); err != nil {
-			log.Println(fmt.Sprintf("Error retrieving deck list w/ ID %s", deckID), err)
+			log.Printf("Error retrieving deck list w/ ID %s. Err: %v", deckID, err)
 			return nil, &model.APIError{Message: "Requested deck list not found in DB."}
 		} else {
 			return &dl, nil
