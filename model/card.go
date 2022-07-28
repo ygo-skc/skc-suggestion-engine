@@ -17,3 +17,14 @@ func (c Card) isExtraDeckMonster() bool {
 	color := strings.ToUpper(c.CardColor)
 	return strings.Contains(color, "FUSION") || strings.Contains(color, "SYNCHRO") || strings.Contains(color, "XYZ") || strings.Contains(color, "PENDULUM") || strings.Contains(color, "LINK")
 }
+
+// Uses new line as delimiter to split card effect. Materials are found in the first token.
+func (card Card) GetPotentialMaterialsAsString() (string, error) {
+	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
+
+	if len(effectTokens) < 2 {
+		// TODO: handle error
+	}
+
+	return effectTokens[0], nil
+}

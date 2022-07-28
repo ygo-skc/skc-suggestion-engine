@@ -20,10 +20,10 @@ var (
 
 // Handler that will be used by material suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials if they are explicitly mentioned by name and their name exists in the DB.
-func getMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Println("Getting suggested materials for card:", cardID)
+	log.Println("Getting suggestions for card:", cardID)
 
 	if cardToGetSuggestionsFor, err := db.FindDesiredCardInDBUsingID(cardID); err != nil {
 		res.Header().Add("Content-Type", "application/json")
@@ -31,48 +31,50 @@ func getMaterialSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(model.APIError{Message: "Cannot find card using ID " + cardID})
 	} else {
-		materialString, _ := getMaterialString(cardToGetSuggestionsFor)
-		cards := getMaterials(materialString)
-		log.Println("Found", len(cards), "unique materials")
+		var s model.CardSuggestions
+
+		materialString, _ := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+		s.NamedMaterials = getMaterials(materialString)
 
 		res.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(res).Encode(cards)
+		json.NewEncoder(res).Encode(s)
 	}
-}
-
-// Uses new line as delimiter to split card effect. Materials are found in the first token.
-func getMaterialString(card model.Card) (string, error) {
-	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
-
-	if len(effectTokens) < 2 {
-		// TODO: handle error
-	}
-
-	return effectTokens[0], nil
 }
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getMaterials(materialString string) []model.Card {
+func getMaterials(materialString string) *[]model.Card {
+	namedMaterials, _ := isolateReferences(materialString)
+
+	uniqueMaterials := make([]model.Card, 0, len(namedMaterials))
+	for _, card := range namedMaterials {
+		uniqueMaterials = append(uniqueMaterials, card)
+	}
+
+	sort.SliceStable(uniqueMaterials, func(i, j int) bool {
+		return uniqueMaterials[i].CardName < uniqueMaterials[j].CardName // sorting alphabetically from a-z
+	})
+
+	return &uniqueMaterials
+}
+
+func isolateReferences(materialString string) (map[string]model.Card, []string) {
 	tokens := quotedStringRegex.FindAllString(materialString, -1)
 
-	materials := map[string]model.Card{}
+	namedMaterials := map[string]model.Card{}
+	var archetypalMaterials []string
+
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
 
 		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
-			log.Printf("Could not find the full name %s in DB. Potentially an archetype?", token)
+			archetypalMaterials = append(archetypalMaterials, token)
 		} else {
-			materials[card.CardID] = card
+			namedMaterials[card.CardID] = card
 		}
 	}
 
-	uniqueMaterials := make([]model.Card, 0, len(materials))
-	for _, v := range materials {
-		uniqueMaterials = append(uniqueMaterials, v)
-	}
-	sort.SliceStable(uniqueMaterials, func(i, j int) bool {
-		return uniqueMaterials[i].CardName < uniqueMaterials[j].CardName // sorting alphabetically from a-z
-	})
-	return uniqueMaterials
+	log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalMaterials)
+	log.Printf("Found %d unique named materials.", len(namedMaterials))
+	return namedMaterials, archetypalMaterials
 }

@@ -48,7 +48,7 @@ func SetupMultiplexer() {
 	router := mux.NewRouter()
 
 	router.HandleFunc(CONTEXT+"/status", getStatusHandler)
-	router.HandleFunc(CONTEXT+"/materials/{cardID:[0-9]{8}}", getMaterialSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
+	router.HandleFunc(CONTEXT+"/card/{cardID:[0-9]{8}}", getSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
 
 	router.HandleFunc(CONTEXT+"/deck", submitNewDeckList).Methods(http.MethodPost).Name("Deck List Submission")
 	router.HandleFunc(CONTEXT+"/deck/{deckID:[0-9a-z]+}", getDeckList).Methods(http.MethodGet).Name("Retrieve Info On Deck")
