@@ -14,7 +14,7 @@ import (
 func GetSkcSuggestionDBVersion() (string, error) {
 	var commandResult bson.M
 	var version string
-	command := bson.D{{"serverStatus", 1}}
+	command := bson.D{{Key: "serverStatus", Value: 1}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -65,7 +65,7 @@ func GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIEr
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	opts := options.Find().SetProjection(bson.D{{"name", 1}})
+	opts := options.Find().SetProjection(bson.D{{Key: "name", Value: 1}, {Key: "videoUrl", Value: 1}, {Key: "createdAt", Value: 1}, {Key: "updatedAt", Value: 1}})
 
 	if cursor, err := skcSuggestionDB.Collection("deckLists").Find(ctx, bson.M{"uniqueCards": bson.M{"$in": cardIDs}}, opts); err != nil {
 		log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)

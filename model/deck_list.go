@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -48,20 +47,12 @@ type DeckListBreakdown struct {
 }
 
 // validate and handle validation error messages
-func (dl DeckList) Validate() APIError {
+func (dl DeckList) Validate() *APIError {
 	if err := util.V.Struct(dl); err != nil {
-		errMessages := []string{}
-		for _, e := range err.(validator.ValidationErrors) {
-			errMessages = append(errMessages, e.Translate(util.Translator))
-		}
-
-		message := strings.Join(errMessages, " ")
-		log.Printf("There were %d errors while validating input. Errors: %s", len(errMessages), message)
-
-		return APIError{Message: message}
+		return &APIError{Message: util.HandleValidationErrors(err)}
+	} else {
+		return nil
 	}
-
-	return APIError{}
 }
 
 func (dlb *DeckListBreakdown) Sort() {

@@ -28,7 +28,7 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	// object validation
-	if err := deckList.Validate(); err.Message != "" {
+	if err := deckList.Validate(); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
 		return
