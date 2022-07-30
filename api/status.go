@@ -9,29 +9,38 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+// Handler for status/health check endpoint of the api.
+// Will get status of downstream services as well to help isolate problems.
 func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Getting API status")
 
-	var skcDB model.DownstreamItem
-	if _, err := db.GetVersion(); err != nil {
-		skcDB = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Down"}
+	var skcDBStatus model.DownstreamItem
+	var skcSuggestionDBStatus model.DownstreamItem
+
+	var err error
+	var skcDBVersion string
+	var skcSuggestionDBVersion string
+
+	// get status on SKC DB by checking the version number. If this operation fails, its save to assume the DB is down.
+	if skcDBVersion, err = db.GetSKCDBVersion(); err != nil {
+		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Down"}
 	} else {
-		skcDB = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Up"}
+		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Up"}
 	}
 
-	var skcSuggestionDB model.DownstreamItem
-	if _, err := db.GetSkcSuggestionDBVersion(); err != nil {
-		skcSuggestionDB = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Down"}
+	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
+	if skcSuggestionDBVersion, err = db.GetSKCSuggestionDBVersion(); err != nil {
+		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Down"}
 	} else {
-		skcSuggestionDB = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Up"}
+		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Up"}
 	}
 
-	downstream := []model.DownstreamItem{skcDB, skcSuggestionDB}
+	downstream := []model.DownstreamItem{skcDBStatus, skcSuggestionDBStatus}
 
 	status := model.Status{Version: "1.0.0", Downstream: downstream}
 
+	log.Printf("SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
 	res.Header().Add("Content-Type", "application/json")
-
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(status)
 }

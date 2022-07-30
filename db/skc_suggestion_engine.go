@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"time"
 
@@ -11,9 +12,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
-func GetSkcSuggestionDBVersion() (string, error) {
+// Retrieves the version number of the SKC Suggestion DB or throws an error if an exception occurs.
+func GetSKCSuggestionDBVersion() (string, error) {
 	var commandResult bson.M
-	var version string
 	command := bson.D{{Key: "serverStatus", Value: 1}}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
@@ -21,9 +22,9 @@ func GetSkcSuggestionDBVersion() (string, error) {
 
 	if err := skcSuggestionDB.RunCommand(ctx, command).Decode(&commandResult); err != nil {
 		log.Println("Error getting SKC Suggestion DB version", err)
-		return version, err
+		return "", err
 	} else {
-		return version, nil
+		return fmt.Sprintf("%v", commandResult["version"]), nil
 	}
 }
 

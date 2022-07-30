@@ -8,15 +8,17 @@ import (
 )
 
 const (
+	// queries
 	queryDBVersion         string = "SELECT VERSION()"
 	queryCardUsingCardID   string = "SELECT card_number, card_name, card_effect FROM cards WHERE card_number = ?"
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
 
-// Get version of MYSQL being used.
-func GetVersion() (string, error) {
+// Get version of MYSQL being used by SKC DB.
+func GetSKCDBVersion() (string, error) {
 	var version string
 	if err := skcDBConn.QueryRow(queryDBVersion).Scan(&version); err != nil {
+		log.Println("Error getting SKC DB version", err)
 		return version, err
 	}
 
