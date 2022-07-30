@@ -10,7 +10,7 @@ import (
 )
 
 func getStatusHandler(res http.ResponseWriter, req *http.Request) {
-	log.Print("Getting API status")
+	log.Println("Getting API status")
 
 	var skcDB model.DownstreamItem
 	if _, err := db.GetVersion(); err != nil {
