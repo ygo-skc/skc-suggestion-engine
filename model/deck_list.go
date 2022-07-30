@@ -13,7 +13,7 @@ import (
 )
 
 type DeckList struct {
-	ID                primitive.ObjectID `bson:"_id,omitempty"`
+	ID                primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name              string             `bson:"name" json:"name" validate:"required,decklistname"`
 	ContentB64        string             `bson:"content" json:"listContent" validate:"required,base64"`
 	VideoUrl          string             `bson:"videoUrl" validate:"omitempty,url"`

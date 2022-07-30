@@ -151,6 +151,7 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 	}
 	deckList.ExtraDeck = &extraDeck
 
+	log.Printf("Successfully retrieved deck list. Name {%s} and encoded deck list content {%s}. This deck list has {%d} main deck cards and {%d} extra deck cards.", deckList.Name, deckList.ContentB64, deckList.NumMainDeckCards, deckList.NumExtraDeckCards)
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(deckList)
 }
