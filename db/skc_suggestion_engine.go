@@ -82,8 +82,9 @@ func GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIEr
 	}
 }
 
+// Will update the database with a new traffic record.
 func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
-	log.Printf("Inserting traffic data for resource %v and system %v.", ta.ResourceUtilized, ta.Source)
+	log.Printf("Inserting traffic data for resource %+v and system %+v.", ta.ResourceUtilized, ta.Source)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 

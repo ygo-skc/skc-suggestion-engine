@@ -36,7 +36,7 @@ func verifyApiKey(headers http.Header) *model.APIError {
 	key := headers.Get("API-Key")
 
 	if key != apiKey {
-		log.Println("Client is using incorrect API Key.")
+		log.Println("Client is using incorrect API Key. Cannot process request.")
 		return &model.APIError{Message: "Request has incorrect or missing API Key."}
 	}
 
