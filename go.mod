@@ -1,6 +1,6 @@
 module github.com/ygo-skc/skc-suggestion-engine
 
-go 1.18
+go 1.19
 
 require (
 	github.com/go-playground/locales v0.14.0
