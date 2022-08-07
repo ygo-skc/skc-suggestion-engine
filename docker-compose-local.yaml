@@ -1,7 +1,7 @@
 version: "3.9"
 
 services:
-  skc-suggestion-enging:
+  skc-suggestion-engine:
     image: golang:1.18.4-bullseye
     command: go run .
     working_dir: /app
