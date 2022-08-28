@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
+	"github.com/rs/cors"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
@@ -55,8 +56,23 @@ func SetupMultiplexer() {
 
 	router.HandleFunc(CONTEXT+"/traffic-analysis", submitNewTrafficData).Methods(http.MethodPost).Name("Traffic Analysis")
 
+	corsOpts := cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:3000", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodOptions,
+		},
+
+		AllowedHeaders: []string{
+			"*", //or you can your header key values which you are using in your application
+
+		},
+	})
+
 	log.Println("Starting server in port 9000")
-	if err := http.ListenAndServe(":9000", router); err != nil { // docker does not like localhost:9000 so im just using port number
+	if err := http.ListenAndServe(":9000", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
 		log.Fatalln("There was an error starting api server: ", err)
 	}
 }
