@@ -26,6 +26,8 @@ github.com/ip2location/ip2location-go/v9 v9.4.0 h1:VV+clcfWo+BCi37+1zVOLCoyy01GT
 github.com/ip2location/ip2location-go/v9 v9.4.0/go.mod h1:s5SV6YZL10TpfPpXw//7fEJC65G/yH7Oh+Tjq9JcQEQ=
 github.com/ip2location/ip2location-go/v9 v9.4.1 h1:Gf7KoyyIVnltwvd7TcwKrkJC9ZnYqiyndXEJtT07AyI=
 github.com/ip2location/ip2location-go/v9 v9.4.1/go.mod h1:s5SV6YZL10TpfPpXw//7fEJC65G/yH7Oh+Tjq9JcQEQ=
+github.com/ip2location/ip2location-go/v9 v9.5.0 h1:7gqKncm4MhBrpJIK0PmV8o6Bf8YbbSAPjORzyjAv1iM=
+github.com/ip2location/ip2location-go/v9 v9.5.0/go.mod h1:s5SV6YZL10TpfPpXw//7fEJC65G/yH7Oh+Tjq9JcQEQ=
 github.com/joho/godotenv v1.4.0 h1:3l4+N6zfMWnkbPEXKng2o2/MR5mSwTrBih4ZEkkz1lg=
 github.com/joho/godotenv v1.4.0/go.mod h1:f4LDr5Voq0i2e/R5DDNOoa2zzDfwtkZa6DnEwAbqwq4=
 github.com/klauspost/compress v1.13.6 h1:P76CopJELS0TiO2mebmnzgWaajssP/EszplttgQxcgc=
