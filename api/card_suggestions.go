@@ -18,8 +18,8 @@ var (
 	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
 )
 
-// Handler that will be used by material suggestion endpoint.
-// Will retrieve fusion, synchro, etc materials if they are explicitly mentioned by name and their name exists in the DB.
+// Handler that will be used by suggestion endpoint.
+// Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
 func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
@@ -31,62 +31,66 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(err)
 	} else {
-		var s model.CardSuggestions
+		var suggestions model.CardSuggestions
+		var materialString string
 
 		// get materials if card is from extra deck
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-			materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
-			s.NamedMaterials = getMaterials(materialString)
+			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+			suggestions.NamedMaterials = getReferences(materialString)
 		}
 
+		// get named references - excludes materials
+		suggestions.NamedReferences = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
+
 		// get decks that feature card
-		s.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
+		suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
 
 		res.Header().Add("Content-Type", "application/json")
-		json.NewEncoder(res).Encode(s)
+		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getMaterials(materialString string) *[]model.Card {
-	namedMaterials, _ := isolateReferences(materialString)
+func getReferences(s string) *[]model.Card {
+	namedReferences, _ := isolateReferences(s)
 
-	uniqueMaterials := make([]model.Card, 0, len(namedMaterials))
-	for _, card := range namedMaterials {
-		uniqueMaterials = append(uniqueMaterials, card)
+	uniqueReferences := make([]model.Card, 0, len(namedReferences))
+	for _, card := range namedReferences {
+		uniqueReferences = append(uniqueReferences, card)
 	}
 
-	sort.SliceStable(uniqueMaterials, func(i, j int) bool {
-		return uniqueMaterials[i].CardName < uniqueMaterials[j].CardName // sorting alphabetically from a-z
+	sort.SliceStable(uniqueReferences, func(i, j int) bool {
+		return uniqueReferences[i].CardName < uniqueReferences[j].CardName // sorting alphabetically from a-z
 	})
 
-	if len(uniqueMaterials) < 1 {
+	if len(uniqueReferences) < 1 {
 		return nil
 	} else {
-		return &uniqueMaterials
+		return &uniqueReferences
 	}
 }
 
-func isolateReferences(materialString string) (map[string]model.Card, []string) {
-	tokens := quotedStringRegex.FindAllString(materialString, -1)
+func isolateReferences(s string) (map[string]model.Card, []string) {
+	tokens := quotedStringRegex.FindAllString(s, -1)
 
-	namedMaterials := map[string]model.Card{}
-	var archetypalMaterials []string
+	namedReferences := map[string]model.Card{}
+	var archetypalReferences []string
 
 	for _, token := range tokens {
 		token = strings.ReplaceAll(token, "\"", "")
 
 		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
-			archetypalMaterials = append(archetypalMaterials, token)
+			archetypalReferences = append(archetypalReferences, token)
 		} else {
-			namedMaterials[card.CardID] = card
+			namedReferences[card.CardID] = card
 		}
 	}
 
-	if len(archetypalMaterials) > 0 {
-		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalMaterials)
+	if len(archetypalReferences) > 0 {
+		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalReferences)
 	}
-	log.Printf("Found %d unique named materials.", len(namedMaterials))
-	return namedMaterials, archetypalMaterials
+	log.Printf("Found %d unique named references.", len(namedReferences))
+	return namedReferences, archetypalReferences
 }
