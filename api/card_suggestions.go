@@ -53,29 +53,26 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getReferences(s string) *[]model.Card {
-	namedReferences, _ := isolateReferences(s)
+func getReferences(s string) *[]model.CardReference {
+	namedReferences, referenceOccurrence, _ := isolateReferences(s)
 
-	uniqueReferences := make([]model.Card, 0, len(namedReferences))
+	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
 	for _, card := range namedReferences {
-		uniqueReferences = append(uniqueReferences, card)
+		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.CardID]})
 	}
 
 	sort.SliceStable(uniqueReferences, func(i, j int) bool {
-		return uniqueReferences[i].CardName < uniqueReferences[j].CardName // sorting alphabetically from a-z
+		return uniqueReferences[i].Card.CardName < uniqueReferences[j].Card.CardName // sorting alphabetically from a-z
 	})
 
-	if len(uniqueReferences) < 1 {
-		return nil
-	} else {
-		return &uniqueReferences
-	}
+	return &uniqueReferences
 }
 
-func isolateReferences(s string) (map[string]model.Card, []string) {
+func isolateReferences(s string) (map[string]model.Card, map[string]int, []string) {
 	tokens := quotedStringRegex.FindAllString(s, -1)
 
 	namedReferences := map[string]model.Card{}
+	referenceOccurrence := map[string]int{}
 	var archetypalReferences []string
 
 	for _, token := range tokens {
@@ -85,12 +82,18 @@ func isolateReferences(s string) (map[string]model.Card, []string) {
 			archetypalReferences = append(archetypalReferences, token)
 		} else {
 			namedReferences[card.CardID] = card
+
+			if _, isPresent := referenceOccurrence[card.CardID]; !isPresent {
+				referenceOccurrence[card.CardID] = 0
+			}
+			referenceOccurrence[card.CardID] += 1
 		}
 	}
 
 	if len(archetypalReferences) > 0 {
 		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalReferences)
 	}
+
 	log.Printf("Found %d unique named references.", len(namedReferences))
-	return namedReferences, archetypalReferences
+	return namedReferences, referenceOccurrence, archetypalReferences
 }
