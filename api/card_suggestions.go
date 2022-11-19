@@ -35,7 +35,7 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		// get materials if card is from extra deck
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-			materialString, _ := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+			materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 			s.NamedMaterials = getMaterials(materialString)
 		}
 

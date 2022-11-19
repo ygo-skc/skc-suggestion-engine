@@ -1,6 +1,9 @@
 package model
 
-import "strings"
+import (
+	"log"
+	"strings"
+)
 
 type Card struct {
 	CardID         string  `db:"card_number" json:"cardID"`
@@ -19,12 +22,12 @@ func (c Card) IsExtraDeckMonster() bool {
 }
 
 // Uses new line as delimiter to split card effect. Materials are found in the first token.
-func (card Card) GetPotentialMaterialsAsString() (string, error) {
+func (card Card) GetPotentialMaterialsAsString() string {
 	effectTokens := strings.SplitAfter(card.CardEffect, "\n")
 
 	if len(effectTokens) < 2 {
-		// TODO: handle error
+		log.Printf("Card w/ ID {%s} doesn't seem to have a materials string", card.CardID)
 	}
 
-	return effectTokens[0], nil
+	return effectTokens[0]
 }
