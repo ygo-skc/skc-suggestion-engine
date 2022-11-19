@@ -1,6 +1,7 @@
 package db
 
 import (
+	"fmt"
 	"log"
 	"strings"
 
@@ -10,7 +11,7 @@ import (
 const (
 	// queries
 	queryDBVersion         string = "SELECT VERSION()"
-	queryCardUsingCardID   string = "SELECT card_number, card_name, card_effect FROM cards WHERE card_number = ?"
+	queryCardUsingCardID   string = "SELECT card_number, card_color, card_name, card_effect FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
 
@@ -26,15 +27,21 @@ func GetSKCDBVersion() (string, error) {
 }
 
 // Uses card ID to find instance of card.
-// Returns error if no instance of card ID as found in DB.
-func FindDesiredCardInDBUsingID(cardID string) (model.Card, error) {
+// Returns error if no instance of card ID is found in DB or other issues occur while accessing DB.
+func FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
 	var card model.Card
 
-	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardName, &card.CardEffect); err != nil {
-		return card, err
+	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardEffect); err != nil {
+		if err.Error() == "sql: no rows in result set" {
+			log.Printf("Card w/ ID {%s} not found in DB", cardID)
+			return nil, &model.APIError{Message: fmt.Sprintf("Cannot find card using ID %s", cardID)}
+		} else {
+			log.Printf("An error ocurred while fetching card using ID. Err {%s}", err)
+			return nil, &model.APIError{Message: "Service unavailable"}
+		}
 	}
 
-	return card, nil
+	return &card, nil
 }
 
 func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {

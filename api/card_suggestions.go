@@ -29,13 +29,17 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("Content-Type", "application/json")
 		res.WriteHeader(http.StatusNotFound)
 
-		json.NewEncoder(res).Encode(model.APIError{Message: "Cannot find card using ID " + cardID})
+		json.NewEncoder(res).Encode(err)
 	} else {
 		var s model.CardSuggestions
 
-		materialString, _ := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
-		s.NamedMaterials = getMaterials(materialString)
+		// get materials if card is from extra deck
+		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
+			materialString, _ := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+			s.NamedMaterials = getMaterials(materialString)
+		}
 
+		// get decks that feature card
 		s.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
 
 		res.Header().Add("Content-Type", "application/json")
@@ -80,7 +84,9 @@ func isolateReferences(materialString string) (map[string]model.Card, []string) 
 		}
 	}
 
-	log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalMaterials)
+	if len(archetypalMaterials) > 0 {
+		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalMaterials)
+	}
 	log.Printf("Found %d unique named materials.", len(namedMaterials))
 	return namedMaterials, archetypalMaterials
 }

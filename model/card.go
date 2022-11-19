@@ -13,7 +13,7 @@ type Card struct {
 	MonsterDefense *uint16 `db:"monster_defense" json:"monsterDefense"`
 }
 
-func (c Card) isExtraDeckMonster() bool {
+func (c Card) IsExtraDeckMonster() bool {
 	color := strings.ToUpper(c.CardColor)
 	return strings.Contains(color, "FUSION") || strings.Contains(color, "SYNCHRO") || strings.Contains(color, "XYZ") || strings.Contains(color, "PENDULUM") || strings.Contains(color, "LINK")
 }

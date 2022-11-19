@@ -65,7 +65,7 @@ func (dlb *DeckListBreakdown) Sort() {
 		if _, isPresent := dlb.AllCards[cardID]; !isPresent {
 			dlb.InvalidIDs = append(dlb.InvalidIDs, cardID)
 		} else {
-			if dlb.AllCards[cardID].isExtraDeckMonster() {
+			if dlb.AllCards[cardID].IsExtraDeckMonster() {
 				dlb.ExtraDeck = append(dlb.ExtraDeck, dlb.AllCards[cardID])
 				numExtraDeckCards += dlb.CardQuantity[cardID]
 			} else {
