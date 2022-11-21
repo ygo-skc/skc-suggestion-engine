@@ -31,6 +31,9 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(err)
 	} else {
+		// clean up card effect
+		cardToGetSuggestionsFor.CardEffect = strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, "'", "\"")
+
 		var suggestions model.CardSuggestions
 		var materialString string
 
@@ -38,16 +41,44 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
 			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 			suggestions.NamedMaterials = getReferences(materialString)
+			log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
+		} else {
+			log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 		}
 
 		// get named references - excludes materials
 		suggestions.NamedReferences = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
+		removeSelfReference(cardToGetSuggestionsFor.CardName, &suggestions)
+		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
 
 		// get decks that feature card
 		suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
 
 		res.Header().Add("Content-Type", "application/json")
 		json.NewEncoder(res).Encode(suggestions)
+	}
+}
+
+// looks for a self reference, if a self reference is found it is removed from original slice
+// this method returns true if a self reference is found
+func removeSelfReference(self string, cs *model.CardSuggestions) bool {
+	hasSelfRef := false
+	if cs.NamedReferences != nil {
+		x := 0
+		for _, cr := range *cs.NamedReferences {
+			if cr.Card.CardName != self {
+				(*cs.NamedReferences)[x] = cr
+				x++
+			} else {
+				hasSelfRef = true
+			}
+		}
+		y := (*cs.NamedReferences)[:x]
+		cs.NamedReferences = &y
+
+		return hasSelfRef
+	} else {
+		return hasSelfRef
 	}
 }
 
@@ -94,6 +125,5 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalReferences)
 	}
 
-	log.Printf("Found %d unique named references.", len(namedReferences))
 	return namedReferences, referenceOccurrence, archetypalReferences
 }
