@@ -76,7 +76,7 @@ func getBreakdown(dl string) (*model.DeckListBreakdown, *model.APIError) {
 	}
 
 	var allCards model.DeckListContents
-	if allCards, err = db.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
+	if allCards, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
 		return nil, &model.APIError{Message: "Could not access DB"}
 	}
 

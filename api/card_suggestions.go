@@ -21,11 +21,12 @@ var (
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
 func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 	log.Println("Getting suggestions for card:", cardID)
 
-	if cardToGetSuggestionsFor, err := db.FindDesiredCardInDBUsingID(cardID); err != nil {
+	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
 		res.Header().Add("Content-Type", "application/json")
 		res.WriteHeader(http.StatusNotFound)
 
@@ -113,7 +114,7 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 		token = strings.ReplaceAll(token, "'", "")
 		token = strings.TrimSpace(token)
 
-		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
+		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
 			archetypalReferences = append(archetypalReferences, token)
 		} else {
 			namedReferences[card.CardID] = card

@@ -15,8 +15,19 @@ const (
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
 
+// interface
+type SKCDatabaseAccessObject interface {
+	GetSKCDBVersion() (string, error)
+	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
+	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
+	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
+}
+
+// impl
+type SKCDatabaseAccessObjectImplementation struct{}
+
 // Get version of MYSQL being used by SKC DB.
-func GetSKCDBVersion() (string, error) {
+func (imp SKCDatabaseAccessObjectImplementation) GetSKCDBVersion() (string, error) {
 	var version string
 	if err := skcDBConn.QueryRow(queryDBVersion).Scan(&version); err != nil {
 		log.Println("Error getting SKC DB version", err)
@@ -28,7 +39,7 @@ func GetSKCDBVersion() (string, error) {
 
 // Uses card ID to find instance of card.
 // Returns error if no instance of card ID is found in DB or other issues occur while accessing DB.
-func FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
 	var card model.Card
 
 	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardEffect); err != nil {
@@ -44,7 +55,7 @@ func FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
 	return &card, nil
 }
 
-func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
+func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
 	args := make([]interface{}, len(cards))
 	for index, cardId := range cards {
 		args[index] = cardId
@@ -71,7 +82,7 @@ func FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListCont
 
 // Uses card name to find instance of card.
 // Returns error if no instance of card name as found in DB.
-func FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
+func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
 	var card model.Card
 
 	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {

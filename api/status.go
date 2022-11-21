@@ -22,7 +22,7 @@ func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 	var skcSuggestionDBVersion string
 
 	// get status on SKC DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if skcDBVersion, err = db.GetSKCDBVersion(); err != nil {
+	if skcDBVersion, err = skcDBInterface.GetSKCDBVersion(); err != nil {
 		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Down"}
 	} else {
 		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Up"}

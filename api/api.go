@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
 	"github.com/rs/cors"
+	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
@@ -17,8 +18,9 @@ const (
 )
 
 var (
-	apiKey string
-	ipDB   *ip2location.DB
+	apiKey         string
+	ipDB           *ip2location.DB
+	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
 )
 
 func init() {
