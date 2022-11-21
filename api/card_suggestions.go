@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	quotedStringRegex            = regexp.MustCompile("\"[^., ].*?\"")
+	quotedStringRegex            = regexp.MustCompile("\"[^.,].*?\"|'[^.,].*?'[\\s.,]")
 	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
 )
 
@@ -31,9 +31,6 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(err)
 	} else {
-		// clean up card effect
-		cardToGetSuggestionsFor.CardEffect = strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, "'", "\"")
-
 		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 		var materialString string
 
@@ -108,7 +105,13 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	var archetypalReferences []string
 
 	for _, token := range tokens {
+		token = strings.ReplaceAll(token, "\".", "")
+		token = strings.ReplaceAll(token, "\".", "")
+		token = strings.ReplaceAll(token, "'.", "")
+		token = strings.ReplaceAll(token, "',", "")
 		token = strings.ReplaceAll(token, "\"", "")
+		token = strings.ReplaceAll(token, "'", "")
+		token = strings.TrimSpace(token)
 
 		if card, err := db.FindDesiredCardInDBUsingName(token); err != nil {
 			archetypalReferences = append(archetypalReferences, token)
