@@ -6,7 +6,11 @@ type CardReference struct {
 }
 
 type CardSuggestions struct {
-	NamedMaterials  *[]CardReference `json:"namedMaterials"`
-	NamedReferences *[]CardReference `json:"namedReferences"`
-	Decks           *[]DeckList      `json:"decks"`
+	Card                 *Card            `json:"card"`
+	HasSelfReference     bool             `json:"hasSelfReference"`
+	NamedMaterials       *[]CardReference `json:"namedMaterials"`
+	NamedReferences      *[]CardReference `json:"namedReferences"`
+	MaterialArchetypes   *[]string        `json:"materialArchetypes"`
+	ReferencedArchetypes *[]string        `json:"referencedArchetypes"`
+	Decks                *[]DeckList      `json:"decks"`
 }

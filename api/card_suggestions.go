@@ -34,21 +34,22 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		// clean up card effect
 		cardToGetSuggestionsFor.CardEffect = strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, "'", "\"")
 
-		var suggestions model.CardSuggestions
+		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 		var materialString string
 
 		// get materials if card is from extra deck
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
 			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
-			suggestions.NamedMaterials = getReferences(materialString)
+			suggestions.NamedMaterials, suggestions.MaterialArchetypes = getReferences(materialString)
 			log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		} else {
 			log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 		}
 
 		// get named references - excludes materials
-		suggestions.NamedReferences = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-		removeSelfReference(cardToGetSuggestionsFor.CardName, &suggestions)
+		// will also check and remove for self references
+		suggestions.NamedReferences, suggestions.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
+		suggestions.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, suggestions.NamedReferences)
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
 
 		// get decks that feature card
@@ -61,21 +62,21 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 // looks for a self reference, if a self reference is found it is removed from original slice
 // this method returns true if a self reference is found
-func removeSelfReference(self string, cs *model.CardSuggestions) bool {
+func removeSelfReference(self string, cr *[]model.CardReference) bool {
 	hasSelfRef := false
-	if cs.NamedReferences != nil {
+
+	if cr != nil {
 		x := 0
-		for _, cr := range *cs.NamedReferences {
-			if cr.Card.CardName != self {
-				(*cs.NamedReferences)[x] = cr
+		for _, ref := range *cr {
+			if ref.Card.CardName != self {
+				(*cr)[x] = ref
 				x++
 			} else {
 				hasSelfRef = true
 			}
 		}
-		y := (*cs.NamedReferences)[:x]
-		cs.NamedReferences = &y
 
+		*cr = (*cr)[:x]
 		return hasSelfRef
 	} else {
 		return hasSelfRef
@@ -84,8 +85,8 @@ func removeSelfReference(self string, cs *model.CardSuggestions) bool {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getReferences(s string) *[]model.CardReference {
-	namedReferences, referenceOccurrence, _ := isolateReferences(s)
+func getReferences(s string) (*[]model.CardReference, *[]string) {
+	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(s)
 
 	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
 	for _, card := range namedReferences {
@@ -96,7 +97,7 @@ func getReferences(s string) *[]model.CardReference {
 		return uniqueReferences[i].Card.CardName < uniqueReferences[j].Card.CardName // sorting alphabetically from a-z
 	})
 
-	return &uniqueReferences
+	return &uniqueReferences, &archetypalReferences
 }
 
 func isolateReferences(s string) (map[string]model.Card, map[string]int, []string) {
