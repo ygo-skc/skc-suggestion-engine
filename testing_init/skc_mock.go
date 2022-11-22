@@ -24,5 +24,16 @@ func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(
 }
 
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
-	return CardMocks["Elemental HERO Sunrise"], nil
+	if card, isPresent := CardMocks[cardName]; isPresent {
+		return card, nil
+	} else {
+		return model.Card{}, ErrorMock{}
+	}
+}
+
+type ErrorMock struct {
+}
+
+func (e ErrorMock) Error() string {
+	return "mock error"
 }
