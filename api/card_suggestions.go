@@ -34,27 +34,48 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor, NamedMaterials: &[]model.CardReference{}, MaterialArchetypes: &[]string{}}
 		materialString := ""
 
+		// setup channels
+		materialChannel, referenceChannel := make(chan bool), make(chan bool)
+
 		// get materials if card is from extra deck
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
 			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
-			suggestions.NamedMaterials, suggestions.MaterialArchetypes = getReferences(materialString)
+			go getMaterialRefs(&suggestions, materialString, materialChannel)
 		} else {
+			materialChannel = nil
 			log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 		}
 
-		// get named references - excludes materials
-		// will also check and remove for self references
-		suggestions.NamedReferences, suggestions.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-		suggestions.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, suggestions.NamedReferences)
+		go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
 
 		// get decks that feature card
 		suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
+
+		// join
+		if materialChannel != nil {
+			<-materialChannel
+		}
+		<-referenceChannel
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
+}
+
+func getMaterialRefs(s *model.CardSuggestions, materialString string, c chan bool) {
+	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
+	c <- true
+}
+
+// get named references - excludes materials
+// will also check and remove self references
+func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, c chan bool) {
+	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
+	s.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
+
+	c <- true
 }
 
 // looks for a self reference, if a self reference is found it is removed from original slice
