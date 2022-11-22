@@ -1,4 +1,4 @@
-package testing_init
+package testing
 
 import (
 	"log"

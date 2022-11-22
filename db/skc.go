@@ -85,7 +85,8 @@ func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingMultipl
 func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
 	var card model.Card
 
-	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
+	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).
+		Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
 		return card, err
 	}
 

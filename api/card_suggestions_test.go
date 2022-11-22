@@ -6,7 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/testing_init"
+	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )
 
 func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
@@ -34,17 +34,26 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 
 func TestGetReferences(t *testing.T) {
 	assert := assert.New(t)
-	skcDBInterface = testing_init.SKCDatabaseAccessObjectMock{}
+	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 
 	expectedReferences := map[string]model.CardSuggestions{
 		"Elemental HERO Sunrise": {
 			NamedMaterials:       &[]model.CardReference{},
 			MaterialArchetypes:   &[]string{"HERO"},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: testing_init.CardMocks["Elemental HERO Sunrise"]}, {Occurrences: 1, Card: testing_init.CardMocks["Miracle Fusion"]}},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["Elemental HERO Sunrise"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Miracle Fusion"]}},
 			ReferencedArchetypes: &[]string{"HERO"},
 		},
 	}
 
-	validateMaterialReferences(testing_init.CardMocks["Elemental HERO Sunrise"], *expectedReferences["Elemental HERO Sunrise"].NamedMaterials, *expectedReferences["Elemental HERO Sunrise"].MaterialArchetypes, assert)
-	validateReferences(testing_init.CardMocks["Elemental HERO Sunrise"], *expectedReferences["Elemental HERO Sunrise"].NamedReferences, *expectedReferences["Elemental HERO Sunrise"].ReferencedArchetypes, assert)
+	validateMaterialReferences(
+		skc_testing.CardMocks["Elemental HERO Sunrise"],
+		*expectedReferences["Elemental HERO Sunrise"].NamedMaterials,
+		*expectedReferences["Elemental HERO Sunrise"].MaterialArchetypes,
+		assert,
+	)
+	validateReferences(skc_testing.CardMocks["Elemental HERO Sunrise"],
+		*expectedReferences["Elemental HERO Sunrise"].NamedReferences,
+		*expectedReferences["Elemental HERO Sunrise"].ReferencedArchetypes,
+		assert,
+	)
 }
