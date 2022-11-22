@@ -21,6 +21,8 @@ var (
 	apiKey         string
 	ipDB           *ip2location.DB
 	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
+	router         *mux.Router
+	corsOpts       *cors.Cors
 )
 
 func init() {
@@ -46,9 +48,9 @@ func verifyApiKey(headers http.Header) *model.APIError {
 	return nil
 }
 
-// Configures routes and starts the application server.
-func SetupMultiplexer() {
-	router := mux.NewRouter()
+// Configures routes and CORs
+func ConfigureServer() {
+	router = mux.NewRouter()
 
 	router.HandleFunc(CONTEXT+"/status", getStatusHandler)
 	router.HandleFunc(CONTEXT+"/card/{cardID:[0-9]{8}}", getSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
@@ -58,7 +60,7 @@ func SetupMultiplexer() {
 
 	router.HandleFunc(CONTEXT+"/traffic-analysis", submitNewTrafficData).Methods(http.MethodPost).Name("Traffic Analysis")
 
-	corsOpts := cors.New(cors.Options{
+	corsOpts = cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000", "http://dev.thesupremekingscastle.com", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
 		AllowedMethods: []string{
 			http.MethodGet,
@@ -71,9 +73,18 @@ func SetupMultiplexer() {
 			"*", //or you can your header key values which you are using in your application
 		},
 	})
+}
 
-	log.Println("Starting server in port 9000")
+func ServeTLS() {
+	log.Println("Starting server in port 9000 (secured)")
 	if err := http.ListenAndServeTLS(":9000", "certs/certificate.crt", "certs/private.key", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
+		log.Fatalln("There was an error starting api server: ", err)
+	}
+}
+
+func ServeUnsecured() {
+	log.Println("Starting server in port 90 (unsecured)")
+	if err := http.ListenAndServe(":90", corsOpts.Handler(router)); err != nil {
 		log.Fatalln("There was an error starting api server: ", err)
 	}
 }

@@ -11,5 +11,8 @@ func main() {
 	util.SetupEnv()
 	db.EstablishSKCDBConn()
 	db.EstablishSKCSuggestionEngineDBConn()
-	api.SetupMultiplexer()
+
+	api.ConfigureServer()
+	go api.ServeTLS()
+	api.ServeUnsecured()
 }
