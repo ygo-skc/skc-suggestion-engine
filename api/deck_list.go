@@ -25,8 +25,6 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ContentB64)
 
-	res.Header().Add("Content-Type", "application/json") // prepping res headers
-
 	// object validation
 	if err := deckList.Validate(); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
@@ -111,8 +109,6 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	deckID := pathVars["deckID"]
 	log.Println("Getting content for deck w/ ID:", deckID)
-
-	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	var deckList *model.DeckList
 	var err *model.APIError

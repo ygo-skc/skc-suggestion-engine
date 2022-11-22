@@ -48,6 +48,16 @@ func verifyApiKey(headers http.Header) *model.APIError {
 	return nil
 }
 
+// sets common headers for response
+func commonHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Add("Content-Type", "application/json")
+		res.Header().Add("Cache-Control", "max-age=300")
+
+		next.ServeHTTP(res, req)
+	})
+}
+
 // Configures routes and CORs
 func ConfigureServer() {
 	router = mux.NewRouter()
@@ -59,6 +69,9 @@ func ConfigureServer() {
 	router.HandleFunc(CONTEXT+"/deck/{deckID:[0-9a-z]+}", getDeckList).Methods(http.MethodGet).Name("Retrieve Info On Deck")
 
 	router.HandleFunc(CONTEXT+"/traffic-analysis", submitNewTrafficData).Methods(http.MethodPost).Name("Traffic Analysis")
+
+	// middleware
+	router.Use(commonHeadersMiddleware)
 
 	corsOpts = cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000", "http://dev.thesupremekingscastle.com", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},

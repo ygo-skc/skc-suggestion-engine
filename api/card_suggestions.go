@@ -27,19 +27,17 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Getting suggestions for card:", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
-		res.Header().Add("Content-Type", "application/json")
 		res.WriteHeader(http.StatusNotFound)
 
 		json.NewEncoder(res).Encode(err)
 	} else {
-		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
-		var materialString string
+		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor, NamedMaterials: &[]model.CardReference{}, MaterialArchetypes: &[]string{}}
+		materialString := ""
 
 		// get materials if card is from extra deck
 		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
 			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 			suggestions.NamedMaterials, suggestions.MaterialArchetypes = getReferences(materialString)
-			log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		} else {
 			log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 		}
@@ -48,12 +46,13 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		// will also check and remove for self references
 		suggestions.NamedReferences, suggestions.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 		suggestions.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, suggestions.NamedReferences)
-		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
 
 		// get decks that feature card
 		suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
 
-		res.Header().Add("Content-Type", "application/json")
+		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
+		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
+
 		json.NewEncoder(res).Encode(suggestions)
 	}
 }

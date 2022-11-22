@@ -40,7 +40,6 @@ func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 	status := model.Status{Version: "1.0.0", Downstream: downstream}
 
 	log.Printf("SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
-	res.Header().Add("Content-Type", "application/json")
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(status)
 }

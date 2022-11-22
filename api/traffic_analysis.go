@@ -14,7 +14,6 @@ import (
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 	log.Println("Adding new traffic record...")
-	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	// verify client can call endpoint
 	if err := verifyApiKey(req.Header); err != nil {
