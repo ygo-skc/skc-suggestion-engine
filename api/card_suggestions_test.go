@@ -13,11 +13,15 @@ func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.
 	materialString := card.GetPotentialMaterialsAsString()
 	refs, archetypes := getReferences(materialString)
 
-	assert.Len(*refs, 0, "Len of material refs mismatch")
-	assert.Len(*archetypes, 1, "Len of material archetypes mismatch")
+	if len(expectedMaterialArchetypes) == 0 {
+		expectedMaterialArchetypes = nil
+	}
 
-	assert.Equal(*refs, expectedNamedMaterials)
-	assert.Equal(*archetypes, expectedMaterialArchetypes, "Expected size of archetype slice is different than what is actually received")
+	assert.Len(expectedNamedMaterials, len(*refs), "Len of NamedMaterials mismatch")
+	assert.Len(expectedMaterialArchetypes, len(*archetypes), "Len of MaterialArchetypes mismatch")
+
+	assert.Equal(expectedNamedMaterials, *refs, "Expected contents of NamedMaterials slice is different than what is actually received")
+	assert.Equal(expectedMaterialArchetypes, *archetypes, "Expected contents of MaterialArchetypes slice is different than what is actually received")
 }
 
 func validateReferences(card model.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
@@ -25,11 +29,15 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
 	refs, archetypes := getReferences(effectWithoutMaterial)
 
-	assert.Len(*refs, 2, "Len of refs mismatch")
-	assert.Len(*archetypes, 1, "Len of archetypes mismatch")
+	if len(expectedReferencedArchetypes) == 0 {
+		expectedReferencedArchetypes = nil
+	}
 
-	assert.Equal(*refs, expectedNamedReferences)
-	assert.Equal(*archetypes, expectedReferencedArchetypes, "Expected size of archetype slice is different than what is actually received")
+	assert.Len(expectedNamedReferences, len(*refs), "Len of NamedReferences mismatch")
+	assert.Len(expectedReferencedArchetypes, len(*archetypes), "Len of ReferencedArchetypes mismatch")
+
+	assert.Equal(expectedNamedReferences, *refs, "Expected contents of NamedReferences slice is different than what is actually received")
+	assert.Equal(expectedReferencedArchetypes, *archetypes, "Expected contents of ReferencedArchetypes slice is different than what is actually received")
 }
 
 func TestGetReferences(t *testing.T) {
@@ -43,17 +51,33 @@ func TestGetReferences(t *testing.T) {
 			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["Elemental HERO Sunrise"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Miracle Fusion"]}},
 			ReferencedArchetypes: &[]string{"HERO"},
 		},
+		"Gem-Knight Master Diamond": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{"Gem-Knight"},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{"Gem-", "Gem-Knight"},
+		},
+		"A-to-Z-Dragon Buster Cannon": {
+			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			ReferencedArchetypes: &[]string{},
+		},
 	}
 
-	validateMaterialReferences(
-		skc_testing.CardMocks["Elemental HERO Sunrise"],
-		*expectedReferences["Elemental HERO Sunrise"].NamedMaterials,
-		*expectedReferences["Elemental HERO Sunrise"].MaterialArchetypes,
-		assert,
-	)
-	validateReferences(skc_testing.CardMocks["Elemental HERO Sunrise"],
-		*expectedReferences["Elemental HERO Sunrise"].NamedReferences,
-		*expectedReferences["Elemental HERO Sunrise"].ReferencedArchetypes,
-		assert,
-	)
+	for cardName, expectedData := range expectedReferences {
+		validateMaterialReferences(
+			skc_testing.CardMocks[cardName],
+			*expectedData.NamedMaterials,
+			*expectedData.MaterialArchetypes,
+			assert,
+		)
+
+		validateReferences(
+			skc_testing.CardMocks[cardName],
+			*expectedData.NamedReferences,
+			*expectedData.ReferencedArchetypes,
+			assert,
+		)
+	}
 }
