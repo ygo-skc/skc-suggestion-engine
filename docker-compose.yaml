@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  skc-suggestion-engine:
+    image: golang:1.19.0-bullseye
+    command: go run .
+    working_dir: /app
+    ports:
+      - "9000:9000"
+    volumes:
+      - "./:/app"
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 200m
+    networks:
+      - skc-network
+    environment:
+      - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_docker
+
+networks:
+  skc-network:
+    name: skc-network
+    driver: bridge
