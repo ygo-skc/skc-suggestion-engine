@@ -18,7 +18,6 @@ const (
 )
 
 var (
-	apiKey         string
 	ipDB           *ip2location.DB
 	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
 	router         *mux.Router
@@ -26,9 +25,6 @@ var (
 )
 
 func init() {
-	// init api key variable
-	apiKey = util.EnvMap["API_KEY"]
-
 	// init IP DB
 	if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 		log.Fatalln("Could not load IP DB file...")
@@ -38,9 +34,10 @@ func init() {
 }
 
 func verifyApiKey(headers http.Header) *model.APIError {
-	key := headers.Get("API-Key")
+	clientKey := headers.Get("API-Key")
+	realKey := util.EnvMap["API_KEY"]
 
-	if key != apiKey {
+	if clientKey != realKey {
 		log.Println("Client is using incorrect API Key. Cannot process request.")
 		return &model.APIError{Message: "Request has incorrect or missing API Key."}
 	}
