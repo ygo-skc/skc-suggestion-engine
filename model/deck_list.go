@@ -8,13 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 type DeckList struct {
-	ID                primitive.ObjectID `bson:"_id,omitempty"`
+	ID                primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name              string             `bson:"name" json:"name" validate:"required,decklistname"`
 	ContentB64        string             `bson:"content" json:"listContent" validate:"required,base64"`
 	VideoUrl          string             `bson:"videoUrl" validate:"omitempty,url"`
@@ -48,20 +47,12 @@ type DeckListBreakdown struct {
 }
 
 // validate and handle validation error messages
-func (dl DeckList) Validate() APIError {
+func (dl DeckList) Validate() *APIError {
 	if err := util.V.Struct(dl); err != nil {
-		errMessages := []string{}
-		for _, e := range err.(validator.ValidationErrors) {
-			errMessages = append(errMessages, e.Translate(util.Translator))
-		}
-
-		message := strings.Join(errMessages, " ")
-		log.Println("There were", len(errMessages), "errors while validating input. Errors:", message)
-
-		return APIError{Message: message}
+		return &APIError{Message: util.HandleValidationErrors(err)}
+	} else {
+		return nil
 	}
-
-	return APIError{}
 }
 
 func (dlb *DeckListBreakdown) Sort() {
@@ -74,7 +65,7 @@ func (dlb *DeckListBreakdown) Sort() {
 		if _, isPresent := dlb.AllCards[cardID]; !isPresent {
 			dlb.InvalidIDs = append(dlb.InvalidIDs, cardID)
 		} else {
-			if dlb.AllCards[cardID].isExtraDeckMonster() {
+			if dlb.AllCards[cardID].IsExtraDeckMonster() {
 				dlb.ExtraDeck = append(dlb.ExtraDeck, dlb.AllCards[cardID])
 				numExtraDeckCards += dlb.CardQuantity[cardID]
 			} else {

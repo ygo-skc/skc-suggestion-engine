@@ -7,6 +7,8 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
+	"github.com/rs/cors"
+	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
@@ -16,8 +18,11 @@ const (
 )
 
 var (
-	apiKey string
-	ipDB   *ip2location.DB
+	apiKey         string
+	ipDB           *ip2location.DB
+	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
+	router         *mux.Router
+	corsOpts       *cors.Cors
 )
 
 func init() {
@@ -36,27 +41,63 @@ func verifyApiKey(headers http.Header) *model.APIError {
 	key := headers.Get("API-Key")
 
 	if key != apiKey {
-		log.Println("Client is using incorrect API Key.")
+		log.Println("Client is using incorrect API Key. Cannot process request.")
 		return &model.APIError{Message: "Request has incorrect or missing API Key."}
 	}
 
 	return nil
 }
 
-// Configures routes and starts the application server.
-func SetupMultiplexer() {
-	router := mux.NewRouter()
+// sets common headers for response
+func commonHeadersMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
+		res.Header().Add("Content-Type", "application/json")
+		res.Header().Add("Cache-Control", "max-age=300")
+
+		next.ServeHTTP(res, req)
+	})
+}
+
+// Configures routes and CORs
+func ConfigureServer() {
+	router = mux.NewRouter()
 
 	router.HandleFunc(CONTEXT+"/status", getStatusHandler)
-	router.HandleFunc(CONTEXT+"/materials/{cardID:[0-9]{8}}", getMaterialSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
+	router.HandleFunc(CONTEXT+"/card/{cardID:[0-9]{8}}", getSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
 
 	router.HandleFunc(CONTEXT+"/deck", submitNewDeckList).Methods(http.MethodPost).Name("Deck List Submission")
 	router.HandleFunc(CONTEXT+"/deck/{deckID:[0-9a-z]+}", getDeckList).Methods(http.MethodGet).Name("Retrieve Info On Deck")
 
 	router.HandleFunc(CONTEXT+"/traffic-analysis", submitNewTrafficData).Methods(http.MethodPost).Name("Traffic Analysis")
 
-	log.Println("Starting server in port 9000")
-	if err := http.ListenAndServe(":9000", router); err != nil { // docker does not like localhost:9000 so im just using port number
+	// middleware
+	router.Use(commonHeadersMiddleware)
+
+	corsOpts = cors.New(cors.Options{
+		AllowedOrigins: []string{"http://localhost:3000", "http://dev.thesupremekingscastle.com", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
+		AllowedMethods: []string{
+			http.MethodGet,
+			http.MethodPost,
+			http.MethodPut,
+			http.MethodOptions,
+		},
+
+		AllowedHeaders: []string{
+			"*", //or you can your header key values which you are using in your application
+		},
+	})
+}
+
+func ServeTLS() {
+	log.Println("Starting server in port 9000 (secured)")
+	if err := http.ListenAndServeTLS(":9000", "certs/certificate.crt", "certs/private.key", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
+		log.Fatalln("There was an error starting api server: ", err)
+	}
+}
+
+func ServeUnsecured() {
+	log.Println("Starting server in port 90 (unsecured)")
+	if err := http.ListenAndServe(":90", corsOpts.Handler(router)); err != nil {
 		log.Fatalln("There was an error starting api server: ", err)
 	}
 }

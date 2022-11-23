@@ -25,10 +25,8 @@ func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
 
 	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ContentB64)
 
-	res.Header().Add("Content-Type", "application/json") // prepping res headers
-
 	// object validation
-	if err := deckList.Validate(); err.Message != "" {
+	if err := deckList.Validate(); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
 		return
@@ -76,7 +74,7 @@ func getBreakdown(dl string) (*model.DeckListBreakdown, *model.APIError) {
 	}
 
 	var allCards model.DeckListContents
-	if allCards, err = db.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
+	if allCards, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
 		return nil, &model.APIError{Message: "Could not access DB"}
 	}
 
@@ -111,8 +109,6 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	deckID := pathVars["deckID"]
 	log.Println("Getting content for deck w/ ID:", deckID)
-
-	res.Header().Add("Content-Type", "application/json") // prepping res headers
 
 	var deckList *model.DeckList
 	var err *model.APIError
@@ -151,6 +147,7 @@ func getDeckList(res http.ResponseWriter, req *http.Request) {
 	}
 	deckList.ExtraDeck = &extraDeck
 
+	log.Printf("Successfully retrieved deck list. Name {%s} and encoded deck list content {%s}. This deck list has {%d} main deck cards and {%d} extra deck cards.", deckList.Name, deckList.ContentB64, deckList.NumMainDeckCards, deckList.NumExtraDeckCards)
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(deckList)
 }
