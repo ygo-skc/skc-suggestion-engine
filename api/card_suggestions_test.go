@@ -81,3 +81,19 @@ func TestGetReferences(t *testing.T) {
 		)
 	}
 }
+
+func TestCleanupReference(t *testing.T) {
+	assert := assert.New(t)
+
+	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
+	for _, value := range baseCases {
+		cleanupToken(&value)
+		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
+	}
+
+	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
+	for _, value := range specialCases {
+		cleanupToken(&value)
+		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
+	}
+}

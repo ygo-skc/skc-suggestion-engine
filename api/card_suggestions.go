@@ -59,6 +59,7 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
+		log.Printf("Has self reference: %t", *&suggestions.HasSelfReference)
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
@@ -126,13 +127,7 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	var archetypalReferences []string
 
 	for _, token := range tokens {
-		token = strings.ReplaceAll(token, "\".", "")
-		token = strings.ReplaceAll(token, "\".", "")
-		token = strings.ReplaceAll(token, "'.", "")
-		token = strings.ReplaceAll(token, "',", "")
-		token = strings.ReplaceAll(token, "\"", "")
-		token = strings.ReplaceAll(token, "'", "")
-		token = strings.TrimSpace(token)
+		cleanupToken(&token)
 
 		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
 			archetypalReferences = append(archetypalReferences, token)
@@ -151,4 +146,15 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	}
 
 	return namedReferences, referenceOccurrence, archetypalReferences
+}
+
+func cleanupToken(token *string) {
+	*token = strings.TrimSpace(*token)
+	*token = strings.ReplaceAll(*token, "\".", "")
+	*token = strings.ReplaceAll(*token, "\".", "")
+	*token = strings.ReplaceAll(*token, "'.", "")
+	*token = strings.ReplaceAll(*token, "',", "")
+
+	*token = strings.Trim(*token, "'")
+	*token = strings.Trim(*token, "\"")
 }
