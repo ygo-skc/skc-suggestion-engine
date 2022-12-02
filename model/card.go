@@ -32,6 +32,7 @@ func (card Card) GetPotentialMaterialsAsString() string {
 
 	if len(effectTokens) < 2 {
 		log.Printf("Card w/ ID {%s} doesn't seem to have a materials string", card.CardID)
+		return ""
 	}
 
 	return effectTokens[0]

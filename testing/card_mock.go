@@ -53,5 +53,23 @@ Must first be Special Summoned (from your Extra Deck) by banishing the above car
 			CardName:   "Polymerization",
 			CardEffect: `Fusion Summon 1 Fusion Monster from your Extra Deck, using monsters from your hand or field as Fusion Material.`,
 		},
+		"The Legendary Fisherman II": {
+			CardID:     "19801646",
+			CardColor:  "Effect",
+			CardName:   "The Legendary Fisherman II",
+			CardEffect: `This card's name becomes "The Legendary Fisherman" while on the field or in the GY. While "Umi" is on the field, this card is unaffected by other monsters' effects. If this face-up card is destroyed by battle, or leaves the field because of an opponent's card effect while its owner controls it: You can add 1 Level 7 WATER monster from your Deck to your hand.`,
+		},
+		"The Legendary Fisherman": {
+			CardID:     "03643300",
+			CardColor:  "Effect",
+			CardName:   "The Legendary Fisherman",
+			CardEffect: `While "Umi" is on the field, this card is unaffected by Spell effects and cannot be targeted for attacks, but does not prevent your opponent from attacking you directly.`,
+		},
+		"Umi": {
+			CardID:     "22702055",
+			CardColor:  "Spell",
+			CardName:   "Umi",
+			CardEffect: `All Fish, Sea Serpent, Thunder, and Aqua monsters on the field gain 200 ATK/DEF, also all Machine and Pyro monsters on the field lose 200 ATK/DEF.`,
+		},
 	}
 )

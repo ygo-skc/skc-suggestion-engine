@@ -63,6 +63,12 @@ func TestGetReferences(t *testing.T) {
 			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			ReferencedArchetypes: &[]string{},
 		},
+		"The Legendary Fisherman II": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
+			ReferencedArchetypes: &[]string{},
+		},
 	}
 
 	for cardName, expectedData := range expectedReferences {
@@ -79,5 +85,21 @@ func TestGetReferences(t *testing.T) {
 			*expectedData.ReferencedArchetypes,
 			assert,
 		)
+	}
+}
+
+func TestCleanupReference(t *testing.T) {
+	assert := assert.New(t)
+
+	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
+	for _, value := range baseCases {
+		cleanupToken(&value)
+		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
+	}
+
+	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
+	for _, value := range specialCases {
+		cleanupToken(&value)
+		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }
