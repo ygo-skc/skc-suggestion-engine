@@ -103,5 +103,24 @@ This card's name becomes "Armityle the Chaos Phantasm" while on the field. Once 
 			CardName:   "Uria, Lord of Searing Flames",
 			CardEffect: `Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by sending 3 face-up Traps you control to the GY. This card gains 1000 ATK for each Continuous Trap in your GY. Once per turn: You can target 1 Set Spell/Trap your opponent controls; destroy that target. Neither player can activate Spell/Trap Cards in response to this effect's activation.`,
 		},
+		"King Dragun": {
+			CardID:    "13756293",
+			CardColor: "Fusion",
+			CardName:  "King Dragun",
+			CardEffect: `"Lord of D." + "Divine Dragon Ragnarok"
+Your opponent cannot target Dragon monsters with card effects. Once per turn: You can Special Summon 1 Dragon monster from your hand.`,
+		},
+		"Divine Dragon Ragnarok": {
+			CardID:     "62113340",
+			CardColor:  "Dragon/Normal",
+			CardName:   "Divine Dragon Ragnarok",
+			CardEffect: `A legendary dragon sent by the gods as their instrument. Legends say that if provoked, the whole world will sink beneath the sea.`,
+		},
+		"Lord of D.": {
+			CardID:     "17985575",
+			CardColor:  "Effect",
+			CardName:   "Lord of D.",
+			CardEffect: `Neither player can target Dragon monsters on the field with card effects.`,
+		},
 	}
 )
