@@ -14,7 +14,7 @@ import (
 )
 
 var (
-	quotedStringRegex            = regexp.MustCompile("^(\"[ \\w\\d-:@']+\"|'[ \\w\\d-:@']+')|[\\W](\"[ \\w\\d-:@']+\"|'[ \\w\\d-:@']+')")
+	quotedStringRegex            = regexp.MustCompile("^(\"[ \\w\\d-:@,']+\"|'[ \\w\\d-:@,']+')|[\\W](\"[ \\w\\d-:@,']+\"|'[ \\w\\d-:@,']+')")
 	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
 )
 
