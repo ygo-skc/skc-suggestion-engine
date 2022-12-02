@@ -63,6 +63,12 @@ func TestGetReferences(t *testing.T) {
 			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			ReferencedArchetypes: &[]string{},
 		},
+		"The Legendary Fisherman II": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
+			ReferencedArchetypes: &[]string{},
+		},
 	}
 
 	for cardName, expectedData := range expectedReferences {
