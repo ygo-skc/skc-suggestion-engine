@@ -69,6 +69,39 @@ func TestGetReferences(t *testing.T) {
 			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
 			ReferencedArchetypes: &[]string{},
 		},
+		"Armityle the Chaos Phantasm": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Armityle the Chaos Phantasm - Phantom of Fury": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 2, Card: skc_testing.CardMocks["Armityle the Chaos Phantasm"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"King Dragun": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Divine Dragon Ragnarok"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Lord of D."]},
+			},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{},
+		},
 	}
 
 	for cardName, expectedData := range expectedReferences {

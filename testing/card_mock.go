@@ -71,5 +71,56 @@ Must first be Special Summoned (from your Extra Deck) by banishing the above car
 			CardName:   "Umi",
 			CardEffect: `All Fish, Sea Serpent, Thunder, and Aqua monsters on the field gain 200 ATK/DEF, also all Machine and Pyro monsters on the field lose 200 ATK/DEF.`,
 		},
+		"Armityle the Chaos Phantasm": {
+			CardID:    "43378048",
+			CardColor: "Fusion",
+			CardName:  "Armityle the Chaos Phantasm",
+			CardEffect: `"Uria, Lord of Searing Flames" + "Hamon, Lord of Striking Thunder" + "Raviel, Lord of Phantasms"
+Must first be Special Summoned (from your Extra Deck) by banishing the above cards you control. (You do not use "Polymerization".) Cannot be destroyed by battle. Gains 10,000 ATK during your turn only.`,
+		},
+		"Armityle the Chaos Phantasm - Phantom of Fury": {
+			CardID:    "60110982",
+			CardColor: "Fusion",
+			CardName:  "Armityle the Chaos Phantasm - Phantom of Fury",
+			CardEffect: `"Uria, Lord of Searing Flames" + "Hamon, Lord of Striking Thunder" + "Raviel, Lord of Phantasms"
+This card's name becomes "Armityle the Chaos Phantasm" while on the field. Once per turn, during your Main Phase: You can give control of this card to your opponent. Once per turn, during the End Phase, if this card's control was changed this turn: Banish all cards you control, then the owner of this card can Special Summon 1 "Armityle the Chaos Phantasm" from their Extra Deck, ignoring its Summoning conditions.`,
+		},
+		"Hamon, Lord of Striking Thunder": {
+			CardID:     "32491822",
+			CardColor:  "Effect",
+			CardName:   "Hamon, Lord of Striking Thunder",
+			CardEffect: `Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by sending 3 face-up Continuous Spells you control to the GY. If this card destroys an opponent's monster by battle and sends it to the GY: Inflict 1000 damage to your opponent. While this card is in face-up Defense Position, monsters your opponent controls cannot target monsters for attacks, except this one.`,
+		},
+		"Raviel, Lord of Phantasms": {
+			CardID:     "69890967",
+			CardColor:  "Effect",
+			CardName:   "Raviel, Lord of Phantasms",
+			CardEffect: `Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by Tributing 3 Fiend monsters. Each time your opponent Normal Summons a monster: Special Summon 1 "Phantasm Token" (Fiend/DARK/Level 1/ATK 1000/DEF 1000), but it cannot declare an attack. Once per turn: You can Tribute 1 monster; this card gains ATK equal to the Tributed monster's original ATK, until the end of this turn.`,
+		},
+		"Uria, Lord of Searing Flames": {
+			CardID:     "06007213",
+			CardColor:  "Effect",
+			CardName:   "Uria, Lord of Searing Flames",
+			CardEffect: `Cannot be Normal Summoned/Set. Must be Special Summoned (from your hand) by sending 3 face-up Traps you control to the GY. This card gains 1000 ATK for each Continuous Trap in your GY. Once per turn: You can target 1 Set Spell/Trap your opponent controls; destroy that target. Neither player can activate Spell/Trap Cards in response to this effect's activation.`,
+		},
+		"King Dragun": {
+			CardID:    "13756293",
+			CardColor: "Fusion",
+			CardName:  "King Dragun",
+			CardEffect: `"Lord of D." + "Divine Dragon Ragnarok"
+Your opponent cannot target Dragon monsters with card effects. Once per turn: You can Special Summon 1 Dragon monster from your hand.`,
+		},
+		"Divine Dragon Ragnarok": {
+			CardID:     "62113340",
+			CardColor:  "Dragon/Normal",
+			CardName:   "Divine Dragon Ragnarok",
+			CardEffect: `A legendary dragon sent by the gods as their instrument. Legends say that if provoked, the whole world will sink beneath the sea.`,
+		},
+		"Lord of D.": {
+			CardID:     "17985575",
+			CardColor:  "Effect",
+			CardName:   "Lord of D.",
+			CardEffect: `Neither player can target Dragon monsters on the field with card effects.`,
+		},
 	}
 )
