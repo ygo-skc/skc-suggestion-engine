@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"strings"
 )
 
@@ -36,8 +35,7 @@ func (card Card) GetPotentialMaterialsAsString() string {
 	}
 
 	if len(effectTokens) < 2 {
-		log.Printf("Card w/ ID {%s} doesn't seem to have a materials string", card.CardID)
-		return ""
+		return card.CardEffect
 	}
 	return effectTokens[0]
 }
