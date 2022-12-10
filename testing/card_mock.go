@@ -122,5 +122,23 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			CardName:   "Lord of D.",
 			CardEffect: `Neither player can target Dragon monsters on the field with card effects.`,
 		},
+		"Great Mammoth of Goldfine": {
+			CardID:     "54622031",
+			CardColor:  "Fusion",
+			CardName:   "Great Mammoth of Goldfine",
+			CardEffect: `"The Snake Hair" + "Dragon Zombie"`,
+		},
+		"Dragon Zombie": {
+			CardID:     "66672569",
+			CardColor:  "Normal",
+			CardName:   "Dragon Zombie",
+			CardEffect: `"A dragon revived by sorcery. Its breath is highly corrosive."`,
+		},
+		"The Snake Hair": {
+			CardID:     "29491031",
+			CardColor:  "Normal",
+			CardName:   "The Snake Hair",
+			CardEffect: `"A monster with a head of poison snakes. One look from this monster can turn an opponent to stone."`,
+		},
 	}
 )
