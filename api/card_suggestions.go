@@ -31,38 +31,43 @@ func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		json.NewEncoder(res).Encode(err)
 	} else {
-		suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor, NamedMaterials: &[]model.CardReference{}, MaterialArchetypes: &[]string{}}
-		materialString := ""
-
-		// setup channels
-		materialChannel, referenceChannel := make(chan bool), make(chan bool)
-
-		// get materials if card is from extra deck
-		if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-			materialString = cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
-			go getMaterialRefs(&suggestions, materialString, materialChannel)
-		} else {
-			materialChannel = nil
-			log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
-		}
-
-		go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
-
-		// get decks that feature card
-		suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardID})
-
-		// join
-		if materialChannel != nil {
-			<-materialChannel
-		}
-		<-referenceChannel
+		suggestions := getSuggestions(cardToGetSuggestionsFor)
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
-		log.Printf("Has self reference: %t", *&suggestions.HasSelfReference)
+		log.Printf("Has self reference: %t", suggestions.HasSelfReference)
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
+}
+
+func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions {
+	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
+	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+
+	// setup channels
+	materialChannel, referenceChannel := make(chan bool), make(chan bool)
+
+	// get materials if card is from extra deck
+	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
+		go getMaterialRefs(&suggestions, materialString, materialChannel)
+	} else {
+		materialChannel = nil
+		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
+	}
+
+	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
+
+	// get decks that feature card
+	suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
+
+	// join
+	if materialChannel != nil {
+		<-materialChannel
+	}
+	<-referenceChannel
+
+	return &suggestions
 }
 
 func getMaterialRefs(s *model.CardSuggestions, materialString string, c chan bool) {
