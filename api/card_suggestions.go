@@ -20,14 +20,12 @@ var (
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
 func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Println("Getting suggestions for card:", cardID)
+	log.Println("Getting suggestions for card w/ ID:", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
-		res.WriteHeader(http.StatusNotFound)
-
+		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
 		suggestions := getSuggestions(cardToGetSuggestionsFor)

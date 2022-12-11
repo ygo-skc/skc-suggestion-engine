@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
+	"net/http"
 	"strings"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -45,10 +46,10 @@ func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingID(card
 	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardEffect); err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			log.Printf("Card w/ ID {%s} not found in DB", cardID)
-			return nil, &model.APIError{Message: fmt.Sprintf("Cannot find card using ID %s", cardID)}
+			return nil, &model.APIError{Message: fmt.Sprintf("Cannot find card using ID %s", cardID), StatusCode: http.StatusNotFound}
 		} else {
 			log.Printf("An error ocurred while fetching card using ID. Err {%s}", err)
-			return nil, &model.APIError{Message: "Service unavailable"}
+			return nil, &model.APIError{Message: "Service unavailable", StatusCode: http.StatusInternalServerError}
 		}
 	}
 
