@@ -18,10 +18,11 @@ const (
 )
 
 var (
-	ipDB           *ip2location.DB
-	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
-	router         *mux.Router
-	corsOpts       *cors.Cors
+	ipDB                           *ip2location.DB
+	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
+	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
+	router                         *mux.Router
+	corsOpts                       *cors.Cors
 )
 
 func init() {

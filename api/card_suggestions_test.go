@@ -40,6 +40,23 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 	assert.Equal(expectedReferencedArchetypes, *archetypes, "Expected contents of ReferencedArchetypes slice is different than what is actually received")
 }
 
+func TestGetSuggestions(t *testing.T) {
+	assert := assert.New(t)
+	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
+	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
+
+	for cardName, expectedSuggestions := range skc_testing.ExpectedReferences {
+		mock := skc_testing.CardMocks[cardName]
+		suggestions := getSuggestions(&mock)
+
+		if len(*expectedSuggestions.NamedMaterials) == 0 {
+			assert.Equal(expectedSuggestions.NamedMaterials, &[]model.CardReference{})
+		} else {
+			assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials)
+		}
+	}
+}
+
 func TestGetReferences(t *testing.T) {
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}

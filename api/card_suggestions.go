@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -59,7 +58,7 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
 
 	// get decks that feature card
-	suggestions.Decks, _ = db.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
+	suggestions.Decks, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
 
 	// join
 	if materialChannel != nil {
