@@ -52,6 +52,9 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 		go getMaterialRefs(&suggestions, materialString, materialChannel)
 	} else {
 		materialChannel = nil
+		suggestions.NamedMaterials = &[]model.CardReference{}
+		suggestions.MaterialArchetypes = &[]string{}
+
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
 
@@ -128,7 +131,7 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 
 	namedReferences := map[string]model.Card{}
 	referenceOccurrence := map[string]int{}
-	var archetypalReferences []string
+	archetypalReferences := []string{}
 
 	for _, token := range tokens {
 		cleanupToken(&token)

@@ -13,10 +13,6 @@ func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.
 	materialString := card.GetPotentialMaterialsAsString()
 	refs, archetypes := getReferences(materialString)
 
-	if len(expectedMaterialArchetypes) == 0 {
-		expectedMaterialArchetypes = nil
-	}
-
 	assert.Len(expectedNamedMaterials, len(*refs), "Len of NamedMaterials mismatch")
 	assert.Len(expectedMaterialArchetypes, len(*archetypes), "Len of MaterialArchetypes mismatch")
 
@@ -29,10 +25,6 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
 	refs, archetypes := getReferences(effectWithoutMaterial)
 
-	if len(expectedReferencedArchetypes) == 0 {
-		expectedReferencedArchetypes = nil
-	}
-
 	assert.Len(expectedNamedReferences, len(*refs), "Len of NamedReferences mismatch")
 	assert.Len(expectedReferencedArchetypes, len(*archetypes), "Len of ReferencedArchetypes mismatch")
 
@@ -41,6 +33,8 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 }
 
 func TestGetSuggestions(t *testing.T) {
+	// setup
+	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
@@ -49,15 +43,18 @@ func TestGetSuggestions(t *testing.T) {
 		mock := skc_testing.CardMocks[cardName]
 		suggestions := getSuggestions(&mock)
 
-		if len(*expectedSuggestions.NamedMaterials) == 0 {
-			assert.Equal(expectedSuggestions.NamedMaterials, &[]model.CardReference{})
-		} else {
-			assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials)
-		}
+		assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
+		assert.Equal(expectedSuggestions.MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+
+		removeSelfReference(cardName, expectedSuggestions.NamedReferences)
+		assert.Equal(expectedSuggestions.NamedReferences, suggestions.NamedReferences, "Named References values did not match")
+		assert.Equal(expectedSuggestions.ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
 	}
 }
 
 func TestGetReferences(t *testing.T) {
+	// setup
+	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 

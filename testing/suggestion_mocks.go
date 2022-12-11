@@ -3,7 +3,11 @@ package testing
 import "github.com/ygo-skc/skc-suggestion-engine/model"
 
 var (
-	ExpectedReferences = map[string]model.CardSuggestions{
+	ExpectedReferences = InitSuggestionMocks()
+)
+
+func InitSuggestionMocks() map[string]model.CardSuggestions {
+	return map[string]model.CardSuggestions{
 		"Elemental HERO Sunrise": {
 			NamedMaterials:       &[]model.CardReference{},
 			MaterialArchetypes:   &[]string{"HERO"},
@@ -71,4 +75,4 @@ var (
 			ReferencedArchetypes: &[]string{},
 		},
 	}
-)
+}
