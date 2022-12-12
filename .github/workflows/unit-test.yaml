@@ -16,6 +16,11 @@ jobs:
           cache: true
 
       - name: Run Unit Tests
-        run: go test -v ./...
+        run: bash test.sh
         env:
-          IS_TEST: true
+          IS_CICD: true
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: results
+          path: coverage.txt|coverage.html
