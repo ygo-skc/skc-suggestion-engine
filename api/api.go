@@ -28,7 +28,7 @@ var (
 
 func init() {
 	// init IP DB
-	if os.Getenv("IS_TEST") == "true" {
+	if os.Getenv("IS_TEST") == "false" {
 		log.Println("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
