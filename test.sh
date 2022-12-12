@@ -1,3 +1,3 @@
 go test -coverprofile coverage.out  ./...
-go tool cover -func coverage.out -o coverage.txt
-go tool cover -html=coverage.out -o coverage.html
+# go tool cover -func coverage.out
+go tool cover -html=coverage.out
