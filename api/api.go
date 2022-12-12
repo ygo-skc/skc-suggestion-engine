@@ -2,9 +2,9 @@
 package api
 
 import (
-	"flag"
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
@@ -28,7 +28,7 @@ var (
 
 func init() {
 	// init IP DB
-	if flag.Lookup("test.v") == nil {
+	if os.Getenv("IS_TEST") == "true" {
 		log.Println("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
