@@ -2,6 +2,7 @@
 package api
 
 import (
+	"flag"
 	"log"
 	"net/http"
 
@@ -27,10 +28,15 @@ var (
 
 func init() {
 	// init IP DB
-	if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
-		log.Fatalln("Could not load IP DB file...")
+	if flag.Lookup("test.v") == nil {
+		log.Println("Loading IP DB...")
+		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
+			log.Fatalln("Could not load IP DB file...")
+		} else {
+			ipDB = ip
+		}
 	} else {
-		ipDB = ip
+		log.Println("Not loading up IP DB")
 	}
 }
 
