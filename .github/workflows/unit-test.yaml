@@ -1,4 +1,4 @@
-name: Go package
+name: Unit Test
 
 on: [push]
 
@@ -16,7 +16,7 @@ jobs:
           cache: true
 
       - name: Run Unit Tests
-        run: bash test.sh
+        run: go test -coverprofile coverage.out  ./... && go tool cover -func coverage.out -o coverage.txt && go tool cover -html=coverage.out -o coverage.html
         env:
           IS_CICD: true
 
