@@ -8,18 +8,19 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Go
+      - name: Set up Golang
         uses: actions/setup-go@v3
         with:
           go-version: 1.19
           cache: true
 
-      - name: Run Unit Tests
+      - name: Execute Unit Tests
         run: go test -coverprofile coverage.out  ./... && go tool cover -func coverage.out -o coverage.txt && go tool cover -html=coverage.out -o coverage.html
         env:
           IS_CICD: true
 
-      - uses: actions/upload-artifact@v3
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: coverage.html
