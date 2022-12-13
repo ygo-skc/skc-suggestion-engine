@@ -34,3 +34,5 @@ certs/*
 
 # Other Senseitve Files
 data/*.BIN
+
+coverage.*

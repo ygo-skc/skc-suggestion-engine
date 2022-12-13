@@ -12,8 +12,17 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+// interface
+type SKCSuggestionEngineDAO interface {
+	GetSKCSuggestionDBVersion() (string, error)
+	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
+}
+
+// impl
+type SKCSuggestionEngineDAOImplementation struct{}
+
 // Retrieves the version number of the SKC Suggestion DB or throws an error if an exception occurs.
-func GetSKCSuggestionDBVersion() (string, error) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion() (string, error) {
 	var commandResult bson.M
 	command := bson.D{{Key: "serverStatus", Value: 1}}
 
@@ -62,7 +71,7 @@ func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 	}
 }
 
-func GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 

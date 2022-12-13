@@ -4,6 +4,7 @@ package api
 import (
 	"log"
 	"net/http"
+	"os"
 
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
@@ -18,18 +19,25 @@ const (
 )
 
 var (
-	ipDB           *ip2location.DB
-	skcDBInterface db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
-	router         *mux.Router
-	corsOpts       *cors.Cors
+	ipDB                           *ip2location.DB
+	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDatabaseAccessObjectImplementation{}
+	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
+	router                         *mux.Router
+	corsOpts                       *cors.Cors
 )
 
 func init() {
 	// init IP DB
-	if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
-		log.Fatalln("Could not load IP DB file...")
+	isCICD := os.Getenv("IS_CICD")
+	if isCICD == "false" || isCICD == "" {
+		log.Println("Loading IP DB...")
+		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
+			log.Fatalln("Could not load IP DB file...")
+		} else {
+			ipDB = ip
+		}
 	} else {
-		ipDB = ip
+		log.Println("Not loading IP DB")
 	}
 }
 

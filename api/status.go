@@ -5,7 +5,6 @@ import (
 	"log"
 	"net/http"
 
-	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -29,7 +28,7 @@ func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if skcSuggestionDBVersion, err = db.GetSKCSuggestionDBVersion(); err != nil {
+	if skcSuggestionDBVersion, err = skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(); err != nil {
 		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Down"}
 	} else {
 		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Up"}
@@ -37,7 +36,7 @@ func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	downstream := []model.DownstreamItem{skcDBStatus, skcSuggestionDBStatus}
 
-	status := model.Status{Version: "1.0.2", Downstream: downstream}
+	status := model.Status{Version: "1.0.3", Downstream: downstream}
 
 	log.Printf("SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
 	res.WriteHeader(http.StatusOK)

@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   skc-suggestion-engine:
-    image: golang:1.19.0-bullseye
+    image: golang:1.19.4-bullseye
     command: go run .
     working_dir: /app
     ports:

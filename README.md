@@ -1,5 +1,7 @@
 # skc-suggestion-engine
 
+[![Unit Test](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml/badge.svg)](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml)
+
 ## Info
 
 Go API that will extend functionality of [SKC API](https://github.com/ygo-skc/skc-api) with the following:

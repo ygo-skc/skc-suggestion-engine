@@ -1,7 +1,6 @@
 package model
 
 import (
-	"log"
 	"strings"
 )
 
@@ -24,16 +23,19 @@ func (c Card) IsExtraDeckMonster() bool {
 // Uses new line as delimiter to split card effect. Materials are found in the first token.
 func (card Card) GetPotentialMaterialsAsString() string {
 	var effectTokens []string
-	if card.CardColor == "Pendulum-Fusion" {
+
+	if !card.IsExtraDeckMonster() {
+		return ""
+	}
+
+	if strings.Contains(card.CardColor, "Pendulum") {
 		effectTokens = strings.SplitAfter(strings.SplitAfter(card.CardEffect, "\n\nMonster Effect\n")[1], "\n")
 	} else {
 		effectTokens = strings.SplitAfter(card.CardEffect, "\n")
 	}
 
 	if len(effectTokens) < 2 {
-		log.Printf("Card w/ ID {%s} doesn't seem to have a materials string", card.CardID)
-		return ""
+		return card.CardEffect
 	}
-
 	return effectTokens[0]
 }

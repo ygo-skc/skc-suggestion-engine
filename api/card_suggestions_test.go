@@ -13,10 +13,6 @@ func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.
 	materialString := card.GetPotentialMaterialsAsString()
 	refs, archetypes := getReferences(materialString)
 
-	if len(expectedMaterialArchetypes) == 0 {
-		expectedMaterialArchetypes = nil
-	}
-
 	assert.Len(expectedNamedMaterials, len(*refs), "Len of NamedMaterials mismatch")
 	assert.Len(expectedMaterialArchetypes, len(*archetypes), "Len of MaterialArchetypes mismatch")
 
@@ -29,10 +25,6 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
 	refs, archetypes := getReferences(effectWithoutMaterial)
 
-	if len(expectedReferencedArchetypes) == 0 {
-		expectedReferencedArchetypes = nil
-	}
-
 	assert.Len(expectedNamedReferences, len(*refs), "Len of NamedReferences mismatch")
 	assert.Len(expectedReferencedArchetypes, len(*archetypes), "Len of ReferencedArchetypes mismatch")
 
@@ -40,71 +32,33 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 	assert.Equal(expectedReferencedArchetypes, *archetypes, "Expected contents of ReferencedArchetypes slice is different than what is actually received")
 }
 
+func TestGetSuggestions(t *testing.T) {
+	// setup
+	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
+	assert := assert.New(t)
+	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
+	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
+
+	for cardName, expectedSuggestions := range skc_testing.ExpectedReferences {
+		mock := skc_testing.CardMocks[cardName]
+		suggestions := getSuggestions(&mock)
+
+		assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
+		assert.Equal(expectedSuggestions.MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+
+		removeSelfReference(cardName, expectedSuggestions.NamedReferences)
+		assert.Equal(expectedSuggestions.NamedReferences, suggestions.NamedReferences, "Named References values did not match")
+		assert.Equal(expectedSuggestions.ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
+	}
+}
+
 func TestGetReferences(t *testing.T) {
+	// setup
+	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 
-	expectedReferences := map[string]model.CardSuggestions{
-		"Elemental HERO Sunrise": {
-			NamedMaterials:       &[]model.CardReference{},
-			MaterialArchetypes:   &[]string{"HERO"},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["Elemental HERO Sunrise"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Miracle Fusion"]}},
-			ReferencedArchetypes: &[]string{"HERO"},
-		},
-		"Gem-Knight Master Diamond": {
-			NamedMaterials:       &[]model.CardReference{},
-			MaterialArchetypes:   &[]string{"Gem-Knight"},
-			NamedReferences:      &[]model.CardReference{},
-			ReferencedArchetypes: &[]string{"Gem-", "Gem-Knight"},
-		},
-		"A-to-Z-Dragon Buster Cannon": {
-			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
-			MaterialArchetypes:   &[]string{},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
-			ReferencedArchetypes: &[]string{},
-		},
-		"The Legendary Fisherman II": {
-			NamedMaterials:       &[]model.CardReference{},
-			MaterialArchetypes:   &[]string{},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
-			ReferencedArchetypes: &[]string{},
-		},
-		"Armityle the Chaos Phantasm": {
-			NamedMaterials: &[]model.CardReference{
-				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
-				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
-				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
-			},
-			MaterialArchetypes: &[]string{},
-			NamedReferences: &[]model.CardReference{
-				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
-			},
-			ReferencedArchetypes: &[]string{},
-		},
-		"Armityle the Chaos Phantasm - Phantom of Fury": {
-			NamedMaterials: &[]model.CardReference{
-				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
-				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
-				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
-			},
-			MaterialArchetypes: &[]string{},
-			NamedReferences: &[]model.CardReference{
-				{Occurrences: 2, Card: skc_testing.CardMocks["Armityle the Chaos Phantasm"]},
-			},
-			ReferencedArchetypes: &[]string{},
-		},
-		"King Dragun": {
-			NamedMaterials: &[]model.CardReference{
-				{Occurrences: 1, Card: skc_testing.CardMocks["Divine Dragon Ragnarok"]},
-				{Occurrences: 1, Card: skc_testing.CardMocks["Lord of D."]},
-			},
-			MaterialArchetypes:   &[]string{},
-			NamedReferences:      &[]model.CardReference{},
-			ReferencedArchetypes: &[]string{},
-		},
-	}
-
-	for cardName, expectedData := range expectedReferences {
+	for cardName, expectedData := range skc_testing.ExpectedReferences {
 		validateMaterialReferences(
 			skc_testing.CardMocks[cardName],
 			*expectedData.NamedMaterials,
