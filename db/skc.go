@@ -12,7 +12,7 @@ import (
 const (
 	// queries
 	queryDBVersion         string = "SELECT VERSION()"
-	queryCardUsingCardID   string = "SELECT card_number, card_color, card_name, card_effect FROM card_info WHERE card_number = ?"
+	queryCardUsingCardID   string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 )
 
@@ -43,7 +43,7 @@ func (imp SKCDatabaseAccessObjectImplementation) GetSKCDBVersion() (string, erro
 func (imp SKCDatabaseAccessObjectImplementation) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
 	var card model.Card
 
-	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardEffect); err != nil {
+	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			log.Printf("Card w/ ID {%s} not found in DB", cardID)
 			return nil, &model.APIError{Message: fmt.Sprintf("Cannot find card using ID %s", cardID), StatusCode: http.StatusNotFound}
