@@ -75,13 +75,19 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	opts := options.Find().SetProjection(bson.D{{Key: "name", Value: 1}, {Key: "videoUrl", Value: 1}, {Key: "createdAt", Value: 1}, {Key: "updatedAt", Value: 1}})
+	// select only these fields from collection
+	opts := options.Find().SetProjection(
+		bson.D{
+			{Key: "name", Value: 1}, {Key: "videoUrl", Value: 1}, {Key: "uniqueCards", Value: 1}, {Key: "deckMascots", Value: 1}, {Key: "numMainDeckCards", Value: 1},
+			{Key: "numExtraDeckCards", Value: 1}, {Key: "tags", Value: 1}, {Key: "createdAt", Value: 1}, {Key: "updatedAt", Value: 1},
+		},
+	)
 
 	if cursor, err := skcSuggestionDB.Collection("deckLists").Find(ctx, bson.M{"uniqueCards": bson.M{"$in": cardIDs}}, opts); err != nil {
 		log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)
 		return nil, &model.APIError{Message: "Could not get deck lists."}
 	} else {
-		var dl []model.DeckList
+		dl := []model.DeckList{}
 		if err := cursor.All(ctx, &dl); err != nil {
 			log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)
 			return nil, &model.APIError{Message: "Could not get deck lists."}

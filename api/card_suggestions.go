@@ -61,7 +61,7 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 	// get decks that feature card
 	suggestions.Decks, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
 
-	// join
+	// join channels
 	if materialChannel != nil {
 		<-materialChannel
 	}
