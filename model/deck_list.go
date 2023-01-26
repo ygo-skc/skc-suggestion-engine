@@ -24,8 +24,8 @@ type DeckList struct {
 	Tags              []string           `bson:"tags" json:"tags" validate:"required"`
 	CreatedAt         time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt         time.Time          `bson:"updatedAt" json:"updatedAt"`
-	MainDeck          *[]Content         `bson:"mainDeck,omitempty" json:"mainDeck"`
-	ExtraDeck         *[]Content         `bson:"extraDeck,omitempty" json:"extraDeck"`
+	MainDeck          *[]Content         `bson:"mainDeck,omitempty" json:"mainDeck,omitempty"`
+	ExtraDeck         *[]Content         `bson:"extraDeck,omitempty" json:"extraDeck,omitempty"`
 }
 
 type Content struct {
