@@ -79,7 +79,7 @@ func InitSuggestionMocks() map[string]model.CardSuggestions {
 			MaterialArchetypes: &[]string{},
 			NamedReferences:    &[]model.CardReference{},
 			ReferencedArchetypes: &[]string{
-				"HERO", "HERO",
+				"HERO",
 			},
 		},
 	}

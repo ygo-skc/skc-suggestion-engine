@@ -129,28 +129,46 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 
 	namedReferences := map[string]model.Card{}
 	referenceOccurrence := map[string]int{}
-	archetypalReferences := []string{}
+	archetypalReferences := map[string]bool{}
+	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
 
 	for _, token := range tokens {
 		cleanupToken(&token)
 
-		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
-			archetypalReferences = append(archetypalReferences, token)
-		} else {
-			namedReferences[card.CardID] = card
+		// if we already searched the token before we don't need to waste time re-searching it in DB
+		if _, isPresent := archetypalReferences[token]; isPresent {
+			continue
+		}
+		if _, isPresent := tokenToCardId[token]; isPresent {
+			referenceOccurrence[tokenToCardId[token]] += 1
+			continue
+		}
 
-			if _, isPresent := referenceOccurrence[card.CardID]; !isPresent {
-				referenceOccurrence[card.CardID] = 0
-			}
-			referenceOccurrence[card.CardID] += 1
+		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
+			// add occurrence of archetype to map
+			archetypalReferences[token] = true
+		} else {
+			// add occurrence of referenced card to maps
+			namedReferences[card.CardID] = card
+			referenceOccurrence[card.CardID] = 1
+			tokenToCardId[token] = card.CardID
 		}
 	}
 
+	// get unique archetypes
+	uniqueArchetypalReferences := make([]string, len(archetypalReferences))
+	ind := 0
+	for ref := range archetypalReferences {
+		uniqueArchetypalReferences[ind] = ref
+		ind++
+	}
+	sort.Strings(uniqueArchetypalReferences) // needed as source of this array was a map and maps don't have predictable sorting - tests will fail randomly without sort
+
 	if len(archetypalReferences) > 0 {
-		log.Printf("Could not find the following in DB: %v. Potentially an archetype?", archetypalReferences)
+		log.Printf("Could not find the following in DB: %v. Potentially archetypes?", archetypalReferences)
 	}
 
-	return namedReferences, referenceOccurrence, archetypalReferences
+	return namedReferences, referenceOccurrence, uniqueArchetypalReferences
 }
 
 func cleanupToken(token *string) {
