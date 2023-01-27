@@ -197,5 +197,14 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			MonsterAttack:  util.InlineUInt16Pointer(1500),
 			MonsterDefense: util.InlineUInt16Pointer(1200),
 		},
+		"Elemental HERO Stratos": {
+			CardID:         "40044918",
+			CardColor:      "Effect",
+			CardName:       "Elemental HERO Stratos",
+			CardEffect:     `When this card is Normal or Special Summoned: You can activate 1 of these effects.\n&bull; Destroy Spells/Traps on the field, up to the number of "HERO" monsters you control, except this card.\n&bull; Add 1 "HERO" monster from your Deck to your hand.`,
+			MonsterType:    util.InlineStringPointer("Warrior/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(1800),
+			MonsterDefense: util.InlineUInt16Pointer(300),
+		},
 	}
 )

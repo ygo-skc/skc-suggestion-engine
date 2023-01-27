@@ -74,5 +74,13 @@ func InitSuggestionMocks() map[string]model.CardSuggestions {
 			NamedReferences:      &[]model.CardReference{},
 			ReferencedArchetypes: &[]string{},
 		},
+		"Elemental HERO Stratos": {
+			NamedMaterials:     &[]model.CardReference{},
+			MaterialArchetypes: &[]string{},
+			NamedReferences:    &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{
+				"HERO", "HERO",
+			},
+		},
 	}
 }
