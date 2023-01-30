@@ -10,9 +10,9 @@ type Card struct {
 	CardName       string  `db:"card_name" json:"cardName"`
 	CardAttribute  string  `db:"card_attribute" json:"cardAttribute"`
 	CardEffect     string  `db:"card_effect" json:"cardEffect"`
-	MonsterType    *string `db:"monster_type" json:"monsterType"`
-	MonsterAttack  *uint16 `db:"monster_attack" json:"monsterAttack"`
-	MonsterDefense *uint16 `db:"monster_defense" json:"monsterDefense"`
+	MonsterType    *string `db:"monster_type" json:"monsterType,omitempty"`
+	MonsterAttack  *uint16 `db:"monster_attack" json:"monsterAttack,omitempty"`
+	MonsterDefense *uint16 `db:"monster_defense" json:"monsterDefense,omitempty"`
 }
 
 func (c Card) IsExtraDeckMonster() bool {

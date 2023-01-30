@@ -36,7 +36,7 @@ func getStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	downstream := []model.DownstreamItem{skcDBStatus, skcSuggestionDBStatus}
 
-	status := model.Status{Version: "1.0.3", Downstream: downstream}
+	status := model.Status{Version: "1.0.4", Downstream: downstream}
 
 	log.Printf("SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
 	res.WriteHeader(http.StatusOK)

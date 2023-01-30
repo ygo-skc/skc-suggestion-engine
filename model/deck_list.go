@@ -16,7 +16,7 @@ type DeckList struct {
 	ID                primitive.ObjectID `bson:"_id,omitempty" json:"id"`
 	Name              string             `bson:"name" json:"name" validate:"required,decklistname"`
 	ContentB64        string             `bson:"content" json:"listContent" validate:"required,base64"`
-	VideoUrl          string             `bson:"videoUrl" validate:"omitempty,url"`
+	VideoUrl          string             `bson:"videoUrl" json:"videoUrl" validate:"omitempty,url"`
 	UniqueCards       []string           `bson:"uniqueCards" json:"uniqueCards" validate:"omitempty"`
 	DeckMascots       []string           `bson:"deckMascots" json:"deckMascots" validate:"omitempty,deckmascots"`
 	NumMainDeckCards  int                `bson:"numMainDeckCards" json:"numMainDeckCards"`
@@ -24,8 +24,8 @@ type DeckList struct {
 	Tags              []string           `bson:"tags" json:"tags" validate:"required"`
 	CreatedAt         time.Time          `bson:"createdAt" json:"createdAt"`
 	UpdatedAt         time.Time          `bson:"updatedAt" json:"updatedAt"`
-	MainDeck          *[]Content         `bson:"mainDeck,omitempty" json:"mainDeck"`
-	ExtraDeck         *[]Content         `bson:"extraDeck,omitempty" json:"extraDeck"`
+	MainDeck          *[]Content         `bson:"mainDeck,omitempty" json:"mainDeck,omitempty"`
+	ExtraDeck         *[]Content         `bson:"extraDeck,omitempty" json:"extraDeck,omitempty"`
 }
 
 type Content struct {
