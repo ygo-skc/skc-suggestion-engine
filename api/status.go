@@ -11,34 +11,30 @@ import (
 // Handler for status/health check endpoint of the api.
 // Will get status of downstream services as well to help isolate problems.
 func getStatusHandler(res http.ResponseWriter, req *http.Request) {
-	log.Println("Getting API status")
+	downstreamHealth := []model.DownstreamItem{}
 
-	var skcDBStatus model.DownstreamItem
-	var skcSuggestionDBStatus model.DownstreamItem
-
-	var err error
 	var skcDBVersion string
 	var skcSuggestionDBVersion string
 
 	// get status on SKC DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if skcDBVersion, err = skcDBInterface.GetSKCDBVersion(); err != nil {
-		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Down"}
+	if dbVersion, err := skcDBInterface.GetSKCDBVersion(); err != nil {
+		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC API DB", Status: model.Down})
 	} else {
-		skcDBStatus = model.DownstreamItem{ServiceName: "SKC API DB", Status: "Up"}
+		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC API DB", Status: model.Up})
+		skcDBVersion = dbVersion
 	}
 
 	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if skcSuggestionDBVersion, err = skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(); err != nil {
-		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Down"}
+	if dbVersion, err := skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(); err != nil {
+		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: model.Down})
 	} else {
-		skcSuggestionDBStatus = model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: "Up"}
+		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: model.Up})
+		skcSuggestionDBVersion = dbVersion
 	}
 
-	downstream := []model.DownstreamItem{skcDBStatus, skcSuggestionDBStatus}
+	status := model.APIHealth{Version: "1.1.0", Downstream: downstreamHealth}
 
-	status := model.Status{Version: "1.0.4", Downstream: downstream}
-
-	log.Printf("SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
+	log.Printf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion)
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(status)
 }
