@@ -22,7 +22,7 @@ var (
 func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Println("Getting suggestions for card w/ ID:", cardID)
+	log.Printf("Getting suggestions for card w/ ID: %s", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)

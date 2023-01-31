@@ -15,13 +15,6 @@ import (
 func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 	log.Println("Adding new traffic record...")
 
-	// verify client can call endpoint
-	if err := verifyApiKey(req.Header); err != nil {
-		res.WriteHeader(http.StatusUnauthorized)
-		json.NewEncoder(res).Encode(err)
-		return
-	}
-
 	// deserialize body
 	var trafficData model.TrafficAnalysisInput
 	if b, err := ioutil.ReadAll(req.Body); err != nil {
