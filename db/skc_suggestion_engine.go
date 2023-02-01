@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -104,12 +105,10 @@ func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	defer cancel()
 
 	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, ta); err != nil {
-		log.Println("Error inserting traffic data into DB", err)
-
-		return &model.APIError{Message: "Error occurred while attempting to insert new traffic data."}
+		log.Printf("Error inserting traffic data into DB: %v", err)
+		return &model.APIError{Message: "Error occurred while attempting to insert new traffic data.", StatusCode: http.StatusInternalServerError}
 	} else {
-		log.Println("Successfully inserted traffic data into DB, ID:", res.InsertedID)
+		log.Printf("Successfully inserted traffic data into DB, ID: %v", res.InsertedID)
+		return nil
 	}
-
-	return nil
 }

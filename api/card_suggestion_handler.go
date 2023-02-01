@@ -13,13 +13,12 @@ import (
 )
 
 var (
-	quotedStringRegex            = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
-	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
+	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
 )
 
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
-func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 	log.Printf("Getting suggestions for card w/ ID: %s", cardID)

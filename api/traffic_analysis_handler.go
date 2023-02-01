@@ -11,7 +11,7 @@ import (
 )
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
-func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
+func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Adding new traffic record...")
 
 	// deserialize body
@@ -49,7 +49,7 @@ func submitNewTrafficData(res http.ResponseWriter, req *http.Request) {
 	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: *trafficData.ResourceUtilized, Source: source}
 
 	if err := db.InsertTrafficData(trafficAnalysis); err != nil {
-		res.WriteHeader(http.StatusInternalServerError)
+		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return
 	}

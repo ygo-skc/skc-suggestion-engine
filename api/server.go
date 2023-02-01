@@ -85,15 +85,15 @@ func ConfigureServer() {
 
 	// configure routes
 	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
-	unprotectedRoutes.HandleFunc("/status", getStatusHandler)
-	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
-	unprotectedRoutes.HandleFunc("/deck", submitNewDeckList).Methods(http.MethodPost).Name("Deck List Submission")
-	unprotectedRoutes.HandleFunc("/deck/{deckID:[0-9a-z]+}", getDeckList).Methods(http.MethodGet).Name("Retrieve Info On Deck")
+	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
+	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
+	unprotectedRoutes.HandleFunc("/deck", submitNewDeckListHandler).Methods(http.MethodPost).Name("Deck List Submission")
+	unprotectedRoutes.HandleFunc("/deck/{deckID:[0-9a-z]+}", getDeckListHandler).Methods(http.MethodGet).Name("Retrieve Info On Deck")
 
 	// admin routes
 	protectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
 	protectedRoutes.Use(verifyAPIKeyMiddleware)
-	protectedRoutes.HandleFunc("/traffic-analysis", submitNewTrafficData).Methods(http.MethodPost).Name("Traffic Analysis")
+	protectedRoutes.HandleFunc("/traffic-analysis", submitNewTrafficDataHandler).Methods(http.MethodPost).Name("Traffic Analysis")
 
 	// common middleware
 	router.Use(commonHeadersMiddleware)

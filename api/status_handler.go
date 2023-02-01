@@ -10,7 +10,7 @@ import (
 
 // Handler for status/health check endpoint of the api.
 // Will get status of downstream services as well to help isolate problems.
-func getStatusHandler(res http.ResponseWriter, req *http.Request) {
+func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 	downstreamHealth := []model.DownstreamItem{}
 
 	var skcDBVersion string

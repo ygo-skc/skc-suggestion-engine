@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -14,7 +15,11 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
-func submitNewDeckList(res http.ResponseWriter, req *http.Request) {
+var (
+	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
+)
+
+func submitNewDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	var deckList model.DeckList
 
 	if b, err := ioutil.ReadAll(req.Body); err != nil {
@@ -105,7 +110,7 @@ func transformDeckListStringToMap(list string) (model.DeckListBreakdown, model.A
 	return model.DeckListBreakdown{CardQuantity: cardCopiesInDeck, CardIDs: cards}, model.APIError{}
 }
 
-func getDeckList(res http.ResponseWriter, req *http.Request) {
+func getDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	deckID := pathVars["deckID"]
 	log.Println("Getting content for deck w/ ID:", deckID)
