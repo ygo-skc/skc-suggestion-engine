@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/base64"
 	"encoding/json"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
@@ -22,10 +21,12 @@ var (
 func submitNewDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	var deckList model.DeckList
 
-	if b, err := ioutil.ReadAll(req.Body); err != nil {
-		log.Println("Error occurred while reading the request body.")
-	} else {
-		json.Unmarshal(b, &deckList)
+	if err := json.NewDecoder(req.Body).Decode(&deckList); err != nil {
+		log.Println("Error occurred while reading submitNewDeckListHandler request body.")
+
+		res.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(res).Encode(model.APIError{Message: "Body could not be deserialized."})
+		return
 	}
 
 	log.Printf("Client attempting to submit new deck with name {%s} and with list contents (in base64) {%s}", deckList.Name, deckList.ContentB64)
