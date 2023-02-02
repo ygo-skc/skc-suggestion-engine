@@ -58,30 +58,6 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*mode
 	return &card, nil
 }
 
-// TODO: document
-// TODO: find way to make code more readable
-func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string) (*[]model.Card, *model.APIError) {
-	cards := &[]model.Card{}
-	formattedCardName := "%" + cardName + "%"
-
-	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName); err != nil {
-		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
-		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
-	} else {
-		for rows.Next() {
-			var card model.Card
-			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-				log.Printf("Error occurred while parsing results: %v.", err)
-				return nil, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
-			} else {
-				*cards = append(*cards, card)
-			}
-		}
-	}
-
-	return cards, nil
-}
-
 func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
 	args := make([]interface{}, len(cards))
 	for index, cardId := range cards {
@@ -118,4 +94,28 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 	}
 
 	return card, nil
+}
+
+// TODO: document
+// TODO: find way to make code more readable
+func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string) (*[]model.Card, *model.APIError) {
+	cards := &[]model.Card{}
+	formattedCardName := "%" + cardName + "%"
+
+	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName); err != nil {
+		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
+		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	} else {
+		for rows.Next() {
+			var card model.Card
+			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
+				log.Printf("Error occurred while parsing results: %v.", err)
+				return nil, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
+			} else {
+				*cards = append(*cards, card)
+			}
+		}
+	}
+
+	return cards, nil
 }
