@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
@@ -46,7 +47,7 @@ func TestGetSuggestions(t *testing.T) {
 		assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
 		assert.Equal(expectedSuggestions.MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
 
-		removeSelfReference(cardName, expectedSuggestions.NamedReferences)
+		util.RemoveSelfReference(cardName, expectedSuggestions.NamedReferences)
 		assert.Equal(expectedSuggestions.NamedReferences, suggestions.NamedReferences, "Named References values did not match")
 		assert.Equal(expectedSuggestions.ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
 	}

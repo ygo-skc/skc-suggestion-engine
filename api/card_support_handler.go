@@ -28,7 +28,13 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		support.Support = s
+		references := make([]model.CardReference, len(*s))
+
+		for ind, card := range *s {
+			references[ind] = model.CardReference{Card: card}
+		}
+
+		support.Support = &references
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(support)

@@ -78,32 +78,9 @@ func getMaterialRefs(s *model.CardSuggestions, materialString string, c chan boo
 // will also check and remove self references
 func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, c chan bool) {
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-	s.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
+	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
 
 	c <- true
-}
-
-// looks for a self reference, if a self reference is found it is removed from original slice
-// this method returns true if a self reference is found
-func removeSelfReference(self string, cr *[]model.CardReference) bool {
-	hasSelfRef := false
-
-	if cr != nil {
-		x := 0
-		for _, ref := range *cr {
-			if ref.Card.CardName != self {
-				(*cr)[x] = ref
-				x++
-			} else {
-				hasSelfRef = true
-			}
-		}
-
-		*cr = (*cr)[:x]
-		return hasSelfRef
-	} else {
-		return hasSelfRef
-	}
 }
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
