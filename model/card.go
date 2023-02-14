@@ -39,3 +39,5 @@ func (card Card) GetPotentialMaterialsAsString() string {
 	}
 	return effectTokens[0]
 }
+
+type QuotedToken = string

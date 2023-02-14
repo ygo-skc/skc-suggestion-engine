@@ -41,28 +41,28 @@ func buildSupport(cardName string, c *[]model.Card) (*[]model.Card, *[]model.Car
 	materialFor := make([]model.Card, 0)
 
 	for _, card := range *c {
-		if card.IsExtraDeckMonster() {
-			// materialFor = append(materialFor, card)
-			tokens := quotedStringRegex.FindAllString(card.GetPotentialMaterialsAsString(), -1)
-			isMaterialFor := false
-
-			for _, token := range tokens {
-				util.CleanupToken(&token)
-				if cardName == token {
-					isMaterialFor = true
-					break
-				}
-			}
-
-			if isMaterialFor {
-				materialFor = append(materialFor, card)
-			} else {
-				support = append(support, card)
-			}
+		tokens := quotedStringRegex.FindAllString(card.GetPotentialMaterialsAsString(), -1)
+		if card.IsExtraDeckMonster() && isCardAMaterialForReference(tokens, cardName) {
+			materialFor = append(materialFor, card)
 		} else {
 			support = append(support, card)
 		}
 	}
 
 	return &support, &materialFor
+}
+
+func isCardAMaterialForReference(tokens []model.QuotedToken, cardName string) bool {
+	isMaterialFor := false
+
+	for _, token := range tokens {
+		util.CleanupToken(&token)
+
+		if cardName == token {
+			isMaterialFor = true
+			break
+		}
+	}
+
+	return isMaterialFor
 }

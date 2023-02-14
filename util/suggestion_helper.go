@@ -29,10 +29,8 @@ func RemoveSelfReference(self string, cr *[]model.CardReference) bool {
 	}
 }
 
-type quotedToken = string
-
 // cleans up a quoted string found in card text so its easier to parse
-func CleanupToken(t *quotedToken) {
+func CleanupToken(t *model.QuotedToken) {
 	*t = strings.TrimSpace(*t)
 	*t = strings.ReplaceAll(*t, "\".", "")
 	*t = strings.ReplaceAll(*t, "\".", "")
