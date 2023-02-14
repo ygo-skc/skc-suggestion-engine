@@ -14,7 +14,7 @@ const (
 	queryDBVersion                  string = "SELECT VERSION()"
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
-	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_color"
+	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? AND card_number != ? ORDER BY card_color"
 )
 
 // interface
@@ -23,7 +23,7 @@ type SKCDatabaseAccessObject interface {
 	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
-	FindOccurrenceOfCardNameInAllCardEffect(cardName string) (*[]model.Card, *model.APIError)
+	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) (*[]model.Card, *model.APIError)
 }
 
 // impl
@@ -98,11 +98,11 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 
 // TODO: document
 // TODO: find way to make code more readable
-func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string) (*[]model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) (*[]model.Card, *model.APIError) {
 	cards := &[]model.Card{}
 	formattedCardName := "%" + cardName + "%"
 
-	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName); err != nil {
+	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName, cardId); err != nil {
 		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
 		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
 	} else {

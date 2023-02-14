@@ -7,6 +7,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
@@ -24,19 +25,44 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get support
-	if s, err := skcDBInterface.FindOccurrenceOfCardNameInAllCardEffect(support.Card.CardName); err != nil {
+	if s, err := skcDBInterface.FindOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		references := make([]model.CardReference, len(*s))
-
-		for ind, card := range *s {
-			references[ind] = model.CardReference{Card: card}
-		}
-
-		support.Support = &references
+		support.ReferencedBy, support.MaterialFor = buildSupport(support.Card.CardName, s)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(support)
 	}
+}
+
+func buildSupport(cardName string, c *[]model.Card) (*[]model.Card, *[]model.Card) {
+	support := make([]model.Card, 0)
+	materialFor := make([]model.Card, 0)
+
+	for _, card := range *c {
+		if card.IsExtraDeckMonster() {
+			// materialFor = append(materialFor, card)
+			tokens := quotedStringRegex.FindAllString(card.GetPotentialMaterialsAsString(), -1)
+			isMaterialFor := false
+
+			for _, token := range tokens {
+				util.CleanupToken(&token)
+				if cardName == token {
+					isMaterialFor = true
+					break
+				}
+			}
+
+			if isMaterialFor {
+				materialFor = append(materialFor, card)
+			} else {
+				support = append(support, card)
+			}
+		} else {
+			support = append(support, card)
+		}
+	}
+
+	return &support, &materialFor
 }
