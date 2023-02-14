@@ -81,13 +81,13 @@ func TestCleanupReference(t *testing.T) {
 
 	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
 	for _, value := range baseCases {
-		cleanupToken(&value)
+		util.CleanupToken(&value)
 		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
 	}
 
 	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
 	for _, value := range specialCases {
-		cleanupToken(&value)
+		util.CleanupToken(&value)
 		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }
