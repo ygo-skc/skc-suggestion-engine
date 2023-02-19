@@ -13,9 +13,9 @@ import (
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Printf("Getting associated support cards for card w/ ID: %s", cardID)
+	log.Printf("Getting cards that support card w/ ID: %s", cardID)
 
-	var support model.CardSupport
+	support := model.CardSupport{ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
 	if cardToGetSupportFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
@@ -28,28 +28,35 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	if s, err := skcDBInterface.FindOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
+		return
+	} else if len(*s) == 0 {
+		log.Println("No support found")
 	} else {
-		support.ReferencedBy, support.MaterialFor = buildSupport(support.Card.CardName, s)
-
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(support)
+		support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card.CardName, s)
+		log.Printf("%s has %d cards that directly reference it (excluding cards referencing it as a material)", cardID, len(support.ReferencedBy))
+		log.Printf("%s can be used as a material for %d cards", cardID, len(support.MaterialFor))
 	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(support)
 }
 
-func buildSupport(cardName string, c *[]model.Card) (*[]model.Card, *[]model.Card) {
-	support := make([]model.Card, 0)
-	materialFor := make([]model.Card, 0)
+// iterates over a list of cards and attempts to determine if given cardName is found in material clause or within the body of the card
+// if the name is found in the material clause, we can assume the cardName is a required or optional summoning material - otherwise its a support card
+func determineSupportCards(cardName string, c *[]model.Card) ([]model.Card, []model.Card) {
+	referencedBy := []model.Card{}
+	materialFor := []model.Card{}
 
 	for _, card := range *c {
 		tokens := quotedStringRegex.FindAllString(card.GetPotentialMaterialsAsString(), -1)
 		if card.IsExtraDeckMonster() && isCardAMaterialForReference(tokens, cardName) {
 			materialFor = append(materialFor, card)
 		} else {
-			support = append(support, card)
+			referencedBy = append(referencedBy, card)
 		}
 	}
 
-	return &support, &materialFor
+	return referencedBy, materialFor
 }
 
 func isCardAMaterialForReference(tokens []model.QuotedToken, cardName string) bool {

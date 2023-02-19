@@ -16,7 +16,7 @@ type CardSuggestions struct {
 }
 
 type CardSupport struct {
-	Card         *Card   `json:"card"`
-	ReferencedBy *[]Card `json:"referencedBy"`
-	MaterialFor  *[]Card `json:"materialFor"`
+	Card         *Card  `json:"card"`
+	ReferencedBy []Card `json:"referencedBy"`
+	MaterialFor  []Card `json:"materialFor"`
 }
