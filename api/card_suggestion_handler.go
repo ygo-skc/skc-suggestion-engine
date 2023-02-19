@@ -130,7 +130,7 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
 
 	for _, token := range tokens {
-		util.CleanupToken(&token)
+		model.CleanupToken(&token)
 
 		// if we already searched the token before we don't need to waste time re-searching it in DB
 

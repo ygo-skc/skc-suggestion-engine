@@ -1,6 +1,7 @@
 package model
 
 import (
+	"log"
 	"strings"
 )
 
@@ -28,8 +29,10 @@ func (card Card) GetPotentialMaterialsAsString() string {
 		return ""
 	}
 
-	if strings.Contains(card.CardColor, "Pendulum") {
+	color := strings.ToUpper(card.CardColor)
+	if strings.Contains(color, "PENDULUM") && color != "PENDULUM-EFFECT" {
 		effectTokens = strings.SplitAfter(strings.SplitAfter(card.CardEffect, "\n\nMonster Effect\n")[1], "\n")
+		log.Println(effectTokens)
 	} else {
 		effectTokens = strings.SplitAfter(card.CardEffect, "\n")
 	}
@@ -41,3 +44,30 @@ func (card Card) GetPotentialMaterialsAsString() string {
 }
 
 type QuotedToken = string
+
+func (c *Card) IsCardNameFoundInTokens(tokens []QuotedToken) bool {
+	isMaterialFor := false
+
+	for _, token := range tokens {
+		CleanupToken(&token)
+
+		if c.CardName == token {
+			isMaterialFor = true
+			break
+		}
+	}
+
+	return isMaterialFor
+}
+
+// cleans up a quoted string found in card text so its easier to parse
+func CleanupToken(t *QuotedToken) {
+	*t = strings.TrimSpace(*t)
+	*t = strings.ReplaceAll(*t, "\".", "")
+	*t = strings.ReplaceAll(*t, "\".", "")
+	*t = strings.ReplaceAll(*t, "'.", "")
+	*t = strings.ReplaceAll(*t, "',", "")
+
+	*t = strings.Trim(*t, "'")
+	*t = strings.Trim(*t, "\"")
+}

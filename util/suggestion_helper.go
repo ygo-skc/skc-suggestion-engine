@@ -1,8 +1,6 @@
 package util
 
 import (
-	"strings"
-
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -27,16 +25,4 @@ func RemoveSelfReference(self string, cr *[]model.CardReference) bool {
 	} else {
 		return hasSelfRef
 	}
-}
-
-// cleans up a quoted string found in card text so its easier to parse
-func CleanupToken(t *model.QuotedToken) {
-	*t = strings.TrimSpace(*t)
-	*t = strings.ReplaceAll(*t, "\".", "")
-	*t = strings.ReplaceAll(*t, "\".", "")
-	*t = strings.ReplaceAll(*t, "'.", "")
-	*t = strings.ReplaceAll(*t, "',", "")
-
-	*t = strings.Trim(*t, "'")
-	*t = strings.Trim(*t, "\"")
 }
