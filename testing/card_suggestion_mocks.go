@@ -1,6 +1,8 @@
 package testing
 
-import "github.com/ygo-skc/skc-suggestion-engine/model"
+import (
+	"github.com/ygo-skc/skc-suggestion-engine/model"
+)
 
 var (
 	ExpectedReferences = InitSuggestionMocks()
