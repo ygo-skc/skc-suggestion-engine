@@ -31,7 +31,7 @@ func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingName(cardName st
 	}
 }
 
-func (imp SKCDatabaseAccessObjectMock) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) (*[]model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
 	log.Fatalln("Method not mocked")
 	return nil, nil
 }

@@ -87,7 +87,7 @@ func ConfigureServer() {
 	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
 	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
-	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/references", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
+	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/support", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
 	unprotectedRoutes.HandleFunc("/deck", submitNewDeckListHandler).Methods(http.MethodPost).Name("Deck List Submission")
 	unprotectedRoutes.HandleFunc("/deck/{deckID:[0-9a-z]+}", getDeckListHandler).Methods(http.MethodGet).Name("Retrieve Info On Deck")
 

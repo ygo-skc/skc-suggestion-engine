@@ -23,7 +23,7 @@ type SKCDatabaseAccessObject interface {
 	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
-	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) (*[]model.Card, *model.APIError)
+	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 }
 
 // impl
@@ -98,8 +98,8 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 
 // TODO: document
 // TODO: find way to make code more readable
-func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) (*[]model.Card, *model.APIError) {
-	cards := &[]model.Card{}
+func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
+	cards := []model.Card{}
 	formattedCardName := "%" + cardName + "%"
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName, cardId); err != nil {
@@ -112,7 +112,7 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 				log.Printf("Error occurred while parsing results: %v.", err)
 				return nil, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
 			} else {
-				*cards = append(*cards, card)
+				cards = append(cards, card)
 			}
 		}
 	}
