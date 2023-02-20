@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
@@ -35,42 +34,39 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 
 func TestGetSuggestions(t *testing.T) {
 	// setup
-	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	for cardName, expectedSuggestions := range skc_testing.ExpectedReferences {
+	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
 		suggestions := getSuggestions(&mock)
 
-		assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
-		assert.Equal(expectedSuggestions.MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
 
-		util.RemoveSelfReference(cardName, expectedSuggestions.NamedReferences)
-		assert.Equal(expectedSuggestions.NamedReferences, suggestions.NamedReferences, "Named References values did not match")
-		assert.Equal(expectedSuggestions.ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, "Named References values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
 	}
 }
 
 func TestGetReferences(t *testing.T) {
 	// setup
-	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 
-	for cardName, expectedData := range skc_testing.ExpectedReferences {
+	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
 		validateMaterialReferences(
 			skc_testing.CardMocks[cardName],
-			*expectedData.NamedMaterials,
-			*expectedData.MaterialArchetypes,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes,
 			assert,
 		)
 
 		validateReferences(
 			skc_testing.CardMocks[cardName],
-			*expectedData.NamedReferences,
-			*expectedData.ReferencedArchetypes,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedReferences,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].ReferencedArchetypes,
 			assert,
 		)
 	}
