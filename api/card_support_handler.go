@@ -40,18 +40,18 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(support)
 }
 
-// iterates over a list of cards and attempts to determine if given cardName is found in material clause or within the body of the card
-// if the name is found in the material clause, we can assume the cardName is a required or optional summoning material - otherwise its a support card
-func determineSupportCards(card *model.Card, c *[]model.Card) ([]model.Card, []model.Card) {
+// Iterates over a list of card references and attempts to determine if subject is found in material clause or within the body of the reference.
+// If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
+func determineSupportCards(subject *model.Card, references *[]model.Card) ([]model.Card, []model.Card) {
 	referencedBy := []model.Card{}
 	materialFor := []model.Card{}
 
-	for _, card := range *c {
-		tokens := quotedStringRegex.FindAllString(card.GetPotentialMaterialsAsString(), -1)
-		if card.IsExtraDeckMonster() && card.IsCardNameFoundInTokens(tokens) {
-			materialFor = append(materialFor, card)
+	for _, reference := range *references {
+		tokens := quotedStringRegex.FindAllString(reference.GetPotentialMaterialsAsString(), -1)
+		if reference.IsExtraDeckMonster() && subject.IsCardNameFoundInTokens(tokens) {
+			materialFor = append(materialFor, reference)
 		} else {
-			referencedBy = append(referencedBy, card)
+			referencedBy = append(referencedBy, reference)
 		}
 	}
 
