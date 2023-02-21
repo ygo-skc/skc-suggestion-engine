@@ -100,7 +100,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 // TODO: find way to make code more readable
 func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
 	cards := []model.Card{}
-	formattedCardName := "%" + cardName + "%"
+	formattedCardName := `%"` + cardName + `"%`
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName, cardId); err != nil {
 		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
