@@ -12,11 +12,14 @@ type CardSuggestions struct {
 	NamedReferences      *[]CardReference `json:"namedReferences"`
 	MaterialArchetypes   *[]string        `json:"materialArchetypes"`
 	ReferencedArchetypes *[]string        `json:"referencedArchetypes"`
-	Decks                *[]DeckList      `json:"decks"`
 }
 
 type CardSupport struct {
 	Card         *Card  `json:"card"`
 	ReferencedBy []Card `json:"referencedBy"`
 	MaterialFor  []Card `json:"materialFor"`
+}
+
+type SuggestedDecks struct {
+	FeaturedIn *[]DeckList `json:"featuredIn"`
 }

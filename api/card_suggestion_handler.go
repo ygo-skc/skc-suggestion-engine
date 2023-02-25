@@ -58,9 +58,6 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 
 	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
 
-	// get decks that feature card
-	suggestions.Decks, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
-
 	// join channels
 	if materialChannel != nil {
 		<-materialChannel
