@@ -21,6 +21,7 @@ sftp -i ~/.ssh/skc-server.pem "${user}@${server}" << EOF
 	put -r db/
 	put -r model/
 	put -r util/
+	put -r validation/
 	put -r data/
 	put main.go
 	put go.mod
