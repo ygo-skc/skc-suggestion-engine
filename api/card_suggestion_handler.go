@@ -10,19 +10,19 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 var (
-	quotedStringRegex            = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
-	deckListCardAndQuantityRegex = regexp.MustCompile("[1-3][xX][0-9]{8}")
+	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
 )
 
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
-func getSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Println("Getting suggestions for card w/ ID:", cardID)
+	log.Printf("Getting suggestions for card w/ ID: %s", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
@@ -58,9 +58,6 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 
 	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
 
-	// get decks that feature card
-	suggestions.Decks, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardToGetSuggestionsFor.CardID})
-
 	// join channels
 	if materialChannel != nil {
 		<-materialChannel
@@ -79,32 +76,9 @@ func getMaterialRefs(s *model.CardSuggestions, materialString string, c chan boo
 // will also check and remove self references
 func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, c chan bool) {
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-	s.HasSelfReference = removeSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
+	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
 
 	c <- true
-}
-
-// looks for a self reference, if a self reference is found it is removed from original slice
-// this method returns true if a self reference is found
-func removeSelfReference(self string, cr *[]model.CardReference) bool {
-	hasSelfRef := false
-
-	if cr != nil {
-		x := 0
-		for _, ref := range *cr {
-			if ref.Card.CardName != self {
-				(*cr)[x] = ref
-				x++
-			} else {
-				hasSelfRef = true
-			}
-		}
-
-		*cr = (*cr)[:x]
-		return hasSelfRef
-	} else {
-		return hasSelfRef
-	}
 }
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
@@ -127,33 +101,7 @@ func getReferences(s string) (*[]model.CardReference, *[]string) {
 func isolateReferences(s string) (map[string]model.Card, map[string]int, []string) {
 	tokens := quotedStringRegex.FindAllString(s, -1)
 
-	namedReferences := map[string]model.Card{}
-	referenceOccurrence := map[string]int{}
-	archetypalReferences := map[string]bool{}
-	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
-
-	for _, token := range tokens {
-		cleanupToken(&token)
-
-		// if we already searched the token before we don't need to waste time re-searching it in DB
-		if _, isPresent := archetypalReferences[token]; isPresent {
-			continue
-		}
-		if _, isPresent := tokenToCardId[token]; isPresent {
-			referenceOccurrence[tokenToCardId[token]] += 1
-			continue
-		}
-
-		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
-			// add occurrence of archetype to map
-			archetypalReferences[token] = true
-		} else {
-			// add occurrence of referenced card to maps
-			namedReferences[card.CardID] = card
-			referenceOccurrence[card.CardID] = 1
-			tokenToCardId[token] = card.CardID
-		}
-	}
+	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(tokens)
 
 	// get unique archetypes
 	uniqueArchetypalReferences := make([]string, len(archetypalReferences))
@@ -171,13 +119,39 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	return namedReferences, referenceOccurrence, uniqueArchetypalReferences
 }
 
-func cleanupToken(token *string) {
-	*token = strings.TrimSpace(*token)
-	*token = strings.ReplaceAll(*token, "\".", "")
-	*token = strings.ReplaceAll(*token, "\".", "")
-	*token = strings.ReplaceAll(*token, "'.", "")
-	*token = strings.ReplaceAll(*token, "',", "")
+// cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
+func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]int, map[string]bool) {
+	namedReferences := map[string]model.Card{}
+	referenceOccurrence := map[string]int{}
+	archetypalReferences := map[string]bool{}
+	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
 
-	*token = strings.Trim(*token, "'")
-	*token = strings.Trim(*token, "\"")
+	for _, token := range tokens {
+		model.CleanupToken(&token)
+
+		// if we already searched the token before we don't need to waste time re-searching it in DB
+
+		// if token is present in archetype slice, skip token
+		if _, isPresent := archetypalReferences[token]; isPresent {
+			continue
+		}
+
+		// if token mapped to a cardId in previous loop, increase number of occurrences by 1 and skip any other processing this iteration as we already did the processing before
+		if _, isPresent := tokenToCardId[token]; isPresent {
+			referenceOccurrence[tokenToCardId[token]] += 1
+			continue
+		}
+
+		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
+			// add occurrence of archetype to map
+			archetypalReferences[token] = true
+		} else {
+			// add occurrence of referenced card to maps
+			namedReferences[card.CardID] = card
+			referenceOccurrence[card.CardID] = 1
+			tokenToCardId[token] = card.CardID
+		}
+	}
+
+	return namedReferences, referenceOccurrence, archetypalReferences
 }

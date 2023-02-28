@@ -206,5 +206,32 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			MonsterAttack:  util.InlineUInt16Pointer(1800),
 			MonsterDefense: util.InlineUInt16Pointer(300),
 		},
+		"Dark Magician": {
+			CardID:         "46986414",
+			CardColor:      "Normal",
+			CardName:       "Dark Magician",
+			CardEffect:     `The ultimate wizard in terms of attack and defense.`,
+			MonsterType:    util.InlineStringPointer("Spellcaster/Normal"),
+			MonsterAttack:  util.InlineUInt16Pointer(2500),
+			MonsterDefense: util.InlineUInt16Pointer(2100),
+		},
+		"Magicians' Souls": {
+			CardID:         "97631303",
+			CardColor:      "Effect",
+			CardName:       "Magicians' Souls",
+			CardEffect:     `You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;\n&bull; Special Summon this card.\n&bull; Send this card to the GY, then, you can Special Summon 1 "Dark Magician" or 1 "Dark Magician Girl" from your GY.\nYou can only use each effect of "Magicians' Souls" once per turn.`,
+			MonsterType:    util.InlineStringPointer("Spellcaster/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(0),
+			MonsterDefense: util.InlineUInt16Pointer(0),
+		},
+		"Dark Paladin": {
+			CardID:         "98502113",
+			CardColor:      "Fusion",
+			CardName:       "Dark Paladin",
+			CardEffect:     `You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;\n&bull; Special Summon this card.\n&bull; Send this card to the GY, then, you can Special Summon 1 "Dark Magician" or 1 "Dark Magician Girl" from your GY.\nYou can only use each effect of "Magicians' Souls" once per turn.`,
+			MonsterType:    util.InlineStringPointer("Spellcaster/Fusion/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(2900),
+			MonsterDefense: util.InlineUInt16Pointer(2400),
+		},
 	}
 )

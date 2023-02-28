@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/util"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -43,8 +43,8 @@ type TrafficAnalysisInput struct {
 }
 
 func (tai TrafficAnalysisInput) Validate() *APIError {
-	if err := util.V.Struct(tai); err != nil {
-		return &APIError{Message: util.HandleValidationErrors(err)}
+	if err := validation.V.Struct(tai); err != nil {
+		return &APIError{Message: validation.HandleValidationErrors(err)}
 	} else {
 		return nil
 	}

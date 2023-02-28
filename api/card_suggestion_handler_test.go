@@ -34,42 +34,39 @@ func validateReferences(card model.Card, expectedNamedReferences []model.CardRef
 
 func TestGetSuggestions(t *testing.T) {
 	// setup
-	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	for cardName, expectedSuggestions := range skc_testing.ExpectedReferences {
+	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
 		suggestions := getSuggestions(&mock)
 
-		assert.Equal(expectedSuggestions.NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
-		assert.Equal(expectedSuggestions.MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
 
-		removeSelfReference(cardName, expectedSuggestions.NamedReferences)
-		assert.Equal(expectedSuggestions.NamedReferences, suggestions.NamedReferences, "Named References values did not match")
-		assert.Equal(expectedSuggestions.ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, "Named References values did not match")
+		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
 	}
 }
 
 func TestGetReferences(t *testing.T) {
 	// setup
-	skc_testing.ExpectedReferences = skc_testing.InitSuggestionMocks()
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 
-	for cardName, expectedData := range skc_testing.ExpectedReferences {
+	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
 		validateMaterialReferences(
 			skc_testing.CardMocks[cardName],
-			*expectedData.NamedMaterials,
-			*expectedData.MaterialArchetypes,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes,
 			assert,
 		)
 
 		validateReferences(
 			skc_testing.CardMocks[cardName],
-			*expectedData.NamedReferences,
-			*expectedData.ReferencedArchetypes,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedReferences,
+			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].ReferencedArchetypes,
 			assert,
 		)
 	}
@@ -80,13 +77,13 @@ func TestCleanupReference(t *testing.T) {
 
 	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
 	for _, value := range baseCases {
-		cleanupToken(&value)
+		model.CleanupToken(&value)
 		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
 	}
 
 	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
 	for _, value := range specialCases {
-		cleanupToken(&value)
+		model.CleanupToken(&value)
 		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }
