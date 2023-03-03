@@ -12,5 +12,9 @@ var (
 			ReferencedBy: []model.Card{},
 			MaterialFor:  []model.Card{CardMocks["Armityle the Chaos Phantasm"], CardMocks["Armityle the Chaos Phantasm - Phantom of Fury"]},
 		},
+		"Elemental HERO Neos": {
+			ReferencedBy: []model.Card{CardMocks["Neos Wiseman"]},
+			MaterialFor:  []model.Card{CardMocks["Elemental HERO Air Neos"]},
+		},
 	}
 )

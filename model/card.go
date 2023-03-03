@@ -43,13 +43,13 @@ func (card Card) GetPotentialMaterialsAsString() string {
 
 type QuotedToken = string
 
-func (c *Card) IsCardNameFoundInTokens(tokens []QuotedToken) bool {
+func (c Card) IsCardNameFoundInTokens(tokens []QuotedToken) bool {
 	isMaterialFor := false
 
 	for _, token := range tokens {
 		CleanupToken(&token)
 
-		if c.CardName == token {
+		if strings.EqualFold(c.CardName, token) {
 			isMaterialFor = true
 			break
 		}
