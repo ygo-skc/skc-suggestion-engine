@@ -61,11 +61,11 @@ func (c Card) IsCardNameFoundInTokens(tokens []QuotedToken) bool {
 // cleans up a quoted string found in card text so its easier to parse
 func CleanupToken(t *QuotedToken) {
 	*t = strings.TrimSpace(*t)
-	*t = strings.ReplaceAll(*t, "\".", "")
-	*t = strings.ReplaceAll(*t, "\".", "")
+	*t = strings.ReplaceAll(*t, `".`, "")
+	*t = strings.ReplaceAll(*t, `",`, "")
 	*t = strings.ReplaceAll(*t, "'.", "")
 	*t = strings.ReplaceAll(*t, "',", "")
 
 	*t = strings.Trim(*t, "'")
-	*t = strings.Trim(*t, "\"")
+	*t = strings.Trim(*t, `"`)
 }
