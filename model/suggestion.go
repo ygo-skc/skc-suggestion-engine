@@ -25,5 +25,7 @@ type SuggestedDecks struct {
 }
 
 type ArchetypalSuggestions struct {
-	InArchetype []Card `json:"inArchetype"`
+	UsingName  []Card `json:"usingName"`
+	UsingText  []Card `json:"usingText"`
+	Exclusions []Card `json:"exclusions"`
 }

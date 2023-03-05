@@ -25,7 +25,9 @@ type SKCDatabaseAccessObject interface {
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
 	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
-	FindInArchetypeSupport(archetypeName string) ([]model.Card, *model.APIError)
+	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
+	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 }
 
 // impl
@@ -122,11 +124,33 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 	return cards, nil
 }
 
-func (imp SKCDAOImplementation) FindInArchetypeSupport(archetypeName string) ([]model.Card, *model.APIError) {
-	archetypeName = `%` + archetypeName + `%`
+func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
+	archetypeName = `% ` + archetypeName + ` %`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ?", archetypeName); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using archetype name %s. Err %v", archetypeName, err)
+		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	} else {
+		return parseRowsForCard(rows)
+	}
+}
+
+func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
+
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
+		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
+		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	} else {
+		return parseRowsForCard(rows)
+	}
+}
+
+func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
+
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
+		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
 		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)
