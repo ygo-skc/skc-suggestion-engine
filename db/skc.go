@@ -1,6 +1,7 @@
 package db
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"net/http"
@@ -24,6 +25,7 @@ type SKCDatabaseAccessObject interface {
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
 	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
+	FindInArchetypeSupport(archetypeName string) ([]model.Card, *model.APIError)
 }
 
 // impl
@@ -118,4 +120,31 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 	}
 
 	return cards, nil
+}
+
+func (imp SKCDAOImplementation) FindInArchetypeSupport(archetypeName string) ([]model.Card, *model.APIError) {
+	archetypeName = `%` + archetypeName + `%`
+
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ?", archetypeName); err != nil {
+		log.Printf("Error occurred while searching for in-archetype cards using archetype name %s. Err %v", archetypeName, err)
+		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	} else {
+		return parseRowsForCard(rows)
+	}
+}
+
+func parseRowsForCard(rows *sql.Rows) ([]model.Card, *model.APIError) {
+	cards := []model.Card{}
+
+	for rows.Next() {
+		var card model.Card
+		if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
+			log.Printf("Error occurred while parsing results: %v.", err)
+			return nil, &model.APIError{Message: "Error parsing card data from DB.", StatusCode: http.StatusInternalServerError}
+		} else {
+			cards = append(cards, card)
+		}
+	}
+
+	return cards, nil // no parsing error
 }
