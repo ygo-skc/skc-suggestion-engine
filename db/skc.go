@@ -103,25 +103,14 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 // TODO: document
 // TODO: find way to make code more readable
 func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
-	cards := []model.Card{}
 	formattedCardName := `%"` + cardName + `"%`
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, formattedCardName, cardId); err != nil {
 		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
 		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
 	} else {
-		for rows.Next() {
-			var card model.Card
-			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-				log.Printf("Error occurred while parsing results: %v.", err)
-				return nil, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
-			} else {
-				cards = append(cards, card)
-			}
-		}
+		return parseRowsForCard(rows)
 	}
-
-	return cards, nil
 }
 
 func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
