@@ -68,8 +68,9 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []
 		args[index] = cardId
 	}
 	cardData := map[string]model.Card{}
+	query := fmt.Sprintf("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)", variablePlaceholders(len(args)))
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (?"+strings.Repeat(",?", len(args)-1)+")", args...); err != nil {
+	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
 		return nil, model.APIError{Message: "Error occurred while querying DB."}
 	} else {
@@ -114,9 +115,15 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 }
 
 func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
-	archetypeName = `% ` + archetypeName + ` %`
+	// there are three scenarios
+	// - archetype reference could be in the beginning of the name
+	search1 := archetypeName + ` %`
+	// - archetype reference could be in the middle of the name
+	search2 := `% ` + archetypeName + ` %`
+	// - archetype reference could be in the end of the name
+	search3 := `% ` + archetypeName
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ?", archetypeName); err != nil {
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ? OR card_name LIKE ? OR card_name LIKE ?", search1, search2, search3); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using archetype name %s. Err %v", archetypeName, err)
 		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
 	} else {
@@ -160,4 +167,14 @@ func parseRowsForCard(rows *sql.Rows) ([]model.Card, *model.APIError) {
 	}
 
 	return cards, nil // no parsing error
+}
+
+func variablePlaceholders(totalFields int) string {
+	if totalFields == 0 {
+		return ""
+	} else if totalFields == 1 {
+		return "?"
+	} else {
+		return fmt.Sprintf("?%s", strings.Repeat(", ?", totalFields-1))
+	}
 }
