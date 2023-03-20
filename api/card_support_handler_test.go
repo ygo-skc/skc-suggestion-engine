@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -13,6 +14,7 @@ var (
 	cardReferenceSubjects = map[string][]model.Card{
 		"Dark Magician":                   {skc_testing.CardMocks["Magicians' Souls"], skc_testing.CardMocks["Dark Paladin"]},
 		"Hamon, Lord of Striking Thunder": {skc_testing.CardMocks["Armityle the Chaos Phantasm"], skc_testing.CardMocks["Armityle the Chaos Phantasm - Phantom of Fury"]},
+		"Elemental HERO Neos":             {skc_testing.CardMocks["Neos Wiseman"], skc_testing.CardMocks["Elemental HERO Air Neos"]},
 	}
 )
 
@@ -21,7 +23,10 @@ func TestDetermineSupportCards(t *testing.T) {
 	assert := assert.New(t)
 
 	for cardName, references := range cardReferenceSubjects {
-		actualReferencedBy, actualMaterialFor := determineSupportCards(skc_testing.CardMocks[cardName], references)
+		cardMock := skc_testing.CardMocks[cardName]
+		assert.Equal(cardName, cardMock.CardName, fmt.Sprintf("Mock not setup for %s", cardName))
+
+		actualReferencedBy, actualMaterialFor := determineSupportCards(cardMock, references)
 
 		expectedReferencedBy := skc_testing.ExpectedSupportCardsMocks[cardName].ReferencedBy
 		expectedMaterialFor := skc_testing.ExpectedSupportCardsMocks[cardName].MaterialFor

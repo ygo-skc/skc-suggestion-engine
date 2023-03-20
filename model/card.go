@@ -43,29 +43,29 @@ func (card Card) GetPotentialMaterialsAsString() string {
 
 type QuotedToken = string
 
-func (c *Card) IsCardNameFoundInTokens(tokens []QuotedToken) bool {
-	isMaterialFor := false
+func (c Card) IsCardNameInTokens(tokens []QuotedToken) bool {
+	isFound := false
 
 	for _, token := range tokens {
 		CleanupToken(&token)
 
-		if c.CardName == token {
-			isMaterialFor = true
+		if strings.EqualFold(c.CardName, token) {
+			isFound = true
 			break
 		}
 	}
 
-	return isMaterialFor
+	return isFound
 }
 
 // cleans up a quoted string found in card text so its easier to parse
 func CleanupToken(t *QuotedToken) {
 	*t = strings.TrimSpace(*t)
-	*t = strings.ReplaceAll(*t, "\".", "")
-	*t = strings.ReplaceAll(*t, "\".", "")
+	*t = strings.ReplaceAll(*t, `".`, "")
+	*t = strings.ReplaceAll(*t, `",`, "")
 	*t = strings.ReplaceAll(*t, "'.", "")
 	*t = strings.ReplaceAll(*t, "',", "")
 
 	*t = strings.Trim(*t, "'")
-	*t = strings.Trim(*t, "\"")
+	*t = strings.Trim(*t, `"`)
 }

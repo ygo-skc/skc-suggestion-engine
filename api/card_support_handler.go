@@ -48,7 +48,7 @@ func determineSupportCards(subject model.Card, references []model.Card) ([]model
 
 	for _, reference := range references {
 		tokens := quotedStringRegex.FindAllString(reference.GetPotentialMaterialsAsString(), -1)
-		if reference.IsExtraDeckMonster() && subject.IsCardNameFoundInTokens(tokens) {
+		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(tokens) {
 			materialFor = append(materialFor, reference)
 		} else {
 			referencedBy = append(referencedBy, reference)
