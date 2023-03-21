@@ -28,6 +28,7 @@ type SKCDatabaseAccessObject interface {
 	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
 	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	GetRandomCard() (string, *model.APIError)
 }
 
 // impl
@@ -151,6 +152,16 @@ func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeNa
 	} else {
 		return parseRowsForCard(rows)
 	}
+}
+
+func (imp SKCDAOImplementation) GetRandomCard() (string, *model.APIError) {
+	var id sql.NullString
+
+	if err := skcDBConn.QueryRow("SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1").Scan(&id); err != nil {
+		log.Printf("Error occurred while fetching random card ID from database. Err %v", err)
+		return "", &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	}
+	return id.String, nil
 }
 
 func parseRowsForCard(rows *sql.Rows) ([]model.Card, *model.APIError) {
