@@ -16,6 +16,7 @@ const (
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? AND card_number != ? ORDER BY card_color"
+	queryRandomCardID               string = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 )
 
 // interface
@@ -155,13 +156,13 @@ func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeNa
 }
 
 func (imp SKCDAOImplementation) GetRandomCard() (string, *model.APIError) {
-	var id sql.NullString
+	var randomCardId string
 
-	if err := skcDBConn.QueryRow("SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1").Scan(&id); err != nil {
+	if err := skcDBConn.QueryRow(queryRandomCardID).Scan(&randomCardId); err != nil {
 		log.Printf("Error occurred while fetching random card ID from database. Err %v", err)
 		return "", &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
 	}
-	return id.String, nil
+	return randomCardId, nil
 }
 
 func parseRowsForCard(rows *sql.Rows) ([]model.Card, *model.APIError) {

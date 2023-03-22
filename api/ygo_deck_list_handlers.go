@@ -157,3 +157,16 @@ func getDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(deckList)
 }
+
+func getSuggestedDecks(res http.ResponseWriter, req *http.Request) {
+	pathVars := mux.Vars(req)
+	cardID := pathVars["cardID"]
+	log.Printf("Getting decks that use card w/ ID: %s", cardID)
+
+	suggestedDecks := model.SuggestedDecks{}
+
+	suggestedDecks.FeaturedIn, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardID})
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(suggestedDecks)
+}
