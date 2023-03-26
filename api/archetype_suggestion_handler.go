@@ -28,12 +28,12 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err1)
 		return
 	} else if err2 != nil {
-		res.WriteHeader(err1.StatusCode)
-		json.NewEncoder(res).Encode(err1)
+		res.WriteHeader(err2.StatusCode)
+		json.NewEncoder(res).Encode(err2)
 		return
 	} else if err3 != nil {
-		res.WriteHeader(err1.StatusCode)
-		json.NewEncoder(res).Encode(err1)
+		res.WriteHeader(err3.StatusCode)
+		json.NewEncoder(res).Encode(err3)
 		return
 	}
 
