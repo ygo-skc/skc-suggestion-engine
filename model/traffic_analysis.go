@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -44,7 +45,7 @@ type TrafficAnalysisInput struct {
 
 func (tai TrafficAnalysisInput) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(tai); err != nil {
-		return validation.HandleValidationErrors(err)
+		return validation.HandleValidationErrors(err.(validator.ValidationErrors))
 	} else {
 		return nil
 	}

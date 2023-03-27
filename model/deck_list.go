@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -49,7 +50,7 @@ type DeckListBreakdown struct {
 // validate and handle validation error messages
 func (dl DeckList) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(dl); err != nil {
-		return validation.HandleValidationErrors(err)
+		return validation.HandleValidationErrors(err.(validator.ValidationErrors))
 	} else {
 		return nil
 	}

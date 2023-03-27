@@ -27,6 +27,7 @@ const (
 	systemNameValidator    = "systemname"
 	systemVersionValidator = "systemversion"
 	ipv4Validator          = "ipv4"
+	archetypeValidator     = "archetype"
 )
 
 func init() {
@@ -53,9 +54,9 @@ type ValidationErrors struct {
 	TotalErrors int               `json:"totalErrors"`
 }
 
-func HandleValidationErrors(err error) *ValidationErrors {
+func HandleValidationErrors(err validator.ValidationErrors) *ValidationErrors {
 	validationErrors := []validationError{}
-	for _, e := range err.(validator.ValidationErrors) {
+	for _, e := range err {
 		validationErrors = append(validationErrors, validationError{Field: e.Field(), Hint: e.Translate(Translator)})
 	}
 
