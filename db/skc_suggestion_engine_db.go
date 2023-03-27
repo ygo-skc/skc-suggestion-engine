@@ -112,3 +112,17 @@ func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 		return nil
 	}
 }
+
+func IsArchetypeBlackListed(archetypeName string) (bool, *model.APIError) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if count, err := skcSuggestionDB.Collection("blackList").CountDocuments(ctx, bson.M{"type": "archetype", "phrase": archetypeName}); err != nil {
+		return false, &model.APIError{Message: "Error occurred while checking archetype against black list.", StatusCode: http.StatusInternalServerError}
+	} else if count > 0 {
+		log.Printf("%s is blacklisted", archetypeName)
+		return true, nil
+	} else {
+		return false, nil
+	}
+}

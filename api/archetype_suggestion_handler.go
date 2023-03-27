@@ -7,6 +7,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
+	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
@@ -22,6 +23,15 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 		// TODO: update status code
 		json.NewEncoder(res).Encode(validationErr)
+		return
+	}
+
+	if isBlackListed, err := db.IsArchetypeBlackListed(archetypeName); err != nil {
+		res.WriteHeader(err.StatusCode)
+		json.NewEncoder(res).Encode(err)
+		return
+	} else if isBlackListed {
+		// TODO: add error
 		return
 	}
 
