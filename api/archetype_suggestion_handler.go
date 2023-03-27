@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -20,18 +21,16 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
 		log.Printf("%s failed archetype validation", archetypeName)
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
-
-		// TODO: update status code
-		json.NewEncoder(res).Encode(validationErr)
+		validationErr.HandleServerResponse(res)
 		return
 	}
 
-	if isBlackListed, err := db.IsArchetypeBlackListed(archetypeName); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+	if isBlackListed, err := db.IsBlackListed("archetype", archetypeName); err != nil {
+		err.HandleServerResponse(res)
 		return
 	} else if isBlackListed {
-		// TODO: add error
+		err := model.APIError{Message: fmt.Sprintf("%s is a blacklisted archetype. Common english words are blacklisted. This is done to prevent queries that make no logical sense.", archetypeName), StatusCode: http.StatusBadRequest}
+		err.HandleServerResponse(res)
 		return
 	}
 
@@ -45,16 +44,13 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	go getArchetypeExclusions(archetypeName, &archetypalSuggestions, exclusionsChannel)
 
 	if err1, err2, err3 := <-supportUsingCardNameChannel, <-supportUsingTextChannel, <-exclusionsChannel; err1 != nil {
-		res.WriteHeader(err1.StatusCode)
-		json.NewEncoder(res).Encode(err1)
+		err1.HandleServerResponse(res)
 		return
 	} else if err2 != nil {
-		res.WriteHeader(err2.StatusCode)
-		json.NewEncoder(res).Encode(err2)
+		err2.HandleServerResponse(res)
 		return
 	} else if err3 != nil {
-		res.WriteHeader(err3.StatusCode)
-		json.NewEncoder(res).Encode(err3)
+		err3.HandleServerResponse(res)
 		return
 	}
 
@@ -97,6 +93,7 @@ func removeExclusions(archetypalSuggestions *model.ArchetypalSuggestions) {
 	uniqueExclusions := map[string]bool{}
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.CardName] = true
+		log.Printf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.CardName)
 	}
 
 	newList := []model.Card{}

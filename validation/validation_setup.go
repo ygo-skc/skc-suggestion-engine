@@ -1,7 +1,9 @@
 package validation
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 	"regexp"
 
 	"github.com/go-playground/locales/en"
@@ -53,6 +55,11 @@ type validationError struct {
 type ValidationErrors struct {
 	Errors      []validationError `json:"errors"`
 	TotalErrors int               `json:"totalErrors"`
+}
+
+func (e *ValidationErrors) HandleServerResponse(res http.ResponseWriter) {
+	res.WriteHeader(http.StatusUnprocessableEntity)
+	json.NewEncoder(res).Encode(e)
 }
 
 func HandleValidationErrors(err validator.ValidationErrors) *ValidationErrors {
