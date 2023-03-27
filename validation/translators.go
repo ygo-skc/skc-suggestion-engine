@@ -35,4 +35,5 @@ func configureTranslations() {
 	registerTranslation(systemNameValidator, "{0} can only contain letters, numbers, spaces and the special character -.")
 	registerTranslation(systemVersionValidator, "{0} should use major.minor.patch (Semantic Versioning) format.")
 	registerTranslation(ipv4Validator, "{0} should use ipv4 format.")
+	registerTranslation(ArchetypeValidator, "{0} shoud be valid archetype.")
 }

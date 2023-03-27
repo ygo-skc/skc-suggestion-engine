@@ -16,6 +16,7 @@ var (
 	cardIDRegex        = regexp.MustCompile("^[0-9]{8}$")
 	systemNameRegex    = regexp.MustCompile("^[a-zA-Z0-9 \\-]{3,}$")
 	systemVersionRegex = regexp.MustCompile(`^([1-9]\d*|0)(\.(([1-9]\d*)|0)){2,3}$`)
+	archetypeRegex     = regexp.MustCompile("^.{3,}$")
 )
 
 const (
@@ -27,7 +28,7 @@ const (
 	systemNameValidator    = "systemname"
 	systemVersionValidator = "systemversion"
 	ipv4Validator          = "ipv4"
-	archetypeValidator     = "archetype"
+	ArchetypeValidator     = "archetype"
 )
 
 func init() {

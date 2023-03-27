@@ -28,6 +28,10 @@ func configureCustomValidators() {
 		return true
 	})
 
+	V.RegisterValidation(ArchetypeValidator, func(fl validator.FieldLevel) bool {
+		return len(archetypeRegex.FindAllString(fl.Field().String(), -1)) > 0
+	})
+
 	V.RegisterValidation(systemNameValidator, func(fl validator.FieldLevel) bool {
 		return len(systemNameRegex.FindAllString(fl.Field().String(), -1)) > 0
 	})

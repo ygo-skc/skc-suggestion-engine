@@ -5,14 +5,25 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	archetypeName := pathVars["archetypeName"]
 	log.Printf("Getting cards belonging to archetype: %s", archetypeName)
+
+	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
+		log.Printf("%s failed archetype validation", archetypeName)
+		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
+
+		// TODO: update status code
+		json.NewEncoder(res).Encode(validationErr)
+		return
+	}
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
 
