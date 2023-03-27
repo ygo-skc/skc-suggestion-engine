@@ -42,9 +42,9 @@ type TrafficAnalysisInput struct {
 	ResourceUtilized *Resource      `json:"resourceUtilized" validate:"required"`
 }
 
-func (tai TrafficAnalysisInput) Validate() *APIError {
+func (tai TrafficAnalysisInput) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(tai); err != nil {
-		return &APIError{Message: validation.HandleValidationErrors(err)}
+		return validation.HandleValidationErrors(err)
 	} else {
 		return nil
 	}

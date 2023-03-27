@@ -47,9 +47,9 @@ type DeckListBreakdown struct {
 }
 
 // validate and handle validation error messages
-func (dl DeckList) Validate() *APIError {
+func (dl DeckList) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(dl); err != nil {
-		return &APIError{Message: validation.HandleValidationErrors(err)}
+		return validation.HandleValidationErrors(err)
 	} else {
 		return nil
 	}

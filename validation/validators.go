@@ -8,11 +8,11 @@ import (
 
 // Add custom validators to handle validation scenarios not supported out of the box.
 func configureCustomValidators() {
-	V.RegisterValidation("decklistname", func(fl validator.FieldLevel) bool {
+	V.RegisterValidation(deckListNameValidator, func(fl validator.FieldLevel) bool {
 		return len(deckListNameRegex.FindAllString(fl.Field().String(), -1)) > 0
 	})
 
-	V.RegisterValidation("deckmascots", func(fl validator.FieldLevel) bool {
+	V.RegisterValidation(deckMascotsValidator, func(fl validator.FieldLevel) bool {
 		mascots := fl.Field().Interface().([]string)
 
 		for ind, mascot := range mascots {
@@ -28,11 +28,11 @@ func configureCustomValidators() {
 		return true
 	})
 
-	V.RegisterValidation("systemname", func(fl validator.FieldLevel) bool {
+	V.RegisterValidation(systemNameValidator, func(fl validator.FieldLevel) bool {
 		return len(systemNameRegex.FindAllString(fl.Field().String(), -1)) > 0
 	})
 
-	V.RegisterValidation("systemversion", func(fl validator.FieldLevel) bool {
+	V.RegisterValidation(systemVersionValidator, func(fl validator.FieldLevel) bool {
 		return len(systemVersionRegex.FindAllString(fl.Field().String(), -1)) > 0
 	})
 }
