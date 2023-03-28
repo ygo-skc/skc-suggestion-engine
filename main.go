@@ -9,7 +9,7 @@ import (
 
 func main() {
 	util.SetupEnv()
-	db.EstablishSKCDBConn()
+	db.EstablishDBConn()
 	db.EstablishSKCSuggestionEngineDBConn()
 
 	api.ConfigureServer()

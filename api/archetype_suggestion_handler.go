@@ -13,6 +13,23 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
+type archetypeSuggestionHandlers struct {
+	fetchArchetypeSuggestionsHandler func(archetypeName string) ([]model.Card, *model.APIError)
+	archetypeSuggestionCBHandler     func([]model.Card, *model.ArchetypalSuggestions)
+}
+
+var (
+	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+		as.UsingName = dbData
+	}}
+	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+		as.UsingText = dbData
+	}}
+	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+		as.Exclusions = dbData
+	}}
+)
+
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	archetypeName := pathVars["archetypeName"]
@@ -39,9 +56,9 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	// setup channels
 	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan *model.APIError), make(chan *model.APIError), make(chan *model.APIError)
 
-	go getArchetypeSuggestionsUsingCardName(archetypeName, &archetypalSuggestions, supportUsingCardNameChannel)
-	go getArchetypeSuggestionsUsingCardText(archetypeName, &archetypalSuggestions, supportUsingTextChannel)
-	go getArchetypeExclusions(archetypeName, &archetypalSuggestions, exclusionsChannel)
+	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, supportUsingCardNameChannel, cardNameArchetypeSuggestionHandlers)
+	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, supportUsingTextChannel, cardTextArchetypeSuggestionHandlers)
+	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, exclusionsChannel, archetypeExclusionHandlers)
 
 	if err1, err2, err3 := <-supportUsingCardNameChannel, <-supportUsingTextChannel, <-exclusionsChannel; err1 != nil {
 		err1.HandleServerResponse(res)
@@ -56,33 +73,17 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	removeExclusions(&archetypalSuggestions)
 
+	log.Printf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d. cards", archetypeName,
+		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText))
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(archetypalSuggestions)
 }
 
-func getArchetypeSuggestionsUsingCardName(archetypeName string, archetypalSuggestions *model.ArchetypalSuggestions, c chan *model.APIError) {
-	if inArchetype, err := skcDBInterface.FindInArchetypeSupportUsingCardName(archetypeName); err != nil {
+func getArchetypeSuggestion(archetypeName string, as *model.ArchetypalSuggestions, c chan *model.APIError, handlers archetypeSuggestionHandlers) {
+	if dbData, err := handlers.fetchArchetypeSuggestionsHandler(archetypeName); err != nil {
 		c <- err
 	} else {
-		archetypalSuggestions.UsingName = inArchetype
-		c <- nil
-	}
-}
-
-func getArchetypeSuggestionsUsingCardText(archetypeName string, archetypalSuggestions *model.ArchetypalSuggestions, c chan *model.APIError) {
-	if inArchetype, err := skcDBInterface.FindInArchetypeSupportUsingCardText(archetypeName); err != nil {
-		c <- err
-	} else {
-		archetypalSuggestions.UsingText = inArchetype
-		c <- nil
-	}
-}
-
-func getArchetypeExclusions(archetypeName string, archetypalSuggestions *model.ArchetypalSuggestions, c chan *model.APIError) {
-	if exclusions, err := skcDBInterface.FindArchetypeExclusionsUsingCardText(archetypeName); err != nil {
-		c <- err
-	} else {
-		archetypalSuggestions.Exclusions = exclusions
+		handlers.archetypeSuggestionCBHandler(dbData, as)
 		c <- nil
 	}
 }

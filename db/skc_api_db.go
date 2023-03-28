@@ -10,6 +10,10 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+var (
+	skcDBConn *sql.DB
+)
+
 const (
 	// queries
 	queryDBVersion                  string = "SELECT VERSION()"
