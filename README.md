@@ -25,6 +25,9 @@ In order for the API to work locally, do the following steps
 | Command            | Notes        |
 | ------------------ | ------------ |
 | go test ./...      | Run all tests - no special perks |
+| go clean -testcache && go test ./...      | Clear cache and runs all tests again |
+
+There is also a shell script - `test.sh` that can be used to test the API.
 
 ## Contact & Support
 

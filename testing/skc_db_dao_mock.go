@@ -51,6 +51,11 @@ func (imp SKCDatabaseAccessObjectMock) FindArchetypeExclusionsUsingCardText(arch
 	return nil, nil
 }
 
+func (imp SKCDatabaseAccessObjectMock) GetRandomCard() (string, *model.APIError) {
+	log.Fatalln("FindArchetypeExclusionsUsingCardText() not mocked")
+	return "", nil
+}
+
 type ErrorMock struct {
 }
 

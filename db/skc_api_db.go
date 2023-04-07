@@ -10,12 +10,17 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+var (
+	skcDBConn *sql.DB
+)
+
 const (
 	// queries
 	queryDBVersion                  string = "SELECT VERSION()"
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? AND card_number != ? ORDER BY card_color"
+	queryRandomCardID               string = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 )
 
 // interface
@@ -28,6 +33,7 @@ type SKCDatabaseAccessObject interface {
 	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
 	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	GetRandomCard() (string, *model.APIError)
 }
 
 // impl
@@ -151,6 +157,16 @@ func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeNa
 	} else {
 		return parseRowsForCard(rows)
 	}
+}
+
+func (imp SKCDAOImplementation) GetRandomCard() (string, *model.APIError) {
+	var randomCardId string
+
+	if err := skcDBConn.QueryRow(queryRandomCardID).Scan(&randomCardId); err != nil {
+		log.Printf("Error occurred while fetching random card ID from database. Err %v", err)
+		return "", &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+	}
+	return randomCardId, nil
 }
 
 func parseRowsForCard(rows *sql.Rows) ([]model.Card, *model.APIError) {

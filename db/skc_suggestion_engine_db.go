@@ -10,7 +10,15 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+)
+
+var (
+	skcSuggestionDB           *mongo.Database
+	blackListCollection       *mongo.Collection
+	deckListCollection        *mongo.Collection
+	trafficAnalysisCollection *mongo.Collection
 )
 
 // interface
@@ -47,7 +55,7 @@ func InsertDeckList(deckList model.DeckList) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if res, err := skcSuggestionDB.Collection("deckLists").InsertOne(ctx, deckList); err != nil {
+	if res, err := deckListCollection.InsertOne(ctx, deckList); err != nil {
 		log.Println("Error inserting new deck list into DB", err)
 	} else {
 		log.Println("Successfully inserted new deck list into DB, ID:", res.InsertedID)
@@ -63,7 +71,7 @@ func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 		defer cancel()
 
 		var dl model.DeckList
-		if err := skcSuggestionDB.Collection("deckLists").FindOne(ctx, bson.M{"_id": objectId}).Decode(&dl); err != nil {
+		if err := deckListCollection.FindOne(ctx, bson.M{"_id": objectId}).Decode(&dl); err != nil {
 			log.Printf("Error retrieving deck list w/ ID %s. Err: %v", deckID, err)
 			return nil, &model.APIError{Message: "Requested deck list not found in DB."}
 		} else {
@@ -84,7 +92,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards
 		},
 	)
 
-	if cursor, err := skcSuggestionDB.Collection("deckLists").Find(ctx, bson.M{"uniqueCards": bson.M{"$in": cardIDs}}, opts); err != nil {
+	if cursor, err := deckListCollection.Find(ctx, bson.M{"uniqueCards": bson.M{"$in": cardIDs}}, opts); err != nil {
 		log.Printf("Error retrieving all deck lists that feature cards w/ ID %v. Err: %v", cardIDs, err)
 		return nil, &model.APIError{Message: "Could not get deck lists."}
 	} else {
@@ -104,11 +112,27 @@ func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
-	if res, err := skcSuggestionDB.Collection("trafficAnalysis").InsertOne(ctx, ta); err != nil {
+	if res, err := trafficAnalysisCollection.InsertOne(ctx, ta); err != nil {
 		log.Printf("Error inserting traffic data into DB: %v", err)
 		return &model.APIError{Message: "Error occurred while attempting to insert new traffic data.", StatusCode: http.StatusInternalServerError}
 	} else {
 		log.Printf("Successfully inserted traffic data into DB, ID: %v", res.InsertedID)
 		return nil
+	}
+}
+
+func IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	query := bson.M{"type": blackListType, "phrase": blackListPhrase}
+
+	if count, err := blackListCollection.CountDocuments(ctx, query); err != nil {
+		message := fmt.Sprintf("Black list query failed using type %s and phrase %s.", blackListType, blackListPhrase)
+		return false, &model.APIError{Message: message, StatusCode: http.StatusInternalServerError}
+	} else if count > 0 {
+		log.Printf("%s is blacklisted", blackListPhrase)
+		return true, nil
+	} else {
+		return false, nil
 	}
 }
