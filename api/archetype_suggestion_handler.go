@@ -35,9 +35,15 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err1.StatusCode)
 		json.NewEncoder(res).Encode(err1)
 		return
+	} else if len(archetypalSuggestions.UsingName) < 2 {
+		notAnArchetypeErr := model.APIError{Message: "There are fewer than 2 cards matching input string, as such it is likely this phrase is not an archetype.", StatusCode: http.StatusNotFound}
+		res.WriteHeader(notAnArchetypeErr.StatusCode)
+		json.NewEncoder(res).Encode(notAnArchetypeErr)
+		return
 	}
 
 	removeExclusions(&archetypalSuggestions)
+	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(archetypalSuggestions)
@@ -72,7 +78,11 @@ func getArchetypeExclusions(archetypeName string, archetypalSuggestions *model.A
 
 // TODO: add method level documentation, use better variable names, add more inline comments
 func removeExclusions(archetypalSuggestions *model.ArchetypalSuggestions) {
-	// setup a map of unique exclusions - should save on multiple traversing
+	if len(archetypalSuggestions.Exclusions) == 0 {
+		return
+	}
+
+	// setting up a map of unique exclusions - should prevent multiple traversing of the same list - effectively making the method O(2n)
 	uniqueExclusions := map[string]bool{}
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.CardName] = true

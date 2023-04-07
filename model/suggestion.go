@@ -25,6 +25,7 @@ type SuggestedDecks struct {
 }
 
 type ArchetypalSuggestions struct {
+	Total      int    `json:"total"`
 	UsingName  []Card `json:"usingName"`
 	UsingText  []Card `json:"usingText"`
 	Exclusions []Card `json:"exclusions"`
