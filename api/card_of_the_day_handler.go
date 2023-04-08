@@ -16,7 +16,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Fetching card of the day - todays date %s", date)
 
 	if cardID, _ := db.GetCardOfTheDayForGivenDate(date); cardID == nil {
-		log.Println("There was no card of the day selected for todays date, fetching random card.")
+		log.Printf("There was no card of the day found for %s, fetching random card from DB.", date)
 		if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
 			res.WriteHeader(err.StatusCode)
 			json.NewEncoder(res).Encode(err)
@@ -25,7 +25,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 			cardOfTheDay.CardID = randomCardId
 		}
 	} else {
-		log.Println("Existing card of the day for todays date found!")
+		log.Printf("Existing card of the day for %s found!", date)
 		cardOfTheDay.CardID = *cardID
 	}
 
