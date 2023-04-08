@@ -19,6 +19,7 @@ var (
 	blackListCollection       *mongo.Collection
 	deckListCollection        *mongo.Collection
 	trafficAnalysisCollection *mongo.Collection
+	cardOfTheDayCollection    *mongo.Collection
 )
 
 // interface
@@ -135,4 +136,27 @@ func IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.A
 	} else {
 		return false, nil
 	}
+}
+
+func GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	query := bson.M{"date": date, "version": 1}
+	// select only these fields from collection
+	opts := options.FindOne().SetProjection(
+		bson.D{
+			{Key: "cardID", Value: 1},
+		},
+	)
+
+	var cotd model.CardOfTheDAy
+	if err := cardOfTheDayCollection.FindOne(ctx, query, opts).Decode(&cotd); err != nil {
+		if err.Error() == "mongo: no documents in result" {
+			return nil, nil
+		}
+		log.Printf("Error retrieving card of the day for given date: %s. Err: %s", date, err)
+		return nil, &model.APIError{Message: "Could not get deck lists."}
+	}
+
+	return &cotd.CardID, nil
 }

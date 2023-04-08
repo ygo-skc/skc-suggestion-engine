@@ -55,4 +55,5 @@ func EstablishSKCSuggestionEngineDBConn() {
 	blackListCollection = skcSuggestionDB.Collection("blackList")
 	deckListCollection = skcSuggestionDB.Collection("deckLists")
 	trafficAnalysisCollection = skcSuggestionDB.Collection("trafficAnalysis")
+	cardOfTheDayCollection = skcSuggestionDB.Collection("cardOfTheDay")
 }
