@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -15,7 +14,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	cardOfTheDay := model.CardOfTheDAy{Date: date, Version: 1}
 	log.Printf("Fetching card of the day - todays date %s", date)
 
-	if cardID, _ := db.GetCardOfTheDayForGivenDate(date); cardID == nil {
+	if cardID, _ := skcSuggestionEngineDBInterface.GetCardOfTheDayForGivenDate(date); cardID == nil {
 		log.Printf("There was no card of the day found for %s, fetching random card from DB.", date)
 		if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
 			res.WriteHeader(err.StatusCode)

@@ -25,7 +25,16 @@ var (
 // interface
 type SKCSuggestionEngineDAO interface {
 	GetSKCSuggestionDBVersion() (string, error)
+
+	InsertDeckList(deckList model.DeckList)
+	GetDeckList(deckID string) (*model.DeckList, *model.APIError)
 	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
+
+	InsertTrafficData(ta model.TrafficAnalysis) *model.APIError
+
+	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
+
+	GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError)
 }
 
 // impl
@@ -47,7 +56,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersio
 	}
 }
 
-func InsertDeckList(deckList model.DeckList) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) InsertDeckList(deckList model.DeckList) {
 	deckList.CreatedAt = time.Now()
 	deckList.UpdatedAt = deckList.CreatedAt
 
@@ -63,7 +72,7 @@ func InsertDeckList(deckList model.DeckList) {
 	}
 }
 
-func GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
 	if objectId, err := primitive.ObjectIDFromHex(deckID); err != nil {
 		log.Println("Invalid Object ID.")
 		return nil, &model.APIError{Message: "Object ID used for deck list was not valid."}
@@ -108,7 +117,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards
 }
 
 // Will update the database with a new traffic record.
-func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
+func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	log.Printf("Inserting traffic data for resource %+v and system %+v.", ta.ResourceUtilized, ta.Source)
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
@@ -122,7 +131,7 @@ func InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	}
 }
 
-func IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	query := bson.M{"type": blackListType, "phrase": blackListPhrase}
@@ -138,7 +147,7 @@ func IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.A
 	}
 }
 
-func GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 	query := bson.M{"date": date, "version": 1}

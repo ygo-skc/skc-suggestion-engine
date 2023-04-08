@@ -6,7 +6,6 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -48,7 +47,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	source := model.TrafficSource{SystemName: trafficData.Source.SystemName, Version: trafficData.Source.Version}
 	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: *trafficData.ResourceUtilized, Source: source}
 
-	if err := db.InsertTrafficData(trafficAnalysis); err != nil {
+	if err := skcSuggestionEngineDBInterface.InsertTrafficData(trafficAnalysis); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return
