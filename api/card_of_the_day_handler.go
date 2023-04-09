@@ -14,15 +14,25 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	cardOfTheDay := model.CardOfTheDay{Date: date, Version: 1}
 	log.Printf("Fetching card of the day - todays date %s", date)
 
-	if cardID, _ := skcSuggestionEngineDBInterface.GetCardOfTheDay(date); cardID == nil {
+	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(date); cardID == nil {
 		if err := fetchNewCardOfTheDayAndPersist(&cardOfTheDay); err != nil {
-			res.WriteHeader(err.StatusCode)
-			json.NewEncoder(res).Encode(err)
+			err.HandleServerResponse(res)
 			return
 		}
+	} else if err != nil {
+		err.HandleServerResponse(res)
 	} else {
 		log.Printf("Existing card of the day for %s found! Card of the day: %s", date, *cardID)
 		cardOfTheDay.CardID = *cardID
+	}
+
+	log.Println("Fetching card of the day information.")
+	if card, err := skcDBInterface.FindDesiredCardInDBUsingID(cardOfTheDay.CardID); err != nil {
+		e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
+		e.HandleServerResponse(res)
+		return
+	} else {
+		cardOfTheDay.Card = card
 	}
 
 	res.WriteHeader(http.StatusOK)
@@ -31,14 +41,16 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 func fetchNewCardOfTheDayAndPersist(cotd *model.CardOfTheDay) *model.APIError {
 	log.Printf("There was no card of the day found for %s, fetching random card from DB.", cotd.Date)
+	e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
+
 	if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
-		return err
+		return e
 	} else {
 		cotd.CardID = randomCardId
 	}
 
 	if err := skcSuggestionEngineDBInterface.InsertCardOfTheDay(*cotd); err != nil {
-		return err
+		return e
 	}
 
 	return nil

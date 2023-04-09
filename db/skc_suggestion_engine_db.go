@@ -165,7 +165,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(date str
 			return nil, nil
 		}
 		log.Printf("Error retrieving card of the day for given date: %s. Err: %s", date, err)
-		return nil, &model.APIError{Message: "Could not get deck lists."}
+		return nil, &model.APIError{Message: "Could not get card of the day."}
 	}
 
 	return &cotd.CardID, nil
