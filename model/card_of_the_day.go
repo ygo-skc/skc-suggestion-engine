@@ -1,7 +1,7 @@
 package model
 
 type CardOfTheDay struct {
-	CardID  string `json:"cardID"`
-	Date    string `json:"date"`
-	Version uint8  `json:"version"`
+	CardID  string `bson:"cardID" json:"cardID"`
+	Date    string `bson:"date" json:"date"`
+	Version uint8  `bson:"version" json:"version"`
 }

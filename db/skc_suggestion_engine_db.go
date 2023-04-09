@@ -34,7 +34,8 @@ type SKCSuggestionEngineDAO interface {
 
 	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
 
-	GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError)
+	GetCardOfTheDay(date string) (*string, *model.APIError)
+	InsertCardOfTheDay(cotd model.CardOfTheDay) *model.APIError
 }
 
 // impl
@@ -147,12 +148,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(blackListT
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(date string) (*string, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
+
 	query := bson.M{"date": date, "version": 1}
-	// select only these fields from collection
-	opts := options.FindOne().SetProjection(
+	opts := options.FindOne().SetProjection( // select only these fields from collection
 		bson.D{
 			{Key: "cardID", Value: 1},
 		},
@@ -160,7 +161,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenD
 
 	var cotd model.CardOfTheDay
 	if err := cardOfTheDayCollection.FindOne(ctx, query, opts).Decode(&cotd); err != nil {
-		if err.Error() == "mongo: no documents in result" {
+		if err.Error() == "mongo: no documents in result" { // no card of the day present in db for specified date
 			return nil, nil
 		}
 		log.Printf("Error retrieving card of the day for given date: %s. Err: %s", date, err)
@@ -168,4 +169,19 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenD
 	}
 
 	return &cotd.CardID, nil
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(cotd model.CardOfTheDay) *model.APIError {
+	log.Printf("Inserting new card of the day for date %s. Card being saved is %s. Using version %d.", cotd.Date, cotd.CardID, cotd.Version)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	if _, err := cardOfTheDayCollection.InsertOne(ctx, cotd); err != nil {
+		log.Printf("Could not insert card of the day, err %s", err)
+		return &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Error saving card of the day."}
+	}
+
+	log.Println("Successfully inserted new card of the day.")
+	return nil
 }

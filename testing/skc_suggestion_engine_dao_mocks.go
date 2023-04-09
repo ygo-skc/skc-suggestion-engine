@@ -37,7 +37,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(blackListT
 	return false, nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenDate(date string) (*string, *model.APIError) {
-	log.Fatalln("GetCardOfTheDayForGivenDate() not mocked")
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(date string) (*string, *model.APIError) {
+	log.Fatalln("GetCardOfTheDay() not mocked")
 	return nil, nil
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(cotd model.CardOfTheDay) *model.APIError {
+	log.Fatalln("InsertCardOfTheDay() not mocked")
+	return nil
 }
