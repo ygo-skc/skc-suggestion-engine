@@ -23,3 +23,10 @@ type CardSupport struct {
 type SuggestedDecks struct {
 	FeaturedIn *[]DeckList `json:"featuredIn"`
 }
+
+type ArchetypalSuggestions struct {
+	Total      int    `json:"total"`
+	UsingName  []Card `json:"usingName"`
+	UsingText  []Card `json:"usingText"`
+	Exclusions []Card `json:"exclusions"`
+}

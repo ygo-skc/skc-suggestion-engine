@@ -233,5 +233,32 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			MonsterAttack:  util.InlineUInt16Pointer(2900),
 			MonsterDefense: util.InlineUInt16Pointer(2400),
 		},
+		"Elemental HERO Air Neos": {
+			CardID:         "11502550",
+			CardColor:      "Fusion",
+			CardName:       "Elemental HERO Air Neos",
+			CardEffect:     `"Elemental Hero Neos" + "Neo-Spacian Air Hummingbird"\nThis card can only be Special Summoned from your Extra Deck by returning the above cards you control to the Deck. (You do not use "Polymerization".) While your Life Points are lower than your opponent's, this card gains ATK equal to the difference. This card returns to the Extra Deck during the End Phase.`,
+			MonsterType:    util.InlineStringPointer("Warrior/Fusion/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(2500),
+			MonsterDefense: util.InlineUInt16Pointer(2000),
+		},
+		"Neos Wiseman": {
+			CardID:         "05126490",
+			CardColor:      "Effect",
+			CardName:       "Neos Wiseman",
+			CardEffect:     `Cannot be Normal Summoned or Set. Must be Special Summoned (from your hand) by sending 1 face-up "Elemental HERO Neos" and 1 face-up "Yubel" you control to the Graveyard, and cannot be Special Summoned by other ways. This card cannot be destroyed by card effects. At the end of the Damage Step, if this card battled an opponent's monster: Inflict damage to your opponent equal to the ATK of the monster it battled, and you gain Life Points equal to that monster's DEF.`,
+			MonsterType:    util.InlineStringPointer("Spellcaster/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(3000),
+			MonsterDefense: util.InlineUInt16Pointer(3000),
+		},
+		"Elemental HERO Neos": {
+			CardID:         "89943723",
+			CardColor:      "Normal",
+			CardName:       "Elemental HERO Neos",
+			CardEffect:     `A new Elemental HERO has arrived from Neo-Space! When he initiates a Contact Fusion with a Neo-Spacian his unknown powers are unleashed.`,
+			MonsterType:    util.InlineStringPointer("Warrior/Normal"),
+			MonsterAttack:  util.InlineUInt16Pointer(2500),
+			MonsterDefense: util.InlineUInt16Pointer(2000),
+		},
 	}
 )

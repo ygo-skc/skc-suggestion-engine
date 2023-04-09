@@ -4,21 +4,30 @@
 
 ## Info
 
-Go API that will extend functionality of [SKC API](https://github.com/ygo-skc/skc-api) with the following:
+Go API that extends functionality of [SKC API](https://github.com/ygo-skc/skc-api) with the following:
 
-* **Complete** Allow storage of deck list so my subscribers on YT can copy or view a deck I'm showcasing on a video.
-  * Functionality might be extended in the future to allow other people to submit their decks. It all depends on how much time I have to implement this and how many users want this to be added.
-* **Complete** Allow clients to send info about cards or products they are browsing with geo-location (using IP address) to build a trending view. This trending view will allow users to see what others are browsing (which helps w/ suggestions) and also see what is trending near them in close to real time.
-* **In Progress (Testing Needed)** Allow users to see what materials a specific extra deck monster can use in order to fulfill its summoning conditions. First release will only support direct references (not archetypal)
-  * Functionality will be extended to include reference suggestions, ie; if a card mentions another specific card by name (or archetype) the suggestion-engine will return info on all cards mentioned. This will group cards with a relation of sorts. This relation will help users browse similar cards. This will be great as it can leverage further work on cards that search for specific cards.
-  * Another possible addition to functionality, suggest cards found together in deck lists. For example: user want suggestions for Card **XXX** and looking at deck lists we see **XXX** and **YYY** are used together more often then not, then we will suggest card **YYY**
+* Allow storage of deck lists - currently not everyone can submit a deck list, functionality might be opened later.
+* Clients can send browsing data to build a suggestion database. Clients need to be authenticated to do this.
+* Suggest materials by parsing text of a card
+* Suggest references by parsing text of a card
+* Suggest support cards by analyzing every card in the DB
 
 ## Local Setup
+
 In order for the API to work locally, do the following steps
 
 1. Run `go mod tidy` to download deps
 2. Execute the shell **script doppler-secrets-local-setup.sh** to download all the secrets. This will only work if you are logged into Doppler and have access to my org.
 3. Create directory called data and include the IP DB file. Ensure the file is called **IPv4-DB.BIN**.
+
+## Testing
+
+| Command            | Notes        |
+| ------------------ | ------------ |
+| go test ./...      | Run all tests - no special perks |
+| go clean -testcache && go test ./...      | Clear cache and runs all tests again |
+
+There is also a shell script - `test.sh` that can be used to test the API.
 
 ## Contact & Support
 

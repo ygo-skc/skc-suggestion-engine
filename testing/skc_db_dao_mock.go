@@ -36,6 +36,26 @@ func (imp SKCDatabaseAccessObjectMock) FindOccurrenceOfCardNameInAllCardEffect(c
 	return nil, nil
 }
 
+func (imp SKCDatabaseAccessObjectMock) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
+	log.Fatalln("FindInArchetypeSupportUsingCardName() not mocked")
+	return nil, nil
+}
+
+func (imp SKCDatabaseAccessObjectMock) FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+	log.Fatalln("FindInArchetypeSupportUsingCardText() not mocked")
+	return nil, nil
+}
+
+func (imp SKCDatabaseAccessObjectMock) FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+	log.Fatalln("FindArchetypeExclusionsUsingCardText() not mocked")
+	return nil, nil
+}
+
+func (imp SKCDatabaseAccessObjectMock) GetRandomCard() (string, *model.APIError) {
+	log.Fatalln("FindArchetypeExclusionsUsingCardText() not mocked")
+	return "", nil
+}
+
 type ErrorMock struct {
 }
 

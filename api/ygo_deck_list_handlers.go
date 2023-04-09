@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
-	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -67,7 +66,7 @@ func submitNewDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	deckList.UniqueCards = deckListBreakdown.CardIDs
 	deckList.NumMainDeckCards = deckListBreakdown.NumMainDeckCards
 	deckList.NumExtraDeckCards = deckListBreakdown.NumExtraDeckCards
-	db.InsertDeckList(deckList)
+	skcSuggestionEngineDBInterface.InsertDeckList(deckList)
 	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new deck list: " + deckList.Name})
 }
 
@@ -118,7 +117,7 @@ func getDeckListHandler(res http.ResponseWriter, req *http.Request) {
 
 	var deckList *model.DeckList
 	var err *model.APIError
-	if deckList, err = db.GetDeckList(deckID); err != nil {
+	if deckList, err = skcSuggestionEngineDBInterface.GetDeckList(deckID); err != nil {
 		res.WriteHeader(http.StatusInternalServerError)
 		json.NewEncoder(res).Encode(err)
 		return
@@ -156,4 +155,17 @@ func getDeckListHandler(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Successfully retrieved deck list. Name {%s} and encoded deck list content {%s}. This deck list has {%d} main deck cards and {%d} extra deck cards.", deckList.Name, deckList.ContentB64, deckList.NumMainDeckCards, deckList.NumExtraDeckCards)
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(deckList)
+}
+
+func getSuggestedDecks(res http.ResponseWriter, req *http.Request) {
+	pathVars := mux.Vars(req)
+	cardID := pathVars["cardID"]
+	log.Printf("Getting decks that use card w/ ID: %s", cardID)
+
+	suggestedDecks := model.SuggestedDecks{}
+
+	suggestedDecks.FeaturedIn, _ = skcSuggestionEngineDBInterface.GetDecksThatFeatureCards([]string{cardID})
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(suggestedDecks)
 }
