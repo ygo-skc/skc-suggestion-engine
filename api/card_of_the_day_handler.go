@@ -16,12 +16,10 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 	if cardID, _ := skcSuggestionEngineDBInterface.GetCardOfTheDayForGivenDate(date); cardID == nil {
 		log.Printf("There was no card of the day found for %s, fetching random card from DB.", date)
-		if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
+		if err := fetchNewCardOfTheDayAndPersist(&cardOfTheDay); err != nil {
 			res.WriteHeader(err.StatusCode)
 			json.NewEncoder(res).Encode(err)
 			return
-		} else {
-			cardOfTheDay.CardID = randomCardId
 		}
 	} else {
 		log.Printf("Existing card of the day for %s found!", date)
@@ -30,4 +28,14 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(cardOfTheDay)
+}
+
+func fetchNewCardOfTheDayAndPersist(cotd *model.CardOfTheDAy) *model.APIError {
+	if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
+		return err
+	} else {
+		cotd.CardID = randomCardId
+	}
+
+	return nil
 }
