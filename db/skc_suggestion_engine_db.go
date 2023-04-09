@@ -158,7 +158,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDayForGivenD
 		},
 	)
 
-	var cotd model.CardOfTheDAy
+	var cotd model.CardOfTheDay
 	if err := cardOfTheDayCollection.FindOne(ctx, query, opts).Decode(&cotd); err != nil {
 		if err.Error() == "mongo: no documents in result" {
 			return nil, nil

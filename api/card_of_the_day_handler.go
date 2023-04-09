@@ -11,7 +11,7 @@ import (
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	date := time.Now().Format("2006-01-02")
-	cardOfTheDay := model.CardOfTheDAy{Date: date, Version: 1}
+	cardOfTheDay := model.CardOfTheDay{Date: date, Version: 1}
 	log.Printf("Fetching card of the day - todays date %s", date)
 
 	if cardID, _ := skcSuggestionEngineDBInterface.GetCardOfTheDayForGivenDate(date); cardID == nil {
@@ -30,7 +30,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(cardOfTheDay)
 }
 
-func fetchNewCardOfTheDayAndPersist(cotd *model.CardOfTheDAy) *model.APIError {
+func fetchNewCardOfTheDayAndPersist(cotd *model.CardOfTheDay) *model.APIError {
 	if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
 		return err
 	} else {
