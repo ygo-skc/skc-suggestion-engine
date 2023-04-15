@@ -6,20 +6,24 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+const (
+	notMocked = "Method not mocked"
+)
+
 type SKCDatabaseAccessObjectMock struct{}
 
 func (mock SKCDatabaseAccessObjectMock) GetSKCDBVersion() (string, error) {
-	log.Fatalln("Method not mocked")
+	log.Fatalln(notMocked)
 	return "", nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
-	log.Fatalln("Method not mocked")
+	log.Fatalln(notMocked)
 	return nil, nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
-	log.Fatalln("Method not mocked")
+	log.Fatalln(notMocked)
 	return model.DeckListContents{}, model.APIError{}
 }
 
@@ -32,7 +36,7 @@ func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingName(cardName st
 }
 
 func (imp SKCDatabaseAccessObjectMock) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
-	log.Fatalln("Method not mocked")
+	log.Fatalln(notMocked)
 	return nil, nil
 }
 
