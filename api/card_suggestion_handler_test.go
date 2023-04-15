@@ -38,15 +38,15 @@ func TestGetSuggestions(t *testing.T) {
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
+	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
 		suggestions := getSuggestions(&mock)
 
-		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
-		assert.Equal(skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
+		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
 
-		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, "Named References values did not match")
-		assert.Equal(skc_testing.CardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
+		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, "Named References values did not match")
+		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
 	}
 }
 
@@ -55,18 +55,18 @@ func TestGetReferences(t *testing.T) {
 	assert := assert.New(t)
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 
-	for cardName := range skc_testing.CardSuggestionsWithSelfReferenceMock {
+	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		validateMaterialReferences(
 			skc_testing.CardMocks[cardName],
-			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials,
-			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes,
+			*cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials,
+			*cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes,
 			assert,
 		)
 
 		validateReferences(
 			skc_testing.CardMocks[cardName],
-			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].NamedReferences,
-			*skc_testing.CardSuggestionsWithSelfReferenceMock[cardName].ReferencedArchetypes,
+			*cardSuggestionsWithSelfReferenceMock[cardName].NamedReferences,
+			*cardSuggestionsWithSelfReferenceMock[cardName].ReferencedArchetypes,
 			assert,
 		)
 	}
@@ -87,3 +87,159 @@ func TestCleanupReference(t *testing.T) {
 		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }
+
+var (
+	cardSuggestionsWithSelfReferenceMock = map[string]model.CardSuggestions{
+		"Elemental HERO Sunrise": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{"HERO"},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["Elemental HERO Sunrise"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Miracle Fusion"]}},
+			ReferencedArchetypes: &[]string{"HERO"},
+		},
+		"Gem-Knight Master Diamond": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{"Gem-Knight"},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{"Gem-", "Gem-Knight"},
+		},
+		"A-to-Z-Dragon Buster Cannon": {
+			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			ReferencedArchetypes: &[]string{},
+		},
+		"The Legendary Fisherman II": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Armityle the Chaos Phantasm": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Armityle the Chaos Phantasm - Phantom of Fury": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 2, Card: skc_testing.CardMocks["Armityle the Chaos Phantasm"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"King Dragun": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Divine Dragon Ragnarok"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Lord of D."]},
+			},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Great Mammoth of Goldfine": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Dragon Zombie"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["The Snake Hair"]},
+			},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Elemental HERO Stratos": {
+			NamedMaterials:     &[]model.CardReference{},
+			MaterialArchetypes: &[]string{},
+			NamedReferences:    &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{
+				"HERO",
+			},
+		},
+	}
+
+	cardSuggestionsWithoutSelfReferenceMock = map[string]model.CardSuggestions{
+		"Elemental HERO Sunrise": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{"HERO"},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["Miracle Fusion"]}},
+			ReferencedArchetypes: &[]string{"HERO"},
+		},
+		"Gem-Knight Master Diamond": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{"Gem-Knight"},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{"Gem-", "Gem-Knight"},
+		},
+		"A-to-Z-Dragon Buster Cannon": {
+			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			ReferencedArchetypes: &[]string{},
+		},
+		"The Legendary Fisherman II": {
+			NamedMaterials:       &[]model.CardReference{},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Armityle the Chaos Phantasm": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Armityle the Chaos Phantasm - Phantom of Fury": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Hamon, Lord of Striking Thunder"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Raviel, Lord of Phantasms"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Uria, Lord of Searing Flames"]},
+			},
+			MaterialArchetypes: &[]string{},
+			NamedReferences: &[]model.CardReference{
+				{Occurrences: 2, Card: skc_testing.CardMocks["Armityle the Chaos Phantasm"]},
+			},
+			ReferencedArchetypes: &[]string{},
+		},
+		"King Dragun": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Divine Dragon Ragnarok"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["Lord of D."]},
+			},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Great Mammoth of Goldfine": {
+			NamedMaterials: &[]model.CardReference{
+				{Occurrences: 1, Card: skc_testing.CardMocks["Dragon Zombie"]},
+				{Occurrences: 1, Card: skc_testing.CardMocks["The Snake Hair"]},
+			},
+			MaterialArchetypes:   &[]string{},
+			NamedReferences:      &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{},
+		},
+		"Elemental HERO Stratos": {
+			NamedMaterials:     &[]model.CardReference{},
+			MaterialArchetypes: &[]string{},
+			NamedReferences:    &[]model.CardReference{},
+			ReferencedArchetypes: &[]string{
+				"HERO",
+			},
+		},
+	}
+)

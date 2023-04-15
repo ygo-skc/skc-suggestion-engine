@@ -198,10 +198,12 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			MonsterDefense: util.InlineUInt16Pointer(1200),
 		},
 		"Elemental HERO Stratos": {
-			CardID:         "40044918",
-			CardColor:      "Effect",
-			CardName:       "Elemental HERO Stratos",
-			CardEffect:     `When this card is Normal or Special Summoned: You can activate 1 of these effects.\n&bull; Destroy Spells/Traps on the field, up to the number of "HERO" monsters you control, except this card.\n&bull; Add 1 "HERO" monster from your Deck to your hand.`,
+			CardID:    "40044918",
+			CardColor: "Effect",
+			CardName:  "Elemental HERO Stratos",
+			CardEffect: `When this card is Normal or Special Summoned: You can activate 1 of these effects.
+&bull; Destroy Spells/Traps on the field, up to the number of "HERO" monsters you control, except this card.
+&bull; Add 1 "HERO" monster from your Deck to your hand.`,
 			MonsterType:    util.InlineStringPointer("Warrior/Effect"),
 			MonsterAttack:  util.InlineUInt16Pointer(1800),
 			MonsterDefense: util.InlineUInt16Pointer(300),
@@ -216,28 +218,33 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			MonsterDefense: util.InlineUInt16Pointer(2100),
 		},
 		"Magicians' Souls": {
-			CardID:         "97631303",
-			CardColor:      "Effect",
-			CardName:       "Magicians' Souls",
-			CardEffect:     `You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;\n&bull; Special Summon this card.\n&bull; Send this card to the GY, then, you can Special Summon 1 "Dark Magician" or 1 "Dark Magician Girl" from your GY.\nYou can only use each effect of "Magicians' Souls" once per turn.`,
+			CardID:    "97631303",
+			CardColor: "Effect",
+			CardName:  "Magicians' Souls",
+			CardEffect: `You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;
+&bull; Special Summon this card.
+&bull; Send this card to the GY, then, you can Special Summon 1 "Dark Magician" or 1 "Dark Magician Girl" from your GY.
+You can only use each effect of "Magicians' Souls" once per turn.`,
 			MonsterType:    util.InlineStringPointer("Spellcaster/Effect"),
 			MonsterAttack:  util.InlineUInt16Pointer(0),
 			MonsterDefense: util.InlineUInt16Pointer(0),
 		},
 		"Dark Paladin": {
-			CardID:         "98502113",
-			CardColor:      "Fusion",
-			CardName:       "Dark Paladin",
-			CardEffect:     `You can send up to 2 Spells/Traps from your hand and/or field to the GY; draw that many cards. If this card is in your hand: You can send 1 Level 6 or higher Spellcaster monster from your Deck to the GY, then activate 1 of these effects;\n&bull; Special Summon this card.\n&bull; Send this card to the GY, then, you can Special Summon 1 "Dark Magician" or 1 "Dark Magician Girl" from your GY.\nYou can only use each effect of "Magicians' Souls" once per turn.`,
+			CardID:    "98502113",
+			CardColor: "Fusion",
+			CardName:  "Dark Paladin",
+			CardEffect: `"Dark Magician" + "Buster Blader"
+Must be Fusion Summoned. When a Spell Card is activated (Quick Effect): You can discard 1 card; negate the activation, and if you do, destroy it. This card must be face-up on the field to activate and to resolve this effect. Gains 500 ATK for each Dragon monster on the field and in the GY.`,
 			MonsterType:    util.InlineStringPointer("Spellcaster/Fusion/Effect"),
 			MonsterAttack:  util.InlineUInt16Pointer(2900),
 			MonsterDefense: util.InlineUInt16Pointer(2400),
 		},
 		"Elemental HERO Air Neos": {
-			CardID:         "11502550",
-			CardColor:      "Fusion",
-			CardName:       "Elemental HERO Air Neos",
-			CardEffect:     `"Elemental Hero Neos" + "Neo-Spacian Air Hummingbird"\nThis card can only be Special Summoned from your Extra Deck by returning the above cards you control to the Deck. (You do not use "Polymerization".) While your Life Points are lower than your opponent's, this card gains ATK equal to the difference. This card returns to the Extra Deck during the End Phase.`,
+			CardID:    "11502550",
+			CardColor: "Fusion",
+			CardName:  "Elemental HERO Air Neos",
+			CardEffect: `"Elemental Hero Neos" + "Neo-Spacian Air Hummingbird"
+This card can only be Special Summoned from your Extra Deck by returning the above cards you control to the Deck. (You do not use "Polymerization".) While your Life Points are lower than your opponent's, this card gains ATK equal to the difference. This card returns to the Extra Deck during the End Phase.`,
 			MonsterType:    util.InlineStringPointer("Warrior/Fusion/Effect"),
 			MonsterAttack:  util.InlineUInt16Pointer(2500),
 			MonsterDefense: util.InlineUInt16Pointer(2000),
@@ -258,6 +265,16 @@ Your opponent cannot target Dragon monsters with card effects. Once per turn: Yo
 			CardEffect:     `A new Elemental HERO has arrived from Neo-Space! When he initiates a Contact Fusion with a Neo-Spacian his unknown powers are unleashed.`,
 			MonsterType:    util.InlineStringPointer("Warrior/Normal"),
 			MonsterAttack:  util.InlineUInt16Pointer(2500),
+			MonsterDefense: util.InlineUInt16Pointer(2000),
+		},
+		"The Dark Magicians": {
+			CardID:    "50237654",
+			CardColor: "Fusion",
+			CardName:  "The Dark Magicians",
+			CardEffect: `'Dark Magician' or 'Dark Magician Girl' + 1 Spellcaster monster
+Once per turn, if a Spell/Trap Card or effect is activated (except during the Damage Step): You can draw 1 card, then if it was a Spell/Trap, you can Set it, and if it was a Trap or Quick-Play Spell, you can activate it this turn. If this card is destroyed: You can Special Summon both 1 'Dark Magician' and 1 'Dark Magician Girl' from your hand, Deck, and/or GY.`,
+			MonsterType:    util.InlineStringPointer("Spellcaster/Fusion/Effect"),
+			MonsterAttack:  util.InlineUInt16Pointer(2800),
 			MonsterDefense: util.InlineUInt16Pointer(2000),
 		},
 	}

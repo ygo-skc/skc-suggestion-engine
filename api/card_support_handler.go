@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -47,10 +48,17 @@ func determineSupportCards(subject model.Card, references []model.Card) ([]model
 	materialFor := []model.Card{}
 
 	for _, reference := range references {
-		tokens := quotedStringRegex.FindAllString(reference.GetPotentialMaterialsAsString(), -1)
-		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(tokens) {
+		materialString := reference.GetPotentialMaterialsAsString()
+		materialStringTokens := quotedStringRegex.FindAllString(materialString, -1)
+
+		remainingEffect := strings.Replace(reference.CardEffect, materialString, "", -1) // effect without materials
+		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
+
+		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(materialStringTokens) {
 			materialFor = append(materialFor, reference)
-		} else {
+		}
+
+		if subject.IsCardNameInTokens(remainingEffectTokens) {
 			referencedBy = append(referencedBy, reference)
 		}
 	}
