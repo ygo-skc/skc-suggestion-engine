@@ -5,8 +5,8 @@ import "github.com/ygo-skc/skc-suggestion-engine/model"
 var (
 	ExpectedSupportCardsMocks = map[string]model.CardSupport{
 		"Dark Magician": {
-			ReferencedBy: []model.Card{CardMocks["Magicians' Souls"]},
-			MaterialFor:  []model.Card{CardMocks["Dark Paladin"]},
+			ReferencedBy: []model.Card{CardMocks["Magicians' Souls"], CardMocks["The Dark Magicians"]},
+			MaterialFor:  []model.Card{CardMocks["Dark Paladin"], CardMocks["The Dark Magicians"]},
 		},
 		"Hamon, Lord of Striking Thunder": {
 			ReferencedBy: []model.Card{},
