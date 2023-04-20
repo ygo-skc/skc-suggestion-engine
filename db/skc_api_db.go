@@ -19,7 +19,7 @@ const (
 	queryDBVersion                  string = "SELECT VERSION()"
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
-	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY card_color, card_name"
+	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
 	queryRandomCardID               string = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 )
 
