@@ -5,7 +5,7 @@ go 1.19
 require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
-	github.com/go-playground/validator/v10 v10.12.0
+	github.com/go-playground/validator/v10 v10.13.0
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/ip2location/ip2location-go/v9 v9.6.0
@@ -19,7 +19,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/golang/snappy v0.0.1 // indirect
 	github.com/klauspost/compress v1.13.6 // indirect
-	github.com/leodido/go-urn v1.2.2 // indirect
+	github.com/leodido/go-urn v1.2.3 // indirect
 	github.com/montanaflynn/stats v0.0.0-20171201202039-1bf9dbcd8cbe // indirect
 	github.com/pkg/errors v0.9.1 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
