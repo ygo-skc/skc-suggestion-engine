@@ -15,8 +15,12 @@ var (
 )
 
 const (
+	// errors
+	genericError string = "Error occurred while querying DB."
+
 	// queries
 	queryDBVersion                  string = "SELECT VERSION()"
+	queryCardColorIDs               string = "select color_id, card_color from card_colors order by color_id"
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
@@ -26,6 +30,7 @@ const (
 // interface
 type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion() (string, error)
+	GetCardColorIDs() (map[string]int, *model.APIError)
 	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
@@ -48,6 +53,29 @@ func (imp SKCDAOImplementation) GetSKCDBVersion() (string, error) {
 	}
 
 	return version, nil
+}
+
+// Get IDs for all card colors currently in database.
+func (imp SKCDAOImplementation) GetCardColorIDs() (map[string]int, *model.APIError) {
+	cardColorIDs := map[string]int{}
+
+	if rows, err := skcDBConn.Query(queryCardColorIDs); err != nil {
+		log.Printf("Error occurred while fetching card color IDs.")
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+	} else {
+		for rows.Next() {
+			var colorId int
+			var cardColor string
+
+			if err := rows.Scan(&colorId, &cardColor); err != nil {
+				log.Println("Error reading row...", err)
+				return cardColorIDs, &model.APIError{Message: "Error parsing data from DB."}
+			}
+
+			cardColorIDs[cardColor] = colorId
+		}
+	}
+	return cardColorIDs, nil
 }
 
 // Uses card ID to find instance of card.
@@ -78,7 +106,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
-		return nil, model.APIError{Message: "Error occurred while querying DB."}
+		return nil, model.APIError{Message: genericError}
 	} else {
 		for rows.Next() {
 			var card model.Card
@@ -115,7 +143,7 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, cardNameWithDoubleQuotes, cardNameWithSingleQuotes, cardId); err != nil {
 		log.Printf("Error occurred while searching for occurrences of %s in all card effects. Err %v", cardName, err)
-		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)
 	}
@@ -132,7 +160,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeNam
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ? OR card_name LIKE ? OR card_name LIKE ?", search1, search2, search3); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using archetype name %s. Err %v", archetypeName, err)
-		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)
 	}
@@ -143,7 +171,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeNam
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
-		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)
 	}
@@ -154,7 +182,7 @@ func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeNa
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
-		return nil, &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)
 	}
@@ -165,7 +193,7 @@ func (imp SKCDAOImplementation) GetRandomCard() (string, *model.APIError) {
 
 	if err := skcDBConn.QueryRow(queryRandomCardID).Scan(&randomCardId); err != nil {
 		log.Printf("Error occurred while fetching random card ID from database. Err %v", err)
-		return "", &model.APIError{Message: "Error occurred while querying DB.", StatusCode: http.StatusInternalServerError}
+		return "", &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	}
 	return randomCardId, nil
 }
