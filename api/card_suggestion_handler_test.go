@@ -50,28 +50,6 @@ func TestGetSuggestions(t *testing.T) {
 	}
 }
 
-func TestGetReferences(t *testing.T) {
-	// setup
-	assert := assert.New(t)
-	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
-
-	for cardName := range cardSuggestionsWithSelfReferenceMock {
-		validateMaterialReferences(
-			skc_testing.CardMocks[cardName],
-			*cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials,
-			*cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes,
-			assert,
-		)
-
-		validateReferences(
-			skc_testing.CardMocks[cardName],
-			*cardSuggestionsWithSelfReferenceMock[cardName].NamedReferences,
-			*cardSuggestionsWithSelfReferenceMock[cardName].ReferencedArchetypes,
-			assert,
-		)
-	}
-}
-
 func TestCleanupReference(t *testing.T) {
 	assert := assert.New(t)
 
@@ -105,7 +83,7 @@ var (
 		"A-to-Z-Dragon Buster Cannon": {
 			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			MaterialArchetypes:   &[]string{},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}},
 			ReferencedArchetypes: &[]string{},
 		},
 		"The Legendary Fisherman II": {
@@ -182,7 +160,7 @@ var (
 		"A-to-Z-Dragon Buster Cannon": {
 			NamedMaterials:       &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			MaterialArchetypes:   &[]string{},
-			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
+			NamedReferences:      &[]model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}},
 			ReferencedArchetypes: &[]string{},
 		},
 		"The Legendary Fisherman II": {

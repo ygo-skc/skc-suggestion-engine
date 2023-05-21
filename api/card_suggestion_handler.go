@@ -45,9 +45,12 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 	// setup channels
 	materialChannel, referenceChannel := make(chan bool), make(chan bool)
 
+	// retrieve card color IDs
+	ccIds, _ := skcDBInterface.GetCardColorIDs()
+
 	// get materials if card is from extra deck
 	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-		go getMaterialRefs(&suggestions, materialString, materialChannel)
+		go getMaterialRefs(&suggestions, materialString, ccIds, materialChannel)
 	} else {
 		materialChannel = nil
 		suggestions.NamedMaterials = &[]model.CardReference{}
@@ -56,7 +59,7 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
 
-	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, referenceChannel)
+	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, ccIds, referenceChannel)
 
 	// join channels
 	if materialChannel != nil {
@@ -67,18 +70,33 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 	return &suggestions
 }
 
-func getMaterialRefs(s *model.CardSuggestions, materialString string, c chan bool) {
+func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIds map[string]int, c chan bool) {
 	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
+	sortCardReferences(s.NamedMaterials, ccIds)
+
 	c <- true
 }
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, c chan bool) {
+func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIds map[string]int, c chan bool) {
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
+	sortCardReferences(s.NamedReferences, ccIds)
 
 	c <- true
+}
+
+func sortCardReferences(cr *[]model.CardReference, ccIds map[string]int) {
+	// sorting alphabetically from a-z
+	sort.SliceStable(*cr, func(i, j int) bool {
+		return (*cr)[i].Card.CardName < (*cr)[j].Card.CardName
+	})
+
+	// sorting by card color
+	sort.SliceStable(*cr, func(i, j int) bool {
+		return ccIds[(*cr)[i].Card.CardColor] < ccIds[(*cr)[j].Card.CardColor]
+	})
 }
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
@@ -90,10 +108,6 @@ func getReferences(s string) (*[]model.CardReference, *[]string) {
 	for _, card := range namedReferences {
 		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.CardID]})
 	}
-
-	sort.SliceStable(uniqueReferences, func(i, j int) bool {
-		return uniqueReferences[i].Card.CardName < uniqueReferences[j].Card.CardName // sorting alphabetically from a-z
-	})
 
 	return &uniqueReferences, &archetypalReferences
 }
