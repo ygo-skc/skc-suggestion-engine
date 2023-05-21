@@ -17,6 +17,29 @@ func (mock SKCDatabaseAccessObjectMock) GetSKCDBVersion() (string, error) {
 	return "", nil
 }
 
+func (mock SKCDatabaseAccessObjectMock) GetCardColorIDs() (map[string]int, *model.APIError) {
+	ids := map[string]int{
+		"Normal":           1,
+		"Effect":           2,
+		"Fusion":           3,
+		"Ritual":           4,
+		"Synchro":          5,
+		"Xyz":              6,
+		"Pendulum-Normal":  7,
+		"Pendulum-Effect":  8,
+		"Pendulum-Ritual":  9,
+		"Pendulum-Fusion":  10,
+		"Pendulum-Xyz":     11,
+		"Pendulum-Synchro": 12,
+		"Link":             13,
+		"Spell":            14,
+		"Trap":             15,
+		"Token":            16,
+	}
+
+	return ids, nil
+}
+
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
 	log.Fatalln(notMocked)
 	return nil, nil
