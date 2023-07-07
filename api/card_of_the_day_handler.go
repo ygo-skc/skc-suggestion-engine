@@ -10,7 +10,7 @@ import (
 )
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	date := time.Now().Format("2006-01-02")
+	date := time.Now().In(chicagoLocation).Format("2006-01-02")
 	cardOfTheDay := model.CardOfTheDay{Date: date, Version: 1}
 	log.Printf("Fetching card of the day - todays date %s", date)
 
