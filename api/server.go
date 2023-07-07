@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
@@ -26,6 +27,7 @@ var (
 	router                         *mux.Router
 	corsOpts                       *cors.Cors
 	serverAPIKey                   string
+	chicagoLocation                *time.Location
 )
 
 func init() {
@@ -40,6 +42,13 @@ func init() {
 		}
 	} else {
 		log.Println("Not loading IP DB")
+	}
+
+	// init Location
+	if location, err := time.LoadLocation("America/Chicago"); err != nil {
+		log.Fatalln("Could not load Chicago location")
+	} else {
+		chicagoLocation = location
 	}
 }
 
