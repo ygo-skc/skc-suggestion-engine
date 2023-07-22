@@ -14,11 +14,11 @@ import (
 var (
 	V                  = validator.New()
 	Translator         ut.Translator
-	deckListNameRegex  = regexp.MustCompile("^[a-zA-Z0-9 !\\-@]{3,}$")
-	cardIDRegex        = regexp.MustCompile("^[0-9]{8}$")
-	systemNameRegex    = regexp.MustCompile("^[a-zA-Z0-9 \\-]{3,}$")
+	deckListNameRegex  = regexp.MustCompile(`^[a-zA-Z0-9 !\-@]{3,}$`)
+	cardIDRegex        = regexp.MustCompile(`^[0-9]{8}$`)
+	systemNameRegex    = regexp.MustCompile(`^[a-zA-Z0-9 \-]{3,}$`)
 	systemVersionRegex = regexp.MustCompile(`^([1-9]\d*|0)(\.(([1-9]\d*)|0)){2,3}$`)
-	archetypeRegex     = regexp.MustCompile("^.{3,}$")
+	archetypeRegex     = regexp.MustCompile(`^.{3,}$`)
 )
 
 const (
