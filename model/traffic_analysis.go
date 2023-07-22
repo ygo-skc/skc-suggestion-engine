@@ -43,6 +43,11 @@ type TrafficAnalysisInput struct {
 	ResourceUtilized *Resource      `json:"resourceUtilized" validate:"required"`
 }
 
+type Trending struct {
+	ID    string `bson:"_id"`
+	Count int    `json:"count"`
+}
+
 func (tai TrafficAnalysisInput) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(tai); err != nil {
 		return validation.HandleValidationErrors(err.(validator.ValidationErrors))

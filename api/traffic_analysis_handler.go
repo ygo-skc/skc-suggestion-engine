@@ -56,3 +56,14 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new traffic data."})
 }
+
+func trending(res http.ResponseWriter, req *http.Request) {
+	if td, err := skcSuggestionEngineDBInterface.GetTrafficData("CARD"); err != nil {
+		res.WriteHeader(err.StatusCode)
+		json.NewEncoder(res).Encode(err)
+		return
+	} else {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(td)
+	}
+}
