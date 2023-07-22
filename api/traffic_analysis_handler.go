@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 
+	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -58,7 +60,11 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func trending(res http.ResponseWriter, req *http.Request) {
-	if td, err := skcSuggestionEngineDBInterface.GetTrafficData("CARD"); err != nil {
+	pathVars := mux.Vars(req)
+	resource := strings.ToUpper(pathVars["resource"])
+	log.Printf("Getting trending data for resource: %s", resource)
+
+	if td, err := skcSuggestionEngineDBInterface.GetTrafficData(resource); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return
