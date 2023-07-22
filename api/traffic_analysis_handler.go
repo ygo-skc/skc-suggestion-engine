@@ -64,7 +64,8 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	resource := strings.ToUpper(pathVars["resource"])
 	log.Printf("Getting trending data for resource: %s", resource)
 
-	if td, err := skcSuggestionEngineDBInterface.GetTrafficData(resource); err != nil {
+	from, to := time.Now().AddDate(0, 0, -14), time.Now()
+	if td, err := skcSuggestionEngineDBInterface.GetTrafficData(resource, from, to); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return

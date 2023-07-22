@@ -31,7 +31,7 @@ type SKCSuggestionEngineDAO interface {
 	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
 
 	InsertTrafficData(ta model.TrafficAnalysis) *model.APIError
-	GetTrafficData(resourceName string) ([]model.Trending, *model.APIError)
+	GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.Trending, *model.APIError)
 
 	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
 
@@ -133,7 +133,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta mod
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string) ([]model.Trending, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.Trending, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -144,8 +144,8 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceN
 					{Key: "resourceUtilized.name", Value: resourceName},
 					{Key: "timestamp",
 						Value: bson.D{
-							{Key: "$gte", Value: time.Date(2023, 7, 9, 22, 40, 43, 0, time.UTC)},
-							{Key: "$lte", Value: time.Date(2023, 7, 16, 22, 40, 43, 0, time.UTC)},
+							{Key: "$gte", Value: from},
+							{Key: "$lte", Value: to},
 						},
 					},
 				},
