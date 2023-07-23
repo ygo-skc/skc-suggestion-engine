@@ -85,7 +85,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	cdm := model.CardDataMap{}
 	go fetchResourceInfo(metricsForCurrentPeriod, &cdm, c3)
 
-	tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
+	tm := determineTrendChange[model.Card](metricsForCurrentPeriod, metricsForLastPeriod)
 
 	if err1 := <-c3; err1 != nil {
 		res.WriteHeader(err1.StatusCode)
