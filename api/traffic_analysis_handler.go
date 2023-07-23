@@ -64,13 +64,28 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	resource := strings.ToUpper(pathVars["resource"])
 	log.Printf("Getting trending data for resource: %s", resource)
 
-	from, to := time.Now().AddDate(0, 0, -14), time.Now()
-	if td, err := skcSuggestionEngineDBInterface.GetTrafficData(resource, from, to); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
-		return
-	} else {
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(td)
+	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
+	trendingForCurrentPeriod, trendingForLastPeriod := []model.Trending{}, []model.Trending{}
+	today := time.Now()
+	twoWeeksFromToday, fourWeeksFromToday := today.AddDate(0, 0, -14), today.AddDate(0, 0, -28)
+
+	go getTrafficData(resource, twoWeeksFromToday, today, &trendingForCurrentPeriod, c1)
+	go getTrafficData(resource, fourWeeksFromToday, twoWeeksFromToday, &trendingForLastPeriod, c2)
+
+	if err1, err2 := <-c1, <-c2; err1 != nil {
+		res.WriteHeader(err1.StatusCode)
+		json.NewEncoder(res).Encode(err1)
+	} else if err2 != nil {
+		res.WriteHeader(err2.StatusCode)
+		json.NewEncoder(res).Encode(err2)
 	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(trendingForCurrentPeriod)
+}
+
+func getTrafficData(r string, from time.Time, to time.Time, td *[]model.Trending, c chan *model.APIError) {
+	var err *model.APIError
+	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to)
+	c <- err
 }
