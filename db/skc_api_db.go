@@ -32,7 +32,7 @@ type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion() (string, error)
 	GetCardColorIDs() (map[string]int, *model.APIError)
 	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
-	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, model.APIError)
+	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
 	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
@@ -96,7 +96,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*mode
 	return &card, nil
 }
 
-func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, model.APIError) {
+func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError) {
 	args := make([]interface{}, len(cards))
 	for index, cardId := range cards {
 		args[index] = cardId
@@ -106,20 +106,20 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
-		return nil, model.APIError{Message: genericError}
+		return nil, &model.APIError{Message: genericError}
 	} else {
 		for rows.Next() {
 			var card model.Card
 			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
 				log.Println("Error transforming row to Card object from SKC DB while using 1 or more CardIDs", err)
-				return nil, model.APIError{Message: "Error parsing data from DB."}
+				return nil, &model.APIError{Message: "Error parsing data from DB."}
 			}
 
 			cardData[card.CardID] = card
 		}
 	}
 
-	return cardData, model.APIError{}
+	return cardData, nil
 }
 
 // Uses card name to find instance of card.
