@@ -160,6 +160,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceN
 			},
 		},
 		bson.D{{Key: "$sort", Value: bson.D{{Key: "count", Value: -1}}}},
+		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
