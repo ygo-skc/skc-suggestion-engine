@@ -97,12 +97,15 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*mode
 }
 
 func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError) {
-	args := make([]interface{}, len(cards))
+	numCards := len(cards)
+	args := make([]interface{}, numCards)
+	cardData := make(map[string]model.Card, numCards)
+
 	for index, cardId := range cards {
 		args[index] = cardId
 	}
-	cardData := map[string]model.Card{}
-	query := fmt.Sprintf("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)", variablePlaceholders(len(args)))
+
+	query := fmt.Sprintf("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)", variablePlaceholders(numCards))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)

@@ -81,14 +81,45 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err2)
 	}
 
-	tm := determineTrendingChange(metricsForCurrentPeriod, metricsForLastPeriod)
+	c3 := make(chan *model.APIError)
+	cdm := model.CardDataMap{}
+	go fetchResourceInfo(metricsForCurrentPeriod, &cdm, c3)
 
-	trending := model.Trending{Resource: resource, Metrics: tm}
+	tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
+
+	if err1 := <-c3; err1 != nil {
+		res.WriteHeader(err1.StatusCode)
+		json.NewEncoder(res).Encode(err1)
+	}
+
+	for ind := range tm {
+		tm[ind].Resource = cdm[metricsForCurrentPeriod[ind].ResourceValue]
+	}
+
+	trending := model.Trending{ResourceName: resource, Metrics: tm}
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(trending)
 }
 
-func determineTrendingChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric {
+func fetchResourceInfo(metrics []model.TrafficResourceUtilizationMetric, cdm *model.CardDataMap, c chan *model.APIError) {
+	rv := make([]string, len(metrics))
+
+	for ind, value := range metrics {
+		rv[ind] = value.ResourceValue
+	}
+
+	if resourceData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err == nil {
+		for k, v := range resourceData {
+			(*cdm)[k] = v
+		}
+		c <- nil
+	} else {
+		log.Printf("Could not fetch card info for trending data...")
+		c <- err
+	}
+}
+
+func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric {
 	totalElements := len(metricsForCurrentPeriod)
 	previousPeriodRanking := make(map[string]int, totalElements)
 	tm := make([]model.TrendingMetric, totalElements)
