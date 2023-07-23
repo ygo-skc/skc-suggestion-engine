@@ -33,7 +33,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta mod
 	return nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetrics, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError) {
 	log.Fatalln("GetTrafficData() not mocked")
 	return nil, nil
 }

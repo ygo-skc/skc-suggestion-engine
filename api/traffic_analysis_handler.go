@@ -65,7 +65,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Getting trending data for resource: %s", resource)
 
 	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
-	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetrics{}, []model.TrafficResourceUtilizationMetrics{}
+	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
 	today := time.Now()
 	twoWeeksFromToday, fourWeeksFromToday := today.AddDate(0, 0, -14), today.AddDate(0, 0, -28)
 
@@ -81,12 +81,40 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err2)
 	}
 
-	trending := model.Trending{Resource: resource, Metrics: metricsForCurrentPeriod}
+	tm := determineTrendingChange(metricsForCurrentPeriod, metricsForLastPeriod)
+
+	trending := model.Trending{Resource: resource, Metrics: tm}
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(trending)
 }
 
-func getMetrics(r string, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetrics, c chan *model.APIError) {
+func determineTrendingChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric {
+	totalElements := len(metricsForCurrentPeriod)
+	previousPeriodRanking := make(map[string]int, totalElements)
+	tm := make([]model.TrendingMetric, totalElements)
+
+	for ind, value := range metricsForLastPeriod {
+		previousPeriodRanking[value.ResourceValue] = ind
+	}
+
+	for currentPeriodPosition, value := range metricsForCurrentPeriod {
+		if previousPeriodPosition, isPresent := previousPeriodRanking[value.ResourceValue]; isPresent {
+			tm[currentPeriodPosition] = model.TrendingMetric{
+				Change:      previousPeriodPosition - currentPeriodPosition,
+				Occurrences: value.Occurrences,
+			}
+		} else {
+			tm[currentPeriodPosition] = model.TrendingMetric{
+				Change:      totalElements - currentPeriodPosition,
+				Occurrences: value.Occurrences,
+			}
+		}
+	}
+
+	return tm
+}
+
+func getMetrics(r string, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
 	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to)
 	c <- err

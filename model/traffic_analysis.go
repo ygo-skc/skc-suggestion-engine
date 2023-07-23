@@ -43,14 +43,19 @@ type TrafficData struct {
 	ResourceUtilized *TrafficResource `json:"resourceUtilized" validate:"required"`
 }
 
-type TrafficResourceUtilizationMetrics struct {
-	ID          string `bson:"_id" json:"resourceValue"`
-	Occurrences int    `json:"occurrences"`
+type TrafficResourceUtilizationMetric struct {
+	ResourceValue string `bson:"_id" json:"resourceValue"`
+	Occurrences   int    `json:"occurrences"`
 }
 
 type Trending struct {
-	Resource string                              `json:"resource"`
-	Metrics  []TrafficResourceUtilizationMetrics `json:"metrics"`
+	Resource string           `json:"resource"`
+	Metrics  []TrendingMetric `json:"metrics"`
+}
+
+type TrendingMetric struct {
+	Occurrences int `json:"occurrences"`
+	Change      int `json:"change"`
 }
 
 func (tai TrafficData) Validate() *validation.ValidationErrors {
