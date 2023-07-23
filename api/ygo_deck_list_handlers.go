@@ -78,7 +78,7 @@ func getBreakdown(dl string) (*model.DeckListBreakdown, *model.APIError) {
 		return nil, &model.APIError{Message: "Could not transform to map"}
 	}
 
-	var allCards model.DeckListContents
+	var allCards model.CardDataMap
 	if allCards, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(dlb.CardIDs); err.Message != "" {
 		return nil, &model.APIError{Message: "Could not access DB"}
 	}

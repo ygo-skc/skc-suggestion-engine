@@ -34,13 +34,13 @@ type Content struct {
 	Card     Card `bson:"omitempty" json:"card"`
 }
 
-type DeckListContents map[string]Card
+type CardDataMap map[string]Card
 
 type DeckListBreakdown struct {
 	CardQuantity      map[string]int
 	CardIDs           []string
 	InvalidIDs        []string
-	AllCards          DeckListContents
+	AllCards          CardDataMap
 	MainDeck          []Card
 	ExtraDeck         []Card
 	NumMainDeckCards  int

@@ -45,9 +45,9 @@ func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingID(cardID string
 	return nil, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, model.APIError) {
 	log.Fatalln(notMocked)
-	return model.DeckListContents{}, model.APIError{}
+	return model.CardDataMap{}, model.APIError{}
 }
 
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
