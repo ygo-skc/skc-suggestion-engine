@@ -31,7 +31,7 @@ type SKCSuggestionEngineDAO interface {
 	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
 
 	InsertTrafficData(ta model.TrafficAnalysis) *model.APIError
-	GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.Trending, *model.APIError)
+	GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetrics, *model.APIError)
 
 	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
 
@@ -133,7 +133,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta mod
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.Trending, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetrics, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 
@@ -155,11 +155,11 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceN
 			{Key: "$group",
 				Value: bson.D{
 					{Key: "_id", Value: "$resourceUtilized.value"},
-					{Key: "count", Value: bson.D{{Key: "$sum", Value: 1}}},
+					{Key: "occurrences", Value: bson.D{{Key: "$sum", Value: 1}}},
 				},
 			},
 		},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "count", Value: -1}}}},
+		bson.D{{Key: "$sort", Value: bson.D{{Key: "occurrences", Value: -1}}}},
 		bson.D{{Key: "$limit", Value: 10}},
 	}
 
@@ -167,7 +167,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceN
 		log.Printf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err)
 		return nil, &model.APIError{Message: "Could not get traffic data."}
 	} else {
-		td := []model.Trending{}
+		td := []model.TrafficResourceUtilizationMetrics{}
 		if err := cursor.All(ctx, &td); err != nil {
 			log.Printf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err)
 			return nil, &model.APIError{Message: "Could not get traffic data."}

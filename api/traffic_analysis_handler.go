@@ -16,7 +16,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	log.Println("Adding new traffic record...")
 
 	// deserialize body
-	var trafficData model.TrafficAnalysisInput
+	var trafficData model.TrafficData
 	if err := json.NewDecoder(req.Body).Decode(&trafficData); err != nil {
 		log.Println("Error occurred while reading the request body.")
 
@@ -65,13 +65,14 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Getting trending data for resource: %s", resource)
 
 	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
-	trendingForCurrentPeriod, trendingForLastPeriod := []model.Trending{}, []model.Trending{}
+	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetrics{}, []model.TrafficResourceUtilizationMetrics{}
 	today := time.Now()
 	twoWeeksFromToday, fourWeeksFromToday := today.AddDate(0, 0, -14), today.AddDate(0, 0, -28)
 
-	go getTrafficData(resource, twoWeeksFromToday, today, &trendingForCurrentPeriod, c1)
-	go getTrafficData(resource, fourWeeksFromToday, twoWeeksFromToday, &trendingForLastPeriod, c2)
+	go getMetrics(resource, twoWeeksFromToday, today, &metricsForCurrentPeriod, c1)
+	go getMetrics(resource, fourWeeksFromToday, twoWeeksFromToday, &metricsForLastPeriod, c2)
 
+	// get channel data and check for errors
 	if err1, err2 := <-c1, <-c2; err1 != nil {
 		res.WriteHeader(err1.StatusCode)
 		json.NewEncoder(res).Encode(err1)
@@ -80,11 +81,12 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err2)
 	}
 
+	trending := model.Trending{Resource: resource, Metrics: metricsForCurrentPeriod}
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(trendingForCurrentPeriod)
+	json.NewEncoder(res).Encode(trending)
 }
 
-func getTrafficData(r string, from time.Time, to time.Time, td *[]model.Trending, c chan *model.APIError) {
+func getMetrics(r string, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetrics, c chan *model.APIError) {
 	var err *model.APIError
 	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to)
 	c <- err
