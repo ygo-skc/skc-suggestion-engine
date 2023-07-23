@@ -96,7 +96,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		tm[ind].Resource = cdm[metricsForCurrentPeriod[ind].ResourceValue]
 	}
 
-	trending := model.Trending{ResourceName: resource, Metrics: tm}
+	trending := model.Trending[model.Card]{ResourceName: resource, Metrics: tm}
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(trending)
 }
@@ -119,10 +119,10 @@ func fetchResourceInfo(metrics []model.TrafficResourceUtilizationMetric, cdm *mo
 	}
 }
 
-func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric {
+func determineTrendChange[R model.TrafficResourceType](metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric[R] {
 	totalElements := len(metricsForCurrentPeriod)
 	previousPeriodRanking := make(map[string]int, totalElements)
-	tm := make([]model.TrendingMetric, totalElements)
+	tm := make([]model.TrendingMetric[R], totalElements)
 
 	for ind, value := range metricsForLastPeriod {
 		previousPeriodRanking[value.ResourceValue] = ind
@@ -130,12 +130,12 @@ func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtiliza
 
 	for currentPeriodPosition, value := range metricsForCurrentPeriod {
 		if previousPeriodPosition, isPresent := previousPeriodRanking[value.ResourceValue]; isPresent {
-			tm[currentPeriodPosition] = model.TrendingMetric{
+			tm[currentPeriodPosition] = model.TrendingMetric[R]{
 				Change:      previousPeriodPosition - currentPeriodPosition,
 				Occurrences: value.Occurrences,
 			}
 		} else {
-			tm[currentPeriodPosition] = model.TrendingMetric{
+			tm[currentPeriodPosition] = model.TrendingMetric[R]{
 				Change:      totalElements - currentPeriodPosition,
 				Occurrences: value.Occurrences,
 			}
