@@ -159,7 +159,9 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceN
 				},
 			},
 		},
-		bson.D{{Key: "$sort", Value: bson.D{{Key: "occurrences", Value: -1}}}},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "occurrences", Value: -1}, {Key: "_id", Value: 1},
+		}}},
 		bson.D{{Key: "$limit", Value: 10}},
 	}
 

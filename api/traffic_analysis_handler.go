@@ -103,23 +103,23 @@ func trending(res http.ResponseWriter, req *http.Request) {
 
 func fetchResourceInfo(metrics []model.TrafficResourceUtilizationMetric, cdm *model.CardDataMap, c chan *model.APIError) {
 	rv := make([]string, len(metrics))
-
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
-	if resourceData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err == nil {
-		for k, v := range resourceData {
-			(*cdm)[k] = v
-		}
-		c <- nil
-	} else {
+	var err *model.APIError
+	if *cdm, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err != nil {
 		log.Printf("Could not fetch card info for trending data...")
 		c <- err
 	}
+
+	c <- nil
 }
 
-func determineTrendChange[R model.TrafficResourceType](metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric[R] {
+func determineTrendChange[R model.TrafficResourceType](
+	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
+	metricsForLastPeriod []model.TrafficResourceUtilizationMetric,
+) []model.TrendingMetric[R] {
 	totalElements := len(metricsForCurrentPeriod)
 	previousPeriodRanking := make(map[string]int, totalElements)
 	tm := make([]model.TrendingMetric[R], totalElements)
@@ -129,16 +129,12 @@ func determineTrendChange[R model.TrafficResourceType](metricsForCurrentPeriod [
 	}
 
 	for currentPeriodPosition, value := range metricsForCurrentPeriod {
+		tm[currentPeriodPosition] = model.TrendingMetric[R]{Occurrences: value.Occurrences}
+
 		if previousPeriodPosition, isPresent := previousPeriodRanking[value.ResourceValue]; isPresent {
-			tm[currentPeriodPosition] = model.TrendingMetric[R]{
-				Change:      previousPeriodPosition - currentPeriodPosition,
-				Occurrences: value.Occurrences,
-			}
+			tm[currentPeriodPosition].Change = previousPeriodPosition - currentPeriodPosition
 		} else {
-			tm[currentPeriodPosition] = model.TrendingMetric[R]{
-				Change:      totalElements - currentPeriodPosition,
-				Occurrences: value.Occurrences,
-			}
+			tm[currentPeriodPosition].Change = totalElements - currentPeriodPosition
 		}
 	}
 
