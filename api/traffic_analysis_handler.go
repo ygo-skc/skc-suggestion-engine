@@ -100,18 +100,21 @@ func trending(res http.ResponseWriter, req *http.Request) {
 
 	switch resource {
 	case "CARD":
-		for ind := range tm {
-			tm[ind].Resource = cdm[metricsForCurrentPeriod[ind].ResourceValue]
-		}
+		updateTrendingMetric(tm, metricsForCurrentPeriod, cdm)
 	case "PRODUCT":
-		for ind := range tm {
-			tm[ind].Resource = pdm[metricsForCurrentPeriod[ind].ResourceValue]
-		}
+		updateTrendingMetric(tm, metricsForCurrentPeriod, pdm)
 	}
 
 	trending := model.Trending{ResourceName: resource, Metrics: tm}
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(trending)
+}
+
+func updateTrendingMetric[T model.Card | model.Product](
+	tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+	for ind := range tm {
+		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
+	}
 }
 
 func fetchResourceInfo[RDM model.ResourceDataMap](
@@ -160,6 +163,8 @@ func determineTrendChange(
 
 func getMetrics(r string, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
-	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to)
+	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to); err != nil {
+		log.Printf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to)
+	}
 	c <- err
 }
