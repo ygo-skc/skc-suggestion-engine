@@ -38,6 +38,7 @@ type SKCDatabaseAccessObject interface {
 	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
 	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	FindDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError)
 	GetRandomCard() (string, *model.APIError)
 }
 
@@ -123,6 +124,35 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []
 	}
 
 	return cardData, nil
+}
+
+func (imp SKCDAOImplementation) FindDesiredProductInDBUsingMultipleProductIDs(products []string) (model.ProductDataMap, *model.APIError) {
+	numProducts := len(products)
+	args := make([]interface{}, numProducts)
+	productData := make(map[string]model.Product, numProducts)
+
+	for index, cardId := range products {
+		args[index] = cardId
+	}
+
+	query := fmt.Sprintf("SELECT product_id, product_locale, product_name, product_release_date, product_content_total, product_type, product_sub_type FROM product_info WHERE product_id IN (%s)", variablePlaceholders(numProducts))
+
+	if rows, err := skcDBConn.Query(query, args...); err != nil {
+		log.Println("Error occurred while querying SKC DB for product info using 1 or more Product IDs", err)
+		return nil, &model.APIError{Message: genericError}
+	} else {
+		for rows.Next() {
+			var product model.Product
+			if err := rows.Scan(&product.ProductID, &product.ProductLocale, &product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
+				log.Println("Error transforming row to Product object from SKC DB while using 1 or more Product ID's", err)
+				return nil, &model.APIError{Message: "Error parsing data from DB."}
+			}
+
+			productData[product.ProductID] = product
+		}
+	}
+
+	return productData, nil
 }
 
 // Uses card name to find instance of card.
