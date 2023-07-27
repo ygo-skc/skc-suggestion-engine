@@ -30,15 +30,21 @@ const (
 // interface
 type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion() (string, error)
+
 	GetCardColorIDs() (map[string]int, *model.APIError)
+
 	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError)
 	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
+
 	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
+
 	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
 	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+
 	FindDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError)
+
 	GetRandomCard() (string, *model.APIError)
 }
 
@@ -143,7 +149,8 @@ func (imp SKCDAOImplementation) FindDesiredProductInDBUsingMultipleProductIDs(pr
 	} else {
 		for rows.Next() {
 			var product model.Product
-			if err := rows.Scan(&product.ProductID, &product.ProductLocale, &product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
+			if err := rows.Scan(&product.ProductID, &product.ProductLocale,
+				&product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
 				log.Println("Error transforming row to Product object from SKC DB while using 1 or more Product ID's", err)
 				return nil, &model.APIError{Message: "Error parsing data from DB."}
 			}

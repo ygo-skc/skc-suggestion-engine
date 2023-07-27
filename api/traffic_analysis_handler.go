@@ -74,8 +74,10 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	// get channel data and check for errors
 	if err1, err2 := <-c1, <-c2; err1 != nil {
 		err1.HandleServerResponse(res)
+		return
 	} else if err2 != nil {
 		err2.HandleServerResponse(res)
+		return
 	}
 
 	c3 := make(chan *model.APIError)
@@ -84,15 +86,16 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	pdm := model.ProductDataMap{}
 	switch resource {
 	case "CARD":
-		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, c3)
+		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs, c3)
 	case "PRODUCT":
-		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, c3)
+		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs, c3)
 	}
 
 	tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
 
 	if err1 := <-c3; err1 != nil {
 		err1.HandleServerResponse(res)
+		return
 	}
 
 	switch resource {
@@ -111,26 +114,20 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(trending)
 }
 
-func fetchResourceInfo[RDM model.ResourceDataMap](metrics []model.TrafficResourceUtilizationMetric, dataMap *RDM, c chan *model.APIError) {
+func fetchResourceInfo[RDM model.ResourceDataMap](
+	metrics []model.TrafficResourceUtilizationMetric,
+	dataMap *RDM,
+	fetchResourceFromDB func([]string) (RDM, *model.APIError),
+	c chan *model.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
 	var err *model.APIError
-	switch any(dataMap).(type) {
-	case *model.CardDataMap:
-		cdm := any(dataMap).(*model.CardDataMap)
-		if *cdm, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err != nil {
-			log.Printf("Could not fetch card info for trending data...")
-			c <- err
-		}
-	case *model.ProductDataMap:
-		pdm := any(dataMap).(*model.ProductDataMap)
-		if *pdm, err = skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs(rv); err != nil {
-			log.Printf("Could not fetch product info for trending data...")
-			c <- err
-		}
+	if *dataMap, err = fetchResourceFromDB(rv); err != nil {
+		log.Printf("Could not fetch data for trending resources")
+		c <- err
 	}
 
 	c <- nil
