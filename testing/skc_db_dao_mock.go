@@ -78,6 +78,11 @@ func (imp SKCDatabaseAccessObjectMock) FindArchetypeExclusionsUsingCardText(arch
 	return nil, nil
 }
 
+func (imp SKCDatabaseAccessObjectMock) FindDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError) {
+	log.Fatalln("FindDesiredProductInDBUsingMultipleProductIDs() not mocked")
+	return nil, nil
+}
+
 func (imp SKCDatabaseAccessObjectMock) GetRandomCard() (string, *model.APIError) {
 	log.Fatalln("FindArchetypeExclusionsUsingCardText() not mocked")
 	return "", nil
