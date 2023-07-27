@@ -17,5 +17,3 @@ type ProductContent struct {
 	ProductPosition string   `json:"productPosition"`
 	Rarities        []string `json:"rarities"`
 }
-
-type ProductDataMap map[string]Product

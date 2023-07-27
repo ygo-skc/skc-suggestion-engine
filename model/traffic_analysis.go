@@ -48,10 +48,6 @@ type TrafficResourceUtilizationMetric struct {
 	Occurrences   int    `json:"occurrences"`
 }
 
-type ResourceDataMap interface {
-	CardDataMap | ProductDataMap
-}
-
 type Trending struct {
 	ResourceName string           `json:"resourceName"`
 	Metrics      []TrendingMetric `json:"metrics"`
