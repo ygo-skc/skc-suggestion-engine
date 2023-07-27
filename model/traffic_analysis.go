@@ -48,19 +48,17 @@ type TrafficResourceUtilizationMetric struct {
 	Occurrences   int    `json:"occurrences"`
 }
 
-type TrafficResourceType interface {
-	Card
+type TrafficResourceType interface{}
+
+type Trending struct {
+	ResourceName string           `json:"resourceName"`
+	Metrics      []TrendingMetric `json:"metrics"`
 }
 
-type Trending[R TrafficResourceType] struct {
-	ResourceName string              `json:"resourceName"`
-	Metrics      []TrendingMetric[R] `json:"metrics"`
-}
-
-type TrendingMetric[R TrafficResourceType] struct {
-	Resource    R   `json:"resource"`
-	Occurrences int `json:"occurrences"`
-	Change      int `json:"change"`
+type TrendingMetric struct {
+	Resource    TrafficResourceType `json:"resource"`
+	Occurrences int                 `json:"occurrences"`
+	Change      int                 `json:"change"`
 }
 
 func (tai TrafficData) Validate() *validation.ValidationErrors {
