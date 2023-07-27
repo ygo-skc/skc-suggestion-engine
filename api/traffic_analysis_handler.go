@@ -50,8 +50,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: *trafficData.ResourceUtilized, Source: source}
 
 	if err := skcSuggestionEngineDBInterface.InsertTrafficData(trafficAnalysis); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	}
 
@@ -82,11 +81,12 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	c3 := make(chan *model.APIError)
 
 	cdm := model.CardDataMap{}
+	pdm := model.ProductDataMap{}
 	switch resource {
 	case "CARD":
 		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, c3)
 	case "PRODUCT":
-		// cdm = model.ProductDataMap{}
+		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, c3)
 	}
 
 	tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
@@ -95,8 +95,15 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		err1.HandleServerResponse(res)
 	}
 
-	for ind := range tm {
-		tm[ind].Resource = cdm[metricsForCurrentPeriod[ind].ResourceValue]
+	switch resource {
+	case "CARD":
+		for ind := range tm {
+			tm[ind].Resource = cdm[metricsForCurrentPeriod[ind].ResourceValue]
+		}
+	case "PRODUCT":
+		for ind := range tm {
+			tm[ind].Resource = pdm[metricsForCurrentPeriod[ind].ResourceValue]
+		}
 	}
 
 	trending := model.Trending{ResourceName: resource, Metrics: tm}
@@ -104,16 +111,26 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(trending)
 }
 
-func fetchResourceInfo(metrics []model.TrafficResourceUtilizationMetric, cdm *model.CardDataMap, c chan *model.APIError) {
+func fetchResourceInfo[RDM model.ResourceDataMap](metrics []model.TrafficResourceUtilizationMetric, dataMap *RDM, c chan *model.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
 	var err *model.APIError
-	if *cdm, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err != nil {
-		log.Printf("Could not fetch card info for trending data...")
-		c <- err
+	switch any(dataMap).(type) {
+	case *model.CardDataMap:
+		cdm := any(dataMap).(*model.CardDataMap)
+		if *cdm, err = skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(rv); err != nil {
+			log.Printf("Could not fetch card info for trending data...")
+			c <- err
+		}
+	case *model.ProductDataMap:
+		pdm := any(dataMap).(*model.ProductDataMap)
+		if *pdm, err = skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs(rv); err != nil {
+			log.Printf("Could not fetch product info for trending data...")
+			c <- err
+		}
 	}
 
 	c <- nil
