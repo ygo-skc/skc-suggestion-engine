@@ -8,6 +8,13 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type ResourceName string
+
+const (
+	CardResource    ResourceName = "CARD"
+	ProductResource ResourceName = "PRODUCT"
+)
+
 type TrafficAnalysis struct {
 	ID               primitive.ObjectID `bson:"_id,omitempty"`
 	Timestamp        time.Time          `bson:"timestamp" json:"timestamp"`
@@ -49,7 +56,7 @@ type TrafficResourceUtilizationMetric struct {
 }
 
 type Trending struct {
-	ResourceName string           `json:"resourceName"`
+	ResourceName ResourceName     `json:"resourceName"`
 	Metrics      []TrendingMetric `json:"metrics"`
 }
 

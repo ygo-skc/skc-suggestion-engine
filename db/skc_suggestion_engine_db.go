@@ -31,7 +31,7 @@ type SKCSuggestionEngineDAO interface {
 	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
 
 	InsertTrafficData(ta model.TrafficAnalysis) *model.APIError
-	GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
+	GetTrafficData(resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
 
 	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
 
@@ -133,7 +133,8 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta mod
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(resourceName string, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
+	resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 	defer cancel()
 

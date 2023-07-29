@@ -60,16 +60,16 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 
 func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
-	resource := strings.ToUpper(pathVars["resource"])
-	log.Printf("Getting trending data for resource: %s", resource)
+	r := model.ResourceName(strings.ToUpper(pathVars["resource"]))
+	log.Printf("Getting trending data for resource: %s", r)
 
 	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
 	today := time.Now()
 	twoWeeksFromToday, fourWeeksFromToday := today.AddDate(0, 0, -14), today.AddDate(0, 0, -28)
 
-	go getMetrics(resource, twoWeeksFromToday, today, &metricsForCurrentPeriod, c1)
-	go getMetrics(resource, fourWeeksFromToday, twoWeeksFromToday, &metricsForLastPeriod, c2)
+	go getMetrics(r, twoWeeksFromToday, today, &metricsForCurrentPeriod, c1)
+	go getMetrics(r, fourWeeksFromToday, twoWeeksFromToday, &metricsForLastPeriod, c2)
 
 	// get channel data and check for errors
 	if err1, err2 := <-c1, <-c2; err1 != nil {
@@ -80,34 +80,38 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	c3 := make(chan *model.APIError)
-
-	cdm := model.CardDataMap{}
-	pdm := model.ProductDataMap{}
-	switch resource {
-	case "CARD":
-		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs, c3)
-	case "PRODUCT":
-		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs, c3)
-	}
-
-	tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
-
-	if err1 := <-c3; err1 != nil {
-		err1.HandleServerResponse(res)
+	if c3, afterResourcesAreFetchedCB := initResourceInfoFlow(r, metricsForCurrentPeriod); c3 == nil || afterResourcesAreFetchedCB == nil {
+		(&model.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
 		return
-	}
+	} else {
+		tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
+		trending := model.Trending{ResourceName: r, Metrics: tm}
 
-	switch resource {
-	case "CARD":
-		updateTrendingMetric(tm, metricsForCurrentPeriod, cdm)
-	case "PRODUCT":
-		updateTrendingMetric(tm, metricsForCurrentPeriod, pdm)
-	}
+		if err1 := <-c3; err1 != nil {
+			err1.HandleServerResponse(res)
+			return
+		}
 
-	trending := model.Trending{ResourceName: resource, Metrics: tm}
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(trending)
+		afterResourcesAreFetchedCB(tm)
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(trending)
+	}
+}
+
+func initResourceInfoFlow(r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *model.APIError, func([]model.TrendingMetric)) {
+	c := make(chan *model.APIError)
+
+	switch r {
+	case model.CardResource:
+		cdm := model.CardDataMap{}
+		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs, c)
+		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm) }
+	case model.ProductResource:
+		pdm := model.ProductDataMap{}
+		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs, c)
+		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm) }
+	}
+	return nil, nil
 }
 
 func updateTrendingMetric[T model.Card | model.Product](
@@ -161,7 +165,7 @@ func determineTrendChange(
 	return tm
 }
 
-func getMetrics(r string, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
+func getMetrics(r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
 	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to); err != nil {
 		log.Printf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to)
