@@ -2,6 +2,7 @@ package testing
 
 import (
 	"log"
+	"time"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
@@ -30,6 +31,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	log.Fatalln("InsertTrafficData() not mocked")
 	return nil
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
+	resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError) {
+	log.Fatalln("GetTrafficData() not mocked")
+	return nil, nil
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError) {

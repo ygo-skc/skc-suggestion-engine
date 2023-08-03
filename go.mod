@@ -12,7 +12,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/rs/cors v1.9.0
 	github.com/stretchr/testify v1.8.4
-	go.mongodb.org/mongo-driver v1.12.0
+	go.mongodb.org/mongo-driver v1.12.1
 )
 
 require (

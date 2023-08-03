@@ -8,11 +8,18 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
+type ResourceName string
+
+const (
+	CardResource    ResourceName = "CARD"
+	ProductResource ResourceName = "PRODUCT"
+)
+
 type TrafficAnalysis struct {
 	ID               primitive.ObjectID `bson:"_id,omitempty"`
 	Timestamp        time.Time          `bson:"timestamp" json:"timestamp"`
 	Source           TrafficSource      `bson:"source" json:"source"`
-	ResourceUtilized Resource           `bson:"resourceUtilized" json:"resourceUtilized"`
+	ResourceUtilized TrafficResource    `bson:"resourceUtilized" json:"resourceUtilized"`
 	UserData         UserData           `bson:"userData" json:"userData"`
 }
 
@@ -32,18 +39,34 @@ type Location struct {
 	Country string `bson:"country" json:"country"`
 }
 
-type Resource struct {
+type TrafficResource struct {
 	Name  string `bson:"name" json:"name" validate:"required"`
 	Value string `bson:"value" json:"value" validate:"required"`
 }
 
-type TrafficAnalysisInput struct {
-	IP               string         `json:"ip" validate:"ipv4"`
-	Source           *TrafficSource `json:"source" validate:"required"`
-	ResourceUtilized *Resource      `json:"resourceUtilized" validate:"required"`
+type TrafficData struct {
+	IP               string           `json:"ip" validate:"ipv4"`
+	Source           *TrafficSource   `json:"source" validate:"required"`
+	ResourceUtilized *TrafficResource `json:"resourceUtilized" validate:"required"`
 }
 
-func (tai TrafficAnalysisInput) Validate() *validation.ValidationErrors {
+type TrafficResourceUtilizationMetric struct {
+	ResourceValue string `bson:"_id" json:"resourceValue"`
+	Occurrences   int    `json:"occurrences"`
+}
+
+type Trending struct {
+	ResourceName ResourceName     `json:"resourceName"`
+	Metrics      []TrendingMetric `json:"metrics"`
+}
+
+type TrendingMetric struct {
+	Resource    interface{} `json:"resource"`
+	Occurrences int         `json:"occurrences"`
+	Change      int         `json:"change"`
+}
+
+func (tai TrafficData) Validate() *validation.ValidationErrors {
 	if err := validation.V.Struct(tai); err != nil {
 		return validation.HandleValidationErrors(err.(validator.ValidationErrors))
 	} else {

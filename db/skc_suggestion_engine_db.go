@@ -31,6 +31,7 @@ type SKCSuggestionEngineDAO interface {
 	GetDecksThatFeatureCards([]string) (*[]model.DeckList, *model.APIError)
 
 	InsertTrafficData(ta model.TrafficAnalysis) *model.APIError
+	GetTrafficData(resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
 
 	IsBlackListed(blackListType string, blackListPhrase string) (bool, *model.APIError)
 
@@ -129,6 +130,53 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta mod
 	} else {
 		log.Printf("Successfully inserted traffic data into DB, ID: %v", res.InsertedID)
 		return nil
+	}
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
+	resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError) {
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+
+	query := bson.A{
+		bson.D{
+			{Key: "$match",
+				Value: bson.D{
+					{Key: "resourceUtilized.name", Value: resourceName},
+					{Key: "timestamp",
+						Value: bson.D{
+							{Key: "$gte", Value: from},
+							{Key: "$lte", Value: to},
+						},
+					},
+				},
+			},
+		},
+		bson.D{
+			{Key: "$group",
+				Value: bson.D{
+					{Key: "_id", Value: "$resourceUtilized.value"},
+					{Key: "occurrences", Value: bson.D{{Key: "$sum", Value: 1}}},
+				},
+			},
+		},
+		bson.D{{Key: "$sort", Value: bson.D{
+			{Key: "occurrences", Value: -1}, {Key: "_id", Value: 1},
+		}}},
+		bson.D{{Key: "$limit", Value: 10}},
+	}
+
+	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
+		log.Printf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err)
+		return nil, &model.APIError{Message: "Could not get traffic data."}
+	} else {
+		td := []model.TrafficResourceUtilizationMetric{}
+		if err := cursor.All(ctx, &td); err != nil {
+			log.Printf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err)
+			return nil, &model.APIError{Message: "Could not get traffic data."}
+		}
+
+		return td, nil
 	}
 }
 

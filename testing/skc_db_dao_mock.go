@@ -45,9 +45,9 @@ func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingID(cardID string
 	return nil, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.DeckListContents, model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError) {
 	log.Fatalln(notMocked)
-	return model.DeckListContents{}, model.APIError{}
+	return model.CardDataMap{}, nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
@@ -75,6 +75,11 @@ func (imp SKCDatabaseAccessObjectMock) FindInArchetypeSupportUsingCardText(arche
 
 func (imp SKCDatabaseAccessObjectMock) FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
 	log.Fatalln("FindArchetypeExclusionsUsingCardText() not mocked")
+	return nil, nil
+}
+
+func (imp SKCDatabaseAccessObjectMock) FindDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError) {
+	log.Fatalln("FindDesiredProductInDBUsingMultipleProductIDs() not mocked")
 	return nil, nil
 }
 

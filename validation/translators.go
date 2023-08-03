@@ -21,8 +21,8 @@ func createTranslation(tag string) func(ut.Translator, validator.FieldError) str
 }
 
 // simplifies registration of new validation and error message
-func registerTranslation(tag string, description string) {
-	V.RegisterTranslation(tag, Translator, overrideTranslation(tag, description), createTranslation(tag))
+func registerTranslation(tag string, errorMessage string) {
+	V.RegisterTranslation(tag, Translator, overrideTranslation(tag, errorMessage), createTranslation(tag))
 }
 
 // Add translations for errors so messages are more informative.
@@ -35,5 +35,5 @@ func configureTranslations() {
 	registerTranslation(systemNameValidator, "{0} can only contain letters, numbers, spaces and the special character -.")
 	registerTranslation(systemVersionValidator, "{0} should use major.minor.patch (Semantic Versioning) format.")
 	registerTranslation(ipv4Validator, "{0} should use ipv4 format.")
-	registerTranslation(ArchetypeValidator, "{0} shoud be valid archetype.")
+	registerTranslation(ArchetypeValidator, "{0} should be valid archetype.")
 }

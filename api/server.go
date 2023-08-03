@@ -102,6 +102,7 @@ func ConfigureServer() {
 	unprotectedRoutes.HandleFunc("/deck", submitNewDeckListHandler).Methods(http.MethodPost).Name("Deck List Submission")
 	unprotectedRoutes.HandleFunc("/deck/card/{cardID:[0-9]{8}}", getSuggestedDecks).Methods(http.MethodGet).Name("Deck Suggestion For Card")
 	unprotectedRoutes.HandleFunc("/deck/{deckID:[0-9a-z]+}", getDeckListHandler).Methods(http.MethodGet).Name("Retrieve Info On Deck")
+	unprotectedRoutes.HandleFunc("/trending/{resource:(?i)card|product}", trending).Methods(http.MethodGet).Name("Trending")
 
 	// admin routes
 	protectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
