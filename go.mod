@@ -5,12 +5,12 @@ go 1.19
 require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
-	github.com/go-playground/validator/v10 v10.14.1
+	github.com/go-playground/validator/v10 v10.15.4
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gorilla/mux v1.8.0
 	github.com/ip2location/ip2location-go/v9 v9.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/rs/cors v1.9.0
+	github.com/rs/cors v1.10.0
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.12.1
 )
