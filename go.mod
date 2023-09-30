@@ -10,7 +10,7 @@ require (
 	github.com/gorilla/mux v1.8.0
 	github.com/ip2location/ip2location-go/v9 v9.6.0
 	github.com/joho/godotenv v1.5.1
-	github.com/rs/cors v1.10.0
+	github.com/rs/cors v1.10.1
 	github.com/stretchr/testify v1.8.4
 	go.mongodb.org/mongo-driver v1.12.1
 )
