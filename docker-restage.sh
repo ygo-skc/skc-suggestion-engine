@@ -10,7 +10,7 @@ DIR_ON_SERVER="skc-suggestion-engine"
 
 echo "Using server $SERVER and directory $DIR_ON_SERVER to restage api"
 
-ssh -i ~/.ssh/skc-server.pem "${user}@${server}" << EOF
+ssh -i ~/.ssh/skc-server.pem "${USER}@${SERVER}" << EOF
 	cd $DIR_ON_SERVER
 	docker-compose kill
 	docker-compose rm -f
