@@ -2,7 +2,7 @@ version: "3.9"
 
 services:
   skc-suggestion-engine:
-    image: golang:1.21.1-bullseye
+    image: golang:1.21.4-bullseye
     command: go run .
     working_dir: /app
     ports:
@@ -13,7 +13,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 200m
+          memory: 250m
     networks:
       - skc-network
     environment:
