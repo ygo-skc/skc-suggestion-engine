@@ -17,7 +17,7 @@ services:
     networks:
       - skc-network
     environment:
-      - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_docker
+      - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_prod
 
 networks:
   skc-network:
