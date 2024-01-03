@@ -12,8 +12,9 @@ import (
 )
 
 var (
-	V                  = validator.New()
-	Translator         ut.Translator
+	V          = validator.New()
+	Translator ut.Translator
+
 	deckListNameRegex  = regexp.MustCompile(`^[a-zA-Z0-9 !\-@]{3,}$`)
 	cardIDRegex        = regexp.MustCompile(`^[0-9]{8}$`)
 	systemNameRegex    = regexp.MustCompile(`^[a-zA-Z0-9 \-]{3,}$`)

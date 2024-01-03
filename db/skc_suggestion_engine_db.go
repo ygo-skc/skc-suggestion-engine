@@ -16,7 +16,6 @@ import (
 var (
 	skcSuggestionDB           *mongo.Database
 	blackListCollection       *mongo.Collection
-	deckListCollection        *mongo.Collection
 	trafficAnalysisCollection *mongo.Collection
 	cardOfTheDayCollection    *mongo.Collection
 )
