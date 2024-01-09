@@ -95,6 +95,7 @@ func ConfigureServer() {
 	// configure non-admin routes
 	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
 	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
+	unprotectedRoutes.HandleFunc("/card-details", getBatchCardInfo)
 	unprotectedRoutes.HandleFunc("/card-of-the-day", getCardOfTheDay).Methods(http.MethodGet).Name("Card of the Day")
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/support", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
