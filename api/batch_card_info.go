@@ -12,8 +12,8 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	log.Println("Getting batch card info...")
 
 	// deserialize body
-	var cardIDs []string
-	if err := json.NewDecoder(req.Body).Decode(&cardIDs); err != nil {
+	var reqBody model.BatchCardIDs
+	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 		log.Printf("Error occurred while reading the request body. Error %s", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
@@ -24,8 +24,8 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	// TODO: validate body
 
 	// get card details
-	if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(cardIDs); err != nil {
-		// return &model.APIError{Message: "Could not access DB"}
+	if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+		err.HandleServerResponse(res)
 	} else {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(cardData)

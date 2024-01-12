@@ -4,6 +4,10 @@ import (
 	"strings"
 )
 
+type BatchCardIDs struct {
+	CardIDs []string `json:"cardIDs" validate:"required"`
+}
+
 type Card struct {
 	CardID         string  `db:"card_number" json:"cardID"`
 	CardColor      string  `db:"card_color" json:"cardColor"`
