@@ -19,9 +19,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	var trafficData model.TrafficData
 	if err := json.NewDecoder(req.Body).Decode(&trafficData); err != nil {
 		log.Println("Error occurred while reading the request body.")
-
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(model.APIError{Message: "Body could not be deserialized."})
+		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
 

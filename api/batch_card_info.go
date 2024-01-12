@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 
@@ -16,8 +17,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 		log.Printf("Error occurred while reading the request body. Error %s", err)
 
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(model.APIError{Message: "Body could not be deserialized."})
+		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
 
@@ -27,6 +27,16 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 	} else {
+		missingIDs := cardData.FindMissingIDs(reqBody.CardIDs)
+
+		if len(missingIDs) > 0 {
+			msg := fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", missingIDs)
+			log.Println(msg)
+
+			model.HandleServerResponse(model.APIError{Message: msg, StatusCode: http.StatusBadRequest}, res)
+			return
+		}
+
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(cardData)
 	}
