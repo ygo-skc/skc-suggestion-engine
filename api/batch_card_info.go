@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
@@ -26,17 +25,13 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		missingIDs := cardData.FindMissingIDs(reqBody.CardIDs)
+		batchCardInfo := model.BatchCardInfo{CardInfo: cardData, InvalidCardIDs: cardData.FindMissingIDs(reqBody.CardIDs)}
 
-		if len(missingIDs) > 0 {
-			msg := fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", missingIDs)
-			log.Println(msg)
-
-			model.HandleServerResponse(model.APIError{Message: msg, StatusCode: http.StatusNotFound}, res)
-			return
+		if len(batchCardInfo.InvalidCardIDs) > 0 {
+			log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.InvalidCardIDs)
 		}
 
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(cardData)
+		json.NewEncoder(res).Encode(batchCardInfo)
 	}
 }
