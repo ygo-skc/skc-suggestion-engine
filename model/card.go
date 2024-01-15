@@ -8,6 +8,11 @@ type BatchCardIDs struct {
 	CardIDs []string `json:"cardIDs" validate:"required"`
 }
 
+type BatchCardInfo struct {
+	CardInfo       CardDataMap `json:"cardInfo"`
+	InvalidCardIDs []string    `json:"invalidCardIDs"`
+}
+
 type Card struct {
 	CardID         string  `db:"card_number" json:"cardID"`
 	CardColor      string  `db:"card_color" json:"cardColor"`
