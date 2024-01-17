@@ -24,8 +24,6 @@ var (
 	ipDB                           *ip2location.DB
 	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDAOImplementation{}
 	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
-	router                         *mux.Router
-	corsOpts                       *cors.Cors
 	serverAPIKey                   string
 	chicagoLocation                *time.Location
 )
@@ -87,10 +85,9 @@ func commonHeadersMiddleware(next http.Handler) http.Handler {
 
 // Configures routes and their middle wares
 // This method should be called before the environment is set up as the API Key will be set according to the value found in environment
-func ConfigureServer() {
-	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
-
-	router = mux.NewRouter()
+func RunHttpServer() {
+	configureEnv()
+	router := mux.NewRouter()
 
 	// configure non-admin routes
 	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
@@ -111,7 +108,7 @@ func ConfigureServer() {
 	router.Use(commonHeadersMiddleware)
 
 	// Cors
-	corsOpts = cors.New(cors.Options{
+	corsOpts := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000", "http://dev.thesupremekingscastle.com", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
 		AllowedMethods: []string{
 			http.MethodGet,
@@ -124,10 +121,13 @@ func ConfigureServer() {
 			"*", //or you can your header key values which you are using in your application
 		},
 	})
+
+	go serveTLS(router, corsOpts)
+	serveUnsecured(router, corsOpts)
 }
 
 // configure server to handle HTTPS (secured) calls
-func ServeTLS() {
+func serveTLS(router *mux.Router, corsOpts *cors.Cors) {
 	log.Println("Starting server in port 9000 (secured)")
 	if err := http.ListenAndServeTLS(":9000", "certs/certificate.crt", "certs/private.key", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
 		log.Fatalf("There was an error starting api server: %s", err)
@@ -135,9 +135,14 @@ func ServeTLS() {
 }
 
 // configure server to handle HTTPs (un-secured) calls
-func ServeUnsecured() {
+func serveUnsecured(router *mux.Router, corsOpts *cors.Cors) {
 	log.Println("Starting server in port 90 (unsecured)")
 	if err := http.ListenAndServe(":90", corsOpts.Handler(router)); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
+}
+
+func configureEnv() {
+	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
+	log.Printf("API Key for API %s", serverAPIKey)
 }
