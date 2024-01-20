@@ -14,7 +14,10 @@ const (
 )
 
 func init() {
-	EnvMap = ConfigureEnv()
+	isCICD := os.Getenv("IS_CICD")
+	if isCICD == "false" || isCICD == "" {
+		EnvMap = ConfigureEnv()
+	}
 }
 
 func ConfigureEnv() map[string]string {
