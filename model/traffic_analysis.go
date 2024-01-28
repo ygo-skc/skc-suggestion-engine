@@ -3,8 +3,6 @@ package model
 import (
 	"time"
 
-	"github.com/go-playground/validator/v10"
-	"github.com/ygo-skc/skc-suggestion-engine/validation"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
@@ -64,12 +62,4 @@ type TrendingMetric struct {
 	Resource    interface{} `json:"resource"`
 	Occurrences int         `json:"occurrences"`
 	Change      int         `json:"change"`
-}
-
-func (tai TrafficData) Validate() *validation.ValidationErrors {
-	if err := validation.V.Struct(tai); err != nil {
-		return validation.HandleValidationErrors(err.(validator.ValidationErrors))
-	} else {
-		return nil
-	}
 }

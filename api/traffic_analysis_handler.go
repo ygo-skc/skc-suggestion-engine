@@ -9,6 +9,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
@@ -24,7 +25,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// validate body
-	if err := trafficData.Validate(); err != nil {
+	if err := validation.Validate(trafficData); err != nil {
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		json.NewEncoder(res).Encode(err)
 		return

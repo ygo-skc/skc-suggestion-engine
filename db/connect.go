@@ -40,7 +40,12 @@ func EstablishSKCSuggestionEngineDBConn() {
 		AuthMechanism: "MONGODB-X509",
 	}
 
-	if client, err := mongo.Connect(context.TODO(), options.Client().ApplyURI(uri).SetAuth(credential).SetMinPoolSize(minPoolSize).SetMaxPoolSize(maxPoolSize).SetMaxConnIdleTime(10*time.Minute).
+	if client, err := mongo.Connect(context.TODO(), options.Client().
+		ApplyURI(uri).
+		SetAuth(credential).
+		SetMinPoolSize(minPoolSize).
+		SetMaxPoolSize(maxPoolSize).
+		SetMaxConnIdleTime(10*time.Minute).
 		SetAppName("SKC Suggestion Engine")); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine DB", err)
 	} else {

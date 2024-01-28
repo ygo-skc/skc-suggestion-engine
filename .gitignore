@@ -36,3 +36,5 @@ certs/*
 data/*.BIN
 
 coverage.*
+
+/**__debug**
