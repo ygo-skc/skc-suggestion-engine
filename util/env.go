@@ -3,6 +3,7 @@ package util
 import (
 	"log"
 	"os"
+	"strings"
 
 	"github.com/joho/godotenv"
 )
@@ -15,7 +16,7 @@ const (
 
 func init() {
 	isCICD := os.Getenv("IS_CICD")
-	if isCICD == "false" || isCICD == "" {
+	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		EnvMap = ConfigureEnv()
 	}
 }

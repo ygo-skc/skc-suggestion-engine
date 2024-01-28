@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -31,7 +32,7 @@ var (
 func init() {
 	// init IP DB
 	isCICD := os.Getenv("IS_CICD")
-	if isCICD == "false" || isCICD == "" {
+	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		log.Println("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
