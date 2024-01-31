@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
@@ -19,19 +20,29 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: validate body
-
-	// get card details
-	if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
-		err.HandleServerResponse(res)
-	} else {
-		batchCardInfo := model.BatchCardInfo{CardInfo: cardData, InvalidCardIDs: cardData.FindMissingIDs(reqBody.CardIDs)}
-
-		if len(batchCardInfo.InvalidCardIDs) > 0 {
-			log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.InvalidCardIDs)
-		}
-
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(batchCardInfo)
+	// validate body
+	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
+		res.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(res).Encode(err)
+		return
 	}
+
+	var batchCardInfo model.BatchCardInfo
+	if len(reqBody.CardIDs) == 0 {
+		batchCardInfo = model.BatchCardInfo{CardInfo: model.CardDataMap{}, UnknownCardIDs: model.CardIDs{}}
+	} else {
+		// get card details
+		if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+			err.HandleServerResponse(res)
+		} else {
+			batchCardInfo = model.BatchCardInfo{CardInfo: cardData, UnknownCardIDs: cardData.FindMissingIDs(reqBody.CardIDs)}
+
+			if len(batchCardInfo.UnknownCardIDs) > 0 {
+				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownCardIDs)
+			}
+		}
+	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(batchCardInfo)
 }

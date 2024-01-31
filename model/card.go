@@ -4,13 +4,15 @@ import (
 	"strings"
 )
 
+type CardIDs []string
+
 type BatchCardIDs struct {
-	CardIDs []string `json:"cardIDs" validate:"required"`
+	CardIDs CardIDs `json:"cardIDs" validate:"required,ygocardids"`
 }
 
 type BatchCardInfo struct {
 	CardInfo       CardDataMap `json:"cardInfo"`
-	InvalidCardIDs []string    `json:"invalidCardIDs"`
+	UnknownCardIDs CardIDs     `json:"unknownCardIDs"`
 }
 
 type Card struct {

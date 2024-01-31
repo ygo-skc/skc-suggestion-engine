@@ -3,8 +3,8 @@ package model
 type CardDataMap map[string]Card
 
 // finds all card IDs not found in CardDataMap keys
-func (cardData CardDataMap) FindMissingIDs(cardIDs []string) []string {
-	missingIDs := make([]string, 0)
+func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
+	missingIDs := make(CardIDs, 0)
 
 	for _, cardID := range cardIDs {
 		if _, containsKey := cardData[cardID]; !containsKey {

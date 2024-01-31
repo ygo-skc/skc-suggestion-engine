@@ -12,3 +12,11 @@ func Validate(tai model.TrafficData) *ValidationErrors {
 		return nil
 	}
 }
+
+func ValidateBatchCardIDs(bci model.BatchCardIDs) *ValidationErrors {
+	if err := V.Struct(bci); err != nil {
+		return HandleValidationErrors(err.(validator.ValidationErrors))
+	} else {
+		return nil
+	}
+}

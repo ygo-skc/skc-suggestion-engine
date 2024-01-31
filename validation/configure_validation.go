@@ -27,6 +27,7 @@ const (
 	systemVersionValidator = "systemversion"
 	ipv4Validator          = "ipv4"
 	ArchetypeValidator     = "archetype"
+	ygoCardIDsValidator    = "ygocardids"
 )
 
 func init() {
