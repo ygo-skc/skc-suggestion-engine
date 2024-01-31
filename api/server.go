@@ -145,5 +145,4 @@ func serveUnsecured(router *mux.Router, corsOpts *cors.Cors) {
 
 func configureEnv() {
 	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
-	log.Printf("API Key for API %s", serverAPIKey)
 }
