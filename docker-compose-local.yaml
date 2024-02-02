@@ -23,3 +23,4 @@ networks:
   skc-network:
     name: skc-network
     driver: bridge
+    external: true
