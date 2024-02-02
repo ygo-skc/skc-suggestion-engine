@@ -4,6 +4,17 @@ import (
 	"strings"
 )
 
+type CardIDs []string
+
+type BatchCardIDs struct {
+	CardIDs CardIDs `json:"cardIDs" validate:"required,ygocardids"`
+}
+
+type BatchCardInfo struct {
+	CardInfo       CardDataMap `json:"cardInfo"`
+	UnknownCardIDs CardIDs     `json:"unknownCardIDs"`
+}
+
 type Card struct {
 	CardID         string  `db:"card_number" json:"cardID"`
 	CardColor      string  `db:"card_color" json:"cardColor"`

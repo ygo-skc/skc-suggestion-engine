@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -24,8 +25,6 @@ var (
 	ipDB                           *ip2location.DB
 	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDAOImplementation{}
 	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
-	router                         *mux.Router
-	corsOpts                       *cors.Cors
 	serverAPIKey                   string
 	chicagoLocation                *time.Location
 )
@@ -33,7 +32,7 @@ var (
 func init() {
 	// init IP DB
 	isCICD := os.Getenv("IS_CICD")
-	if isCICD == "false" || isCICD == "" {
+	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		log.Println("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
@@ -87,21 +86,18 @@ func commonHeadersMiddleware(next http.Handler) http.Handler {
 
 // Configures routes and their middle wares
 // This method should be called before the environment is set up as the API Key will be set according to the value found in environment
-func ConfigureServer() {
-	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
-
-	router = mux.NewRouter()
+func RunHttpServer() {
+	configureEnv()
+	router := mux.NewRouter()
 
 	// configure non-admin routes
 	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
 	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
+	unprotectedRoutes.HandleFunc("/card-details", getBatchCardInfo)
 	unprotectedRoutes.HandleFunc("/card-of-the-day", getCardOfTheDay).Methods(http.MethodGet).Name("Card of the Day")
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/support", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
 	unprotectedRoutes.HandleFunc("/archetype/{archetypeName}", getArchetypeSupportHandler).Methods(http.MethodGet).Name("Archetype Suggestions")
-	unprotectedRoutes.HandleFunc("/deck", submitNewDeckListHandler).Methods(http.MethodPost).Name("Deck List Submission")
-	unprotectedRoutes.HandleFunc("/deck/card/{cardID:[0-9]{8}}", getSuggestedDecks).Methods(http.MethodGet).Name("Deck Suggestion For Card")
-	unprotectedRoutes.HandleFunc("/deck/{deckID:[0-9a-z]+}", getDeckListHandler).Methods(http.MethodGet).Name("Retrieve Info On Deck")
 	unprotectedRoutes.HandleFunc("/trending/{resource:(?i)card|product}", trending).Methods(http.MethodGet).Name("Trending")
 
 	// admin routes
@@ -113,7 +109,7 @@ func ConfigureServer() {
 	router.Use(commonHeadersMiddleware)
 
 	// Cors
-	corsOpts = cors.New(cors.Options{
+	corsOpts := cors.New(cors.Options{
 		AllowedOrigins: []string{"http://localhost:3000", "http://dev.thesupremekingscastle.com", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
 		AllowedMethods: []string{
 			http.MethodGet,
@@ -126,10 +122,13 @@ func ConfigureServer() {
 			"*", //or you can your header key values which you are using in your application
 		},
 	})
+
+	go serveTLS(router, corsOpts)
+	serveUnsecured(router, corsOpts)
 }
 
 // configure server to handle HTTPS (secured) calls
-func ServeTLS() {
+func serveTLS(router *mux.Router, corsOpts *cors.Cors) {
 	log.Println("Starting server in port 9000 (secured)")
 	if err := http.ListenAndServeTLS(":9000", "certs/certificate.crt", "certs/private.key", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
 		log.Fatalf("There was an error starting api server: %s", err)
@@ -137,9 +136,13 @@ func ServeTLS() {
 }
 
 // configure server to handle HTTPs (un-secured) calls
-func ServeUnsecured() {
+func serveUnsecured(router *mux.Router, corsOpts *cors.Cors) {
 	log.Println("Starting server in port 90 (unsecured)")
 	if err := http.ListenAndServe(":90", corsOpts.Handler(router)); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
+}
+
+func configureEnv() {
+	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
 }

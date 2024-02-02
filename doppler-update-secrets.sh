@@ -17,7 +17,7 @@ cat certs/ca_bundle.crt | doppler secrets set -p skc-suggestion-engine -c dev_do
 
 #######################
 # Upload - Prod
-doppler secrets upload -p skc-suggestion-engine -c prod .env_docker
+doppler secrets upload -p skc-suggestion-engine -c prod .env_prod
 cat certs/skc-suggestion-engine-db.pem| doppler secrets set -p skc-suggestion-engine -c prod MONGODB_X509
 
 # upload tls certs

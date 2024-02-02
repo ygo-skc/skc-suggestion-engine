@@ -1,6 +1,6 @@
 # skc-suggestion-engine
 
-[![Unit Test](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml/badge.svg)](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml)
+[![Unit Test](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml/badge.svg?branch=release)](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/unit-test.yaml) [![CodeQL](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/codeql.yml/badge.svg?branch=release)](https://github.com/ygo-skc/skc-suggestion-engine/actions/workflows/codeql.yml)
 
 ## Info
 

@@ -12,9 +12,9 @@ import (
 )
 
 var (
-	V                  = validator.New()
-	Translator         ut.Translator
-	deckListNameRegex  = regexp.MustCompile(`^[a-zA-Z0-9 !\-@]{3,}$`)
+	V          = validator.New()
+	Translator ut.Translator
+
 	cardIDRegex        = regexp.MustCompile(`^[0-9]{8}$`)
 	systemNameRegex    = regexp.MustCompile(`^[a-zA-Z0-9 \-]{3,}$`)
 	systemVersionRegex = regexp.MustCompile(`^([1-9]\d*|0)(\.(([1-9]\d*)|0)){2,3}$`)
@@ -22,15 +22,12 @@ var (
 )
 
 const (
-	deckListNameValidator  = "decklistname"
-	deckMascotsValidator   = "deckmascots"
 	requiredValidator      = "required"
-	base64Validator        = "base64"
-	urlValidator           = "url"
 	systemNameValidator    = "systemname"
 	systemVersionValidator = "systemversion"
 	ipv4Validator          = "ipv4"
 	ArchetypeValidator     = "archetype"
+	ygoCardIDsValidator    = "ygocardids"
 )
 
 func init() {

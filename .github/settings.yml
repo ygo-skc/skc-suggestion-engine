@@ -3,7 +3,7 @@ repository:
   name: skc-suggestion-engine
   description: API that will provide suggestions for all SKC services.
   homepage: https://thesupremekingscastle.com/about
-  topics: skc suggestion engine, golang, api, suggestion, text parsing
+  topics: skc suggestion engine, golang, api, suggestion, text parsing, ygo, yugioh, yugioh card suggestions
   private: false
   has_issues: true
   has_wiki: false

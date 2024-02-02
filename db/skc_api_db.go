@@ -103,12 +103,12 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*mode
 	return &card, nil
 }
 
-func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError) {
-	numCards := len(cards)
+func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.CardDataMap, *model.APIError) {
+	numCards := len(cardIDs)
 	args := make([]interface{}, numCards)
 	cardData := make(map[string]model.Card, numCards)
 
-	for index, cardId := range cards {
+	for index, cardId := range cardIDs {
 		args[index] = cardId
 	}
 
@@ -118,14 +118,12 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cards []
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
 		return nil, &model.APIError{Message: genericError}
 	} else {
-		for rows.Next() {
-			var card model.Card
-			if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-				log.Println("Error transforming row to Card object from SKC DB while using 1 or more CardIDs", err)
-				return nil, &model.APIError{Message: "Error parsing data from DB."}
+		if cards, err := parseRowsForCard(rows); err != nil {
+			return nil, err
+		} else {
+			for _, card := range cards {
+				cardData[card.CardID] = card
 			}
-
-			cardData[card.CardID] = card
 		}
 	}
 

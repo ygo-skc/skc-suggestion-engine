@@ -11,9 +11,9 @@ DIR_ON_SERVER="skc-suggestion-engine"
 echo "Using server $SERVER and directory $DIR_ON_SERVER to sync prod API"
 
 echo "Uploading API files"
-rsync -avz --progress -e "ssh -i ~/.ssh/skc-server.pem" docker-compose.yaml api certs db model util validation data main.go go.mod go.sum .env_docker "${USER}@${SERVER}:${DIR_ON_SERVER}/"
+rsync -avzh --delete --progress -e "ssh -i ~/.ssh/skc-server.pem" docker-compose.yaml api certs db model util validation data main.go go.mod go.sum .env_prod "${USER}@${SERVER}:${DIR_ON_SERVER}/"
 
-echo "Restaging API"
+echo -e "\n\nRestaging API"
 ssh -i ~/.ssh/skc-server.pem "${USER}@${SERVER}" << EOF
 	cd $DIR_ON_SERVER
 	docker-compose kill

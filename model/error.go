@@ -19,3 +19,7 @@ func (e *APIError) HandleServerResponse(res http.ResponseWriter) {
 	res.WriteHeader(e.StatusCode)
 	json.NewEncoder(res).Encode(e)
 }
+
+func HandleServerResponse(apiErr APIError, res http.ResponseWriter) {
+	apiErr.HandleServerResponse(res)
+}

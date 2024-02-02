@@ -13,21 +13,6 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersio
 	return "1.0.0", nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) InsertDeckList(deckList model.DeckList) {
-	log.Fatalln("InsertDeckList() not mocked")
-}
-
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetDeckList(deckID string) (*model.DeckList, *model.APIError) {
-	log.Fatalln("GetDeckList() not mocked")
-	return nil, nil
-}
-
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetDecksThatFeatureCards(cardIDs []string) (*[]model.DeckList, *model.APIError) {
-	deck := []model.DeckList{}
-
-	return &deck, nil
-}
-
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ta model.TrafficAnalysis) *model.APIError {
 	log.Fatalln("InsertTrafficData() not mocked")
 	return nil
