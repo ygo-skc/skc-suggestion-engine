@@ -17,7 +17,7 @@ Go API that extends functionality of [SKC API](https://github.com/ygo-skc/skc-ap
 In order for the API to work locally, do the following steps
 
 1. Run `go mod tidy` to download deps
-2. Execute the shell **script doppler-secrets-local-setup.sh** to download all the secrets. This will only work if you are logged into Doppler and have access to my org.
+2. Execute the shell script `aws-secrets-local-setup.sh` to download all the secrets. This will only work if you are logged into AWS and have access the secrets.
 3. Create directory called data and include the IP DB file. Ensure the file is called **IPv4-DB.BIN**.
 
 ## Testing

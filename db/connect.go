@@ -20,7 +20,7 @@ const (
 // Connect to SKC database.
 func EstablishDBConn() {
 	uri := "%s:%s@tcp(%s)/%s"
-	dataSourceName := fmt.Sprintf(uri, util.EnvMap["SKC_DB_USER"], util.EnvMap["SKC_DB_PWD"], util.EnvMap["SKC_DB_URI"], util.EnvMap["SKC_DB_NAME"])
+	dataSourceName := fmt.Sprintf(uri, util.EnvMap["SKC_DB_USERNAME"], util.EnvMap["SKC_DB_PASSWORD"], util.EnvMap["SKC_DB_HOST"], util.EnvMap["SKC_DB_NAME"])
 
 	var err error
 	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
@@ -33,8 +33,7 @@ func EstablishDBConn() {
 
 func EstablishSKCSuggestionEngineDBConn() {
 	certificateKeyFilePath := "./certs/skc-suggestion-engine-db.pem"
-	uri := "mongodb+srv://skc-suggestion-engine-e.rfait.mongodb.net/?tlsCertificateKeyFile=%s"
-	uri = fmt.Sprintf(uri, certificateKeyFilePath)
+	uri := fmt.Sprintf("%s/?tlsCertificateKeyFile=%s", util.EnvMap["DB_HOST"], certificateKeyFilePath)
 
 	credential := options.Credential{
 		AuthMechanism: "MONGODB-X509",
