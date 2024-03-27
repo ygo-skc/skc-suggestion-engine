@@ -1,5 +1,3 @@
-version: "3.9"
-
 services:
   skc-suggestion-engine:
     image: golang:1.22.1-bullseye
