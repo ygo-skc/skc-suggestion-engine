@@ -34,7 +34,7 @@ func init() {
 	isCICD := os.Getenv("IS_CICD")
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		log.Println("Loading IP DB...")
-		if ip, err := ip2location.OpenDB("./data/IPv4-DB.BIN"); err != nil {
+		if ip, err := ip2location.OpenDB("./data/IPv4-DB9.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
 		} else {
 			ipDB = ip
