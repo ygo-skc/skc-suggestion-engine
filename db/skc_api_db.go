@@ -11,20 +11,24 @@ import (
 )
 
 var (
-	skcDBConn *sql.DB
+	skcDBConn      *sql.DB
+	skcDBInterface SKCDatabaseAccessObject = SKCDAOImplementation{}
 )
 
 const (
 	// errors
-	genericError string = "Error occurred while querying DB."
+	genericError = "Error occurred while querying DB."
 
 	// queries
-	queryDBVersion                  string = "SELECT VERSION()"
-	queryCardColorIDs               string = "SELECT color_id, card_color from card_colors ORDER BY color_id"
-	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
+	queryDBVersion    = "SELECT VERSION()"
+	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
+
+	queryCardUsingCardID   = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
+	queryCardUsingCardIDs  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
+	queryCardUsingCardName = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
+	queryRandomCardID      = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
-	queryRandomCardID               string = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 )
 
 // interface
@@ -88,19 +92,15 @@ func (imp SKCDAOImplementation) GetCardColorIDs() (map[string]int, *model.APIErr
 // Uses card ID to find instance of card.
 // Returns error if no instance of card ID is found in DB or other issues occur while accessing DB.
 func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
-	var card model.Card
-
-	if err := skcDBConn.QueryRow(queryCardUsingCardID, cardID).Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-		if err.Error() == "sql: no rows in result set" {
-			log.Printf("Card w/ ID {%s} not found in DB", cardID)
-			return nil, &model.APIError{Message: fmt.Sprintf("Cannot find card using ID %s", cardID), StatusCode: http.StatusNotFound}
+	if results, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs([]string{cardID}); err != nil {
+		return nil, err
+	} else {
+		if card, exists := results[cardID]; !exists {
+			return nil, &model.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
 		} else {
-			log.Printf("An error ocurred while fetching card using ID. Err {%s}", err)
-			return nil, &model.APIError{Message: "Service unavailable", StatusCode: http.StatusInternalServerError}
+			return &card, nil
 		}
 	}
-
-	return &card, nil
 }
 
 func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.CardDataMap, *model.APIError) {
@@ -112,7 +112,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cardIDs 
 		args[index] = cardId
 	}
 
-	query := fmt.Sprintf("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)", variablePlaceholders(numCards))
+	query := fmt.Sprintf(queryCardUsingCardIDs, variablePlaceholders(numCards))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Println("Error occurred while querying SKC DB for card info using 1 or more CardIDs", err)
