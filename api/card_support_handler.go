@@ -16,7 +16,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Getting cards that support card w/ ID: %s", cardID)
 
 	support := model.CardSupport{ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
-	if cardToGetSupportFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
+	if cardToGetSupportFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return
@@ -25,7 +25,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get support
-	if s, err := skcDBInterface.FindOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
+	if s, err := skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 		return

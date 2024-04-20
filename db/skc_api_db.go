@@ -11,8 +11,7 @@ import (
 )
 
 var (
-	skcDBConn      *sql.DB
-	skcDBInterface SKCDatabaseAccessObject = SKCDAOImplementation{}
+	skcDBConn *sql.DB
 )
 
 const (
@@ -37,17 +36,17 @@ type SKCDatabaseAccessObject interface {
 
 	GetCardColorIDs() (map[string]int, *model.APIError)
 
-	FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
-	FindDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError)
-	FindDesiredCardInDBUsingName(cardName string) (model.Card, error)
+	GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
+	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError)
+	GetDesiredCardInDBUsingName(cardName string) (model.Card, error)
 
-	FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
+	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 
-	FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
-	FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
-	FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	GetInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
+	GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
+	GetArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 
-	FindDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError)
+	GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError)
 
 	GetRandomCard() (string, *model.APIError)
 }
@@ -59,7 +58,7 @@ type SKCDAOImplementation struct{}
 func (imp SKCDAOImplementation) GetSKCDBVersion() (string, error) {
 	var version string
 	if err := skcDBConn.QueryRow(queryDBVersion).Scan(&version); err != nil {
-		log.Println("Error getting SKC DB version", err)
+		log.Printf("Error getting SKC DB version - %v", err)
 		return version, err
 	}
 
@@ -71,7 +70,7 @@ func (imp SKCDAOImplementation) GetCardColorIDs() (map[string]int, *model.APIErr
 	cardColorIDs := map[string]int{}
 
 	if rows, err := skcDBConn.Query(queryCardColorIDs); err != nil {
-		log.Printf("Error occurred while fetching card color IDs.")
+		log.Println("Error occurred while fetching card color IDs")
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		for rows.Next() {
@@ -91,8 +90,8 @@ func (imp SKCDAOImplementation) GetCardColorIDs() (map[string]int, *model.APIErr
 
 // Uses card ID to find instance of card.
 // Returns error if no instance of card ID is found in DB or other issues occur while accessing DB.
-func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
-	if results, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs([]string{cardID}); err != nil {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
+	if results, err := imp.GetDesiredCardInDBUsingMultipleCardIDs([]string{cardID}); err != nil {
 		return nil, err
 	} else {
 		if card, exists := results[cardID]; !exists {
@@ -103,7 +102,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingID(cardID string) (*mode
 	}
 }
 
-func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.CardDataMap, *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.CardDataMap, *model.APIError) {
 	numCards := len(cardIDs)
 	args := make([]interface{}, numCards)
 	cardData := make(map[string]model.Card, numCards)
@@ -130,7 +129,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingMultipleCardIDs(cardIDs 
 	return cardData, nil
 }
 
-func (imp SKCDAOImplementation) FindDesiredProductInDBUsingMultipleProductIDs(products []string) (model.ProductDataMap, *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(products []string) (model.ProductDataMap, *model.APIError) {
 	numProducts := len(products)
 	args := make([]interface{}, numProducts)
 	productData := make(map[string]model.Product, numProducts)
@@ -162,7 +161,7 @@ func (imp SKCDAOImplementation) FindDesiredProductInDBUsingMultipleProductIDs(pr
 
 // Uses card name to find instance of card.
 // Returns error if no instance of card name as found in DB.
-func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (model.Card, error) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingName(cardName string) (model.Card, error) {
 	var card model.Card
 
 	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).
@@ -175,7 +174,7 @@ func (imp SKCDAOImplementation) FindDesiredCardInDBUsingName(cardName string) (m
 
 // TODO: document
 // TODO: find way to make code more readable
-func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
 	cardNameWithDoubleQuotes := `%"` + cardName + `"%`
 	cardNameWithSingleQuotes := `%'` + cardName + `'%`
 
@@ -187,7 +186,7 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 	}
 }
 
-func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
 	// there are three scenarios
 	searchTerm := `%` + archetypeName + `%`
 
@@ -199,7 +198,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeNam
 	}
 }
 
-func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
 	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
@@ -210,7 +209,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeNam
 	}
 }
 
-func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
 	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {

@@ -27,7 +27,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	}
 
 	log.Println("Fetching card of the day information.")
-	if card, err := skcDBInterface.FindDesiredCardInDBUsingID(cardOfTheDay.CardID); err != nil {
+	if card, err := skcDBInterface.GetDesiredCardInDBUsingID(cardOfTheDay.CardID); err != nil {
 		e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return

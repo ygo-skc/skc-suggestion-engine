@@ -24,7 +24,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := pathVars["cardID"]
 	log.Printf("Getting suggestions for card w/ ID: %s", cardID)
 
-	if cardToGetSuggestionsFor, err := skcDBInterface.FindDesiredCardInDBUsingID(cardID); err != nil {
+	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
@@ -156,7 +156,7 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 			continue
 		}
 
-		if card, err := skcDBInterface.FindDesiredCardInDBUsingName(token); err != nil {
+		if card, err := skcDBInterface.GetDesiredCardInDBUsingName(token); err != nil {
 			// add occurrence of archetype to map
 			archetypalReferences[token] = true
 		} else {

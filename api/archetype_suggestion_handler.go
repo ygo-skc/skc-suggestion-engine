@@ -18,13 +18,13 @@ type archetypeSuggestionHandlers struct {
 }
 
 var (
-	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
 		as.UsingName = dbData
 	}}
-	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
 		as.UsingText = dbData
 	}}
-	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.FindArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
+	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []model.Card, as *model.ArchetypalSuggestions) {
 		as.Exclusions = dbData
 	}}
 )

@@ -32,7 +32,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		batchCardInfo = model.BatchCardInfo{CardInfo: model.CardDataMap{}, UnknownCardIDs: model.CardIDs{}}
 	} else {
 		// get card details
-		if cardData, err := skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+		if cardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
 			err.HandleServerResponse(res)
 		} else {
 			batchCardInfo = model.BatchCardInfo{CardInfo: cardData, UnknownCardIDs: cardData.FindMissingIDs(reqBody.CardIDs)}

@@ -103,11 +103,11 @@ func initResourceInfoFlow(r model.ResourceName, metricsForCurrentPeriod []model.
 	switch r {
 	case model.CardResource:
 		cdm := model.CardDataMap{}
-		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs, c)
+		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
 		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm) }
 	case model.ProductResource:
 		pdm := model.ProductDataMap{}
-		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs, c)
+		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
 		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm) }
 	}
 	return nil, nil
