@@ -20,7 +20,7 @@ const (
 
 	// queries
 	queryDBVersion                  string = "SELECT VERSION()"
-	queryCardColorIDs               string = "select color_id, card_color from card_colors order by color_id"
+	queryCardColorIDs               string = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 	queryCardUsingCardID            string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
 	queryCardUsingCardName          string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
@@ -189,14 +189,9 @@ func (imp SKCDAOImplementation) FindOccurrenceOfCardNameInAllCardEffect(cardName
 
 func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
 	// there are three scenarios
-	// - archetype reference could be in the beginning of the name
-	search1 := archetypeName + ` %`
-	// - archetype reference could be in the middle of the name
-	search2 := `% ` + archetypeName + ` %`
-	// - archetype reference could be in the end of the name
-	search3 := `% ` + archetypeName
+	searchTerm := `%` + archetypeName + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE ? OR card_name LIKE ? OR card_name LIKE ?", search1, search2, search3); err != nil {
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name", searchTerm); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using archetype name %s. Err %v", archetypeName, err)
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
@@ -207,7 +202,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardName(archetypeNam
 func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
 	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
@@ -218,7 +213,7 @@ func (imp SKCDAOImplementation) FindInArchetypeSupportUsingCardText(archetypeNam
 func (imp SKCDAOImplementation) FindArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
 	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ?", archetypeName); err != nil {
+	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
 		log.Printf("Error occurred while searching for in-archetype cards using nickname %s. Err %v", archetypeName, err)
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
