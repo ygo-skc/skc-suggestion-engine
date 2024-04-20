@@ -69,7 +69,9 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err3.HandleServerResponse(res)
 		return
 	} else if len(archetypalSuggestions.UsingName) < 2 {
-		notAnArchetypeErr := model.APIError{Message: "There are fewer than 2 cards matching input string, as such it is likely this phrase is not an archetype.", StatusCode: http.StatusNotFound}
+		notAnArchetypeErr := model.APIError{
+			Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
+			StatusCode: http.StatusNotFound}
 		res.WriteHeader(notAnArchetypeErr.StatusCode)
 		json.NewEncoder(res).Encode(notAnArchetypeErr)
 		return
