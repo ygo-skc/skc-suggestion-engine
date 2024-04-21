@@ -45,17 +45,22 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(cardID string)
 	return nil, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardInfo, *model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardData[model.CardIDs], *model.APIError) {
 	log.Fatalln(notMocked)
-	return &model.BatchCardInfo{}, nil
+	return &model.BatchCardData[model.CardIDs]{}, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingName(cardName string) (model.Card, error) {
-	if card, isPresent := CardMocks[cardName]; isPresent {
-		return card, nil
-	} else {
-		return model.Card{}, ErrorMock{}
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNames(cardNames []string) (*model.BatchCardData[model.CardNames], *model.APIError) {
+	found, notFound := make(model.CardDataMap, 0), make(model.CardNames, 0)
+	for _, cardName := range cardNames {
+		if card, isPresent := CardMocks[cardName]; isPresent {
+			found[card.CardName] = card
+		} else {
+			notFound = append(notFound, cardName)
+		}
 	}
+
+	return &model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
 
 func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
@@ -78,7 +83,7 @@ func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(arche
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (*model.BatchProductInfo, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (*model.BatchProductData[model.ProductIDs], *model.APIError) {
 	log.Fatalln("GetDesiredProductInDBUsingMultipleProductIDs() not mocked")
 	return nil, nil
 }

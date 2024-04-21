@@ -2,9 +2,17 @@ package model
 
 type QuotedToken = string
 
+// identifier arrays
+
 type CardIDs []string
-type ProductIDs []string
 type CardNames []string
+type ProductIDs []string
+type ProductNames []string
+type IdentifierSlice interface {
+	CardIDs | CardNames | ProductIDs | ProductNames
+}
+
+// data maps
 
 type CardDataMap map[string]Card
 type ProductDataMap map[string]Product
@@ -62,16 +70,16 @@ type BatchProductIDs struct {
 	ProductIDs ProductIDs `json:"productIDs"`
 }
 
-type BatchCardInfo struct {
-	CardInfo       CardDataMap `json:"cardInfo"`
-	UnknownCardIDs []string    `json:"unknownCardIDs"`
+type BatchCardData[IS IdentifierSlice] struct {
+	CardInfo         CardDataMap `json:"cardInfo"`
+	UnknownResources IS          `json:"unknownResources"`
 }
 
-type BatchProductInfo struct {
-	ProductInfo       ProductDataMap `json:"productInfo"`
-	UnknownProductIDs ProductIDs     `json:"unknownProductIDs"`
+type BatchProductData[IS IdentifierSlice] struct {
+	ProductInfo      ProductDataMap `json:"productInfo"`
+	UnknownResources IS             `json:"unknownResources"`
 }
 
-type BatchData interface {
-	BatchCardInfo | BatchProductInfo
+type BatchData[IS IdentifierSlice] interface {
+	BatchCardData[IS] | BatchProductData[IS]
 }

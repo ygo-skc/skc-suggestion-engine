@@ -102,12 +102,12 @@ func initResourceInfoFlow(r model.ResourceName, metricsForCurrentPeriod []model.
 
 	switch r {
 	case model.CardResource:
-		cdm := &model.BatchCardInfo{}
-		go fetchResourceInfo(metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
+		cdm := &model.BatchCardData[model.CardIDs]{}
+		go fetchResourceInfo[model.CardIDs](metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
 		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo) }
 	case model.ProductResource:
-		pdm := &model.BatchProductInfo{}
-		go fetchResourceInfo(metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
+		pdm := &model.BatchProductData[model.ProductIDs]{}
+		go fetchResourceInfo[model.ProductIDs](metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
 		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo) }
 	}
 	return nil, nil
@@ -120,7 +120,7 @@ func updateTrendingMetric[T model.Card | model.Product](
 	}
 }
 
-func fetchResourceInfo[BD model.BatchData](
+func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](
 	metrics []model.TrafficResourceUtilizationMetric,
 	bathData *BD,
 	fetchResourceFromDB func([]string) (*BD, *model.APIError),

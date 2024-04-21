@@ -156,7 +156,7 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 			continue
 		}
 
-		if cards, err := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames([]string{token}); err != nil {
+		if cards, err := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames([]string{token}); err != nil || len(cards.UnknownResources) != 0 {
 			// add occurrence of archetype to map
 			archetypalReferences[token] = true
 		} else {

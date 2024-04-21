@@ -27,17 +27,15 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var batchCardInfo *model.BatchCardInfo
-	if len(reqBody.CardIDs) == 0 {
-		batchCardInfo = &model.BatchCardInfo{CardInfo: model.CardDataMap{}, UnknownCardIDs: model.CardIDs{}}
-	} else {
+	batchCardInfo := &model.BatchCardData[model.CardIDs]{CardInfo: model.CardDataMap{}, UnknownResources: model.CardIDs{}}
+	if len(reqBody.CardIDs) != 0 {
 		// get card details
 		var err *model.APIError
 		if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
 			err.HandleServerResponse(res)
 		} else {
-			if len(batchCardInfo.UnknownCardIDs) > 0 {
-				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownCardIDs)
+			if len(batchCardInfo.UnknownResources) > 0 {
+				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources)
 			}
 		}
 	}
