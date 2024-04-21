@@ -45,9 +45,9 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(cardID string)
 	return nil, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardInfo, *model.APIError) {
 	log.Fatalln(notMocked)
-	return model.CardDataMap{}, nil
+	return &model.BatchCardInfo{}, nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingName(cardName string) (model.Card, error) {
@@ -78,7 +78,7 @@ func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(arche
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (*model.BatchProductInfo, *model.APIError) {
 	log.Fatalln("GetDesiredProductInDBUsingMultipleProductIDs() not mocked")
 	return nil, nil
 }

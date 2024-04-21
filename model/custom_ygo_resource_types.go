@@ -1,6 +1,12 @@
 package model
 
+type QuotedToken = string
+
+type CardIDs []string
+type ProductIDs []string
+
 type CardDataMap map[string]Card
+type ProductDataMap map[string]Product
 
 // finds all card IDs not found in CardDataMap keys
 func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
@@ -14,8 +20,6 @@ func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
 
 	return missingIDs
 }
-
-type ProductDataMap map[string]Product
 
 // finds all product IDs not found in ProductDataMap keys
 func (productData ProductDataMap) FindMissingIDs(productIDs ProductIDs) ProductIDs {
@@ -32,4 +36,28 @@ func (productData ProductDataMap) FindMissingIDs(productIDs ProductIDs) ProductI
 
 type ResourceDataMap interface {
 	CardDataMap | ProductDataMap
+}
+
+// data types that contain many resources of the same data type
+
+type BatchCardIDs struct {
+	CardIDs CardIDs `json:"cardIDs" validate:"required,ygocardids"`
+}
+
+type BatchProductIDs struct {
+	ProductIDs ProductIDs `json:"productIDs"`
+}
+
+type BatchCardInfo struct {
+	CardInfo       CardDataMap `json:"cardInfo"`
+	UnknownCardIDs CardIDs     `json:"unknownCardIDs"`
+}
+
+type BatchProductInfo struct {
+	ProductInfo       ProductDataMap `json:"productInfo"`
+	UnknownProductIDs ProductIDs     `json:"unknownProductIDs"`
+}
+
+type BatchData interface {
+	BatchCardInfo | BatchProductInfo
 }
