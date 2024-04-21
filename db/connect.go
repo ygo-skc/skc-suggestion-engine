@@ -13,8 +13,8 @@ import (
 )
 
 const (
-	minPoolSize = 20
-	maxPoolSize = 40
+	minPoolSize = 30
+	maxPoolSize = 50
 )
 
 // Connect to SKC database.
