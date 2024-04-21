@@ -102,13 +102,13 @@ func initResourceInfoFlow(r model.ResourceName, metricsForCurrentPeriod []model.
 
 	switch r {
 	case model.CardResource:
-		cdm := model.CardDataMap{}
-		go fetchResourceInfo(metricsForCurrentPeriod, &cdm, skcDBInterface.FindDesiredCardInDBUsingMultipleCardIDs, c)
-		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm) }
+		cdm := &model.BatchCardData[model.CardIDs]{}
+		go fetchResourceInfo[model.CardIDs](metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
+		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo) }
 	case model.ProductResource:
-		pdm := model.ProductDataMap{}
-		go fetchResourceInfo(metricsForCurrentPeriod, &pdm, skcDBInterface.FindDesiredProductInDBUsingMultipleProductIDs, c)
-		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm) }
+		pdm := &model.BatchProductData[model.ProductIDs]{}
+		go fetchResourceInfo[model.ProductIDs](metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
+		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo) }
 	}
 	return nil, nil
 }
@@ -120,20 +120,21 @@ func updateTrendingMetric[T model.Card | model.Product](
 	}
 }
 
-func fetchResourceInfo[RDM model.ResourceDataMap](
+func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](
 	metrics []model.TrafficResourceUtilizationMetric,
-	dataMap *RDM,
-	fetchResourceFromDB func([]string) (RDM, *model.APIError),
+	bathData *BD,
+	fetchResourceFromDB func([]string) (*BD, *model.APIError),
 	c chan *model.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
-	var err *model.APIError
-	if *dataMap, err = fetchResourceFromDB(rv); err != nil {
+	if bri, err := fetchResourceFromDB(rv); err != nil {
 		log.Printf("Could not fetch data for trending resources")
 		c <- err
+	} else {
+		*bathData = *bri
 	}
 
 	c <- nil
