@@ -139,32 +139,38 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 	referenceOccurrence := map[string]int{}
 	archetypalReferences := map[string]bool{}
 	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
+	totalTokens := len(tokens)
 
-	for _, token := range tokens {
-		model.CleanupToken(&token)
-
-		// if we already searched the token before we don't need to waste time re-searching it in DB
-
-		// if token is present in archetype slice, skip token
-		if _, isPresent := archetypalReferences[token]; isPresent {
-			continue
+	if totalTokens != 0 {
+		for i := 0; i < totalTokens; i++ {
+			model.CleanupToken(&tokens[i])
 		}
 
-		// if token mapped to a cardId in previous loop, increase number of occurrences by 1 and skip any other processing this iteration as we already did the processing before
-		if _, isPresent := tokenToCardId[token]; isPresent {
-			referenceOccurrence[tokenToCardId[token]] += 1
-			continue
-		}
+		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(tokens)
 
-		if cards, err := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames([]string{token}); err != nil || len(cards.UnknownResources) != 0 {
-			// add occurrence of archetype to map
-			archetypalReferences[token] = true
-		} else {
-			card := cards.CardInfo[token]
-			// add occurrence of referenced card to maps
-			namedReferences[card.CardID] = card
-			referenceOccurrence[card.CardID] = 1
-			tokenToCardId[token] = card.CardID
+		for _, token := range tokens {
+			// if we already searched the token before we don't need to waste time re-searching it in DB
+
+			// if token is present in archetype slice, skip token
+			if _, isPresent := archetypalReferences[token]; isPresent {
+				continue
+			}
+
+			// if token mapped to a cardId in previous loop, increase number of occurrences by 1 and skip any other processing this iteration as we already did the processing before
+			if _, isPresent := tokenToCardId[token]; isPresent {
+				referenceOccurrence[tokenToCardId[token]] += 1
+				continue
+			}
+
+			if card, isPresent := batchCardData.CardInfo[token]; !isPresent {
+				// add occurrence of archetype to map
+				archetypalReferences[token] = true
+			} else {
+				// add occurrence of referenced card to maps
+				namedReferences[card.CardID] = card
+				referenceOccurrence[card.CardID] = 1
+				tokenToCardId[token] = card.CardID
+			}
 		}
 	}
 
