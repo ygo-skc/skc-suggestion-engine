@@ -4,6 +4,7 @@ type QuotedToken = string
 
 type CardIDs []string
 type ProductIDs []string
+type CardNames []string
 
 type CardDataMap map[string]Card
 type ProductDataMap map[string]Product
@@ -19,6 +20,19 @@ func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
 	}
 
 	return missingIDs
+}
+
+// finds all card IDs not found in CardDataMap keys
+func (cardData CardDataMap) FindMissingNames(cardNames CardNames) CardNames {
+	missingNames := make(CardNames, 0)
+
+	for _, cardName := range cardNames {
+		if _, containsKey := cardData[cardName]; !containsKey {
+			missingNames = append(missingNames, cardName)
+		}
+	}
+
+	return missingNames
 }
 
 // finds all product IDs not found in ProductDataMap keys
@@ -50,7 +64,7 @@ type BatchProductIDs struct {
 
 type BatchCardInfo struct {
 	CardInfo       CardDataMap `json:"cardInfo"`
-	UnknownCardIDs CardIDs     `json:"unknownCardIDs"`
+	UnknownCardIDs []string    `json:"unknownCardIDs"`
 }
 
 type BatchProductInfo struct {

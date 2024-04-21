@@ -26,10 +26,10 @@ const (
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardID   = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardIDs  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
-	queryCardUsingCardName = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name = ?"
-	queryRandomCardID      = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+	queryCardUsingCardID    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
+	queryCardUsingCardIDs   = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
+	queryCardUsingCardNames = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
+	queryRandomCardID       = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
 )
@@ -42,7 +42,7 @@ type SKCDatabaseAccessObject interface {
 
 	GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardInfo, *model.APIError)
-	GetDesiredCardInDBUsingName(cardName string) (model.Card, error)
+	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (*model.BatchCardInfo, *model.APIError)
 
 	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 
@@ -167,18 +167,34 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(pro
 	return &model.BatchProductInfo{ProductInfo: productData, UnknownProductIDs: productData.FindMissingIDs(products)}, nil
 }
 
-// Uses card name to find instance of card.
-// Returns error if no instance of card name as found in DB.
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingName(cardName string) (model.Card, error) {
-	log.Printf("Retrieving card data from DB for card w/ name %s", cardName)
-	var card model.Card
+// Uses card names to find instance of card
+func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(cardNames []string) (*model.BatchCardInfo, *model.APIError) {
+	log.Printf("Retrieving card data from DB for cards w/ name %v", cardNames)
 
-	if err := skcDBConn.QueryRow(queryCardUsingCardName, cardName).
-		Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-		return card, err
+	numCards := len(cardNames)
+	args := make([]interface{}, numCards)
+	cardData := make(model.CardDataMap, numCards) // used to store results
+
+	for index, cardId := range cardNames {
+		args[index] = cardId
 	}
 
-	return card, nil
+	query := fmt.Sprintf(queryCardUsingCardNames, variablePlaceholders(numCards))
+
+	if rows, err := skcDBConn.Query(query, args...); err != nil {
+		log.Printf(queryErrorLog, err)
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+	} else {
+		if cards, err := parseRowsForCard(rows); err != nil {
+			return nil, err
+		} else {
+			for _, card := range cards {
+				cardData[card.CardName] = card
+			}
+		}
+	}
+
+	return &model.BatchCardInfo{CardInfo: cardData, UnknownCardIDs: cardData.FindMissingNames(cardNames)}, nil
 }
 
 // TODO: document
