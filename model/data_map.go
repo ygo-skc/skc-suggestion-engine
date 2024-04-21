@@ -17,6 +17,19 @@ func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
 
 type ProductDataMap map[string]Product
 
+// finds all product IDs not found in ProductDataMap keys
+func (productData ProductDataMap) FindMissingIDs(productIDs ProductIDs) ProductIDs {
+	missingIDs := make(ProductIDs, 0)
+
+	for _, productID := range productIDs {
+		if _, containsKey := productData[productID]; !containsKey {
+			missingIDs = append(missingIDs, productID)
+		}
+	}
+
+	return missingIDs
+}
+
 type ResourceDataMap interface {
 	CardDataMap | ProductDataMap
 }

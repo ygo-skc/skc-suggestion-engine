@@ -5,14 +5,28 @@ import (
 )
 
 type CardIDs []string
+type ProductIDs []string
 
 type BatchCardIDs struct {
 	CardIDs CardIDs `json:"cardIDs" validate:"required,ygocardids"`
 }
 
+type BatchProductIDs struct {
+	ProductIDs ProductIDs `json:"productIDs"`
+}
+
 type BatchCardInfo struct {
 	CardInfo       CardDataMap `json:"cardInfo"`
 	UnknownCardIDs CardIDs     `json:"unknownCardIDs"`
+}
+
+type BatchProductInfo struct {
+	ProductInfo       ProductDataMap `json:"productInfo"`
+	UnknownProductIDs ProductIDs     `json:"unknownProductIDs"`
+}
+
+type BatchResourceInfo interface {
+	BatchCardInfo | BatchProductInfo
 }
 
 type Card struct {

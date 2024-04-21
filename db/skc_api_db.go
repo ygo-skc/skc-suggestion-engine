@@ -41,7 +41,7 @@ type SKCDatabaseAccessObject interface {
 	GetCardColorIDs() (map[string]int, *model.APIError)
 
 	GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
-	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.CardDataMap, *model.APIError)
+	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardInfo, *model.APIError)
 	GetDesiredCardInDBUsingName(cardName string) (model.Card, error)
 
 	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
@@ -50,7 +50,7 @@ type SKCDatabaseAccessObject interface {
 	GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	GetArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 
-	GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.ProductDataMap, *model.APIError)
+	GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (*model.BatchProductInfo, *model.APIError)
 
 	GetRandomCard() (string, *model.APIError)
 }
@@ -98,7 +98,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (*model
 	if results, err := imp.GetDesiredCardInDBUsingMultipleCardIDs([]string{cardID}); err != nil {
 		return nil, err
 	} else {
-		if card, exists := results[cardID]; !exists {
+		if card, exists := results.CardInfo[cardID]; !exists {
 			return nil, &model.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
 		} else {
 			return &card, nil
@@ -106,7 +106,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (*model
 	}
 }
 
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.CardDataMap, *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (*model.BatchCardInfo, *model.APIError) {
 	log.Printf("Retrieving card data from DB for cards w/ IDs %v", cardIDs)
 
 	numCards := len(cardIDs)
@@ -132,15 +132,15 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs [
 		}
 	}
 
-	return cardData, nil
+	return &model.BatchCardInfo{CardInfo: cardData, UnknownCardIDs: cardData.FindMissingIDs(cardIDs)}, nil
 }
 
-func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(products []string) (model.ProductDataMap, *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(products []string) (*model.BatchProductInfo, *model.APIError) {
 	log.Printf("Retrieving product data from DB for product w/ IDs %v", products)
 
 	numProducts := len(products)
 	args := make([]interface{}, numProducts)
-	productData := make(map[string]model.Product, numProducts)
+	productData := make(model.ProductDataMap, numProducts)
 
 	for index, cardId := range products {
 		args[index] = cardId
@@ -164,7 +164,7 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(pro
 		}
 	}
 
-	return productData, nil
+	return &model.BatchProductInfo{ProductInfo: productData, UnknownProductIDs: productData.FindMissingIDs(products)}, nil
 }
 
 // Uses card name to find instance of card.
