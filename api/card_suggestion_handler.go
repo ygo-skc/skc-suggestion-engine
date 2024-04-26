@@ -11,6 +11,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 var (
@@ -175,4 +176,45 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 	}
 
 	return namedReferences, referenceOccurrence, archetypalReferences
+}
+
+func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
+	log.Println("Getting batch suggestions")
+
+	// deserialize body
+	var reqBody model.BatchCardIDs
+	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
+		log.Printf("Error occurred while reading batch suggestions request body. Error %s", err)
+		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
+		return
+	}
+
+	// validate body
+	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
+		res.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(res).Encode(err)
+		return
+	}
+
+	if len(reqBody.CardIDs) == 0 {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode("Empty") //TODO: return appropriate body
+	}
+
+	x, _ := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs) // TODO: handle error
+
+	c := make(chan bool)
+	for _, b := range x.CardInfo {
+		go func(card *model.Card) {
+			getSuggestions(card)
+			c <- true
+		}(&b)
+	}
+
+	for i := 0; i < len(x.CardInfo); i++ {
+		<-c
+	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode(x)
 }
