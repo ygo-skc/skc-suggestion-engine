@@ -40,7 +40,7 @@ func TestGetSuggestions(t *testing.T) {
 
 	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
-		suggestions := getSuggestions(&mock)
+		suggestions := getSuggestions(mock)
 
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")

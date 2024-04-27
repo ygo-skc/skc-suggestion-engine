@@ -29,7 +29,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		suggestions := getSuggestions(cardToGetSuggestionsFor)
+		suggestions := getSuggestions(*cardToGetSuggestionsFor)
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
@@ -39,8 +39,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions {
-	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
+func getSuggestions(cardToGetSuggestionsFor model.Card) *model.CardSuggestions {
+	suggestions := model.CardSuggestions{Card: &cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
 	// setup channels
@@ -60,7 +60,7 @@ func getSuggestions(cardToGetSuggestionsFor *model.Card) *model.CardSuggestions 
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
 
-	go getNonMaterialRefs(&suggestions, *cardToGetSuggestionsFor, materialString, ccIds, referenceChannel)
+	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIds, referenceChannel)
 
 	// join channels
 	if materialChannel != nil {
@@ -205,10 +205,10 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	c := make(chan bool)
 	for _, b := range x.CardInfo {
-		go func(card *model.Card) {
+		go func(card model.Card) {
 			getSuggestions(card)
 			c <- true
-		}(&b)
+		}(b)
 	}
 
 	for i := 0; i < len(x.CardInfo); i++ {
