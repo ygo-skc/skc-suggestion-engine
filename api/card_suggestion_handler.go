@@ -29,7 +29,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		suggestions := getSuggestions(*cardToGetSuggestionsFor)
+		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		suggestions := getSuggestions(*cardToGetSuggestionsFor, ccIds)
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
@@ -39,15 +40,12 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getSuggestions(cardToGetSuggestionsFor model.Card) *model.CardSuggestions {
+func getSuggestions(cardToGetSuggestionsFor model.Card, ccIds map[string]int) *model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: &cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
 	// setup channels
 	materialChannel, referenceChannel := make(chan bool), make(chan bool)
-
-	// retrieve card color IDs
-	ccIds, _ := skcDBInterface.GetCardColorIDs()
 
 	// get materials if card is from extra deck
 	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
@@ -204,9 +202,10 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	x, _ := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs) // TODO: handle error
 
 	c := make(chan bool)
+	ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
 	for _, b := range x.CardInfo {
 		go func(card model.Card) {
-			getSuggestions(card)
+			getSuggestions(card, ccIds)
 			c <- true
 		}(b)
 	}
