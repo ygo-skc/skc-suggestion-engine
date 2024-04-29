@@ -199,21 +199,24 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode("Empty") //TODO: return appropriate body
 	}
 
-	x, _ := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs) // TODO: handle error
+	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+		res.WriteHeader(err.StatusCode)
+		json.NewEncoder(res).Encode(err)
+	} else {
+		c := make(chan bool)
+		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		for _, b := range suggestionSubjectsCardData.CardInfo {
+			go func(card model.Card) {
+				getSuggestions(card, ccIds)
+				c <- true
+			}(b)
+		}
 
-	c := make(chan bool)
-	ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-	for _, b := range x.CardInfo {
-		go func(card model.Card) {
-			getSuggestions(card, ccIds)
-			c <- true
-		}(b)
+		for i := 0; i < len(suggestionSubjectsCardData.CardInfo); i++ {
+			<-c
+		}
+
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(suggestionSubjectsCardData)
 	}
-
-	for i := 0; i < len(x.CardInfo); i++ {
-		<-c
-	}
-
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(x)
 }
