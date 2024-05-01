@@ -14,6 +14,11 @@ type CardSuggestions struct {
 	ReferencedArchetypes *[]string        `json:"referencedArchetypes"`
 }
 
+type BatchCardSuggestions[IS IdentifierSlice] struct {
+	CardSuggestions  []*CardSuggestions `json:"cardSuggestions"`
+	UnknownResources IS                 `json:"unknownResources"`
+}
+
 type CardSupport struct {
 	Card         *Card  `json:"card"`
 	ReferencedBy []Card `json:"referencedBy"`
