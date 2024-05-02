@@ -198,6 +198,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	if len(reqBody.CardIDs) == 0 {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode("Empty") //TODO: return appropriate body
+		return
 	}
 
 	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
@@ -217,20 +218,20 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 			}(cardInfo)
 		}
 
-		totalSuggestions := len(suggestionSubjectsCardData.CardInfo) - len(unknownIDs)
-		y, z := make(map[string]model.CardReference), make(map[string]model.CardReference)
-		for i := 0; i < totalSuggestions; i++ {
+		totalBatchIDs := len(suggestionSubjectsCardData.CardInfo) - len(unknownIDs)
+		namedMaterials, namedReferences := make(map[string]model.CardReference), make(map[string]model.CardReference)
+		for i := 0; i < totalBatchIDs; i++ {
 			s := <-suggestionChan
-			groupSuggestions(*s.NamedMaterials, y)
-			groupSuggestions(*s.NamedReferences, z)
+			groupSuggestions(*s.NamedMaterials, namedMaterials)
+			groupSuggestions(*s.NamedReferences, namedReferences)
 		}
 		suggestions := model.BatchCardSuggestions[model.CardIDs]{UnknownResources: unknownIDs,
-			NamedMaterials: make([]model.CardReference, 0, len(y)), NamedReferences: make([]model.CardReference, 0, len(z))}
-		for _, xxx := range y {
-			suggestions.NamedMaterials = append(suggestions.NamedMaterials, xxx)
+			NamedMaterials: make([]model.CardReference, 0, len(namedMaterials)), NamedReferences: make([]model.CardReference, 0, len(namedReferences))}
+		for _, reference := range namedMaterials {
+			suggestions.NamedMaterials = append(suggestions.NamedMaterials, reference)
 		}
-		for _, xxx := range z {
-			suggestions.NamedReferences = append(suggestions.NamedReferences, xxx)
+		for _, reference := range namedReferences {
+			suggestions.NamedReferences = append(suggestions.NamedReferences, reference)
 		}
 
 		res.WriteHeader(http.StatusOK)
