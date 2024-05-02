@@ -218,14 +218,33 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		}
 
 		totalSuggestions := len(suggestionSubjectsCardData.CardInfo) - len(unknownIDs)
-		suggestions := model.BatchCardSuggestions[model.CardIDs]{
-			CardSuggestions:  make([]*model.CardSuggestions, totalSuggestions),
-			UnknownResources: unknownIDs}
+		y, z := make(map[string]model.CardReference), make(map[string]model.CardReference)
 		for i := 0; i < totalSuggestions; i++ {
-			suggestions.CardSuggestions[i] = <-suggestionChan
+			s := <-suggestionChan
+			groupSuggestions(*s.NamedMaterials, y)
+			groupSuggestions(*s.NamedReferences, z)
+		}
+		suggestions := model.BatchCardSuggestions[model.CardIDs]{UnknownResources: unknownIDs,
+			NamedMaterials: make([]model.CardReference, 0, len(y)), NamedReferences: make([]model.CardReference, 0, len(z))}
+		for _, xxx := range y {
+			suggestions.NamedMaterials = append(suggestions.NamedMaterials, xxx)
+		}
+		for _, xxx := range z {
+			suggestions.NamedReferences = append(suggestions.NamedReferences, xxx)
 		}
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
+	}
+}
+
+func groupSuggestions(suggestions []model.CardReference, bathSuggestions map[string]model.CardReference) {
+	for _, suggestion := range suggestions {
+		if batchSuggestion, exists := bathSuggestions[suggestion.Card.CardID]; exists {
+			batchSuggestion.Occurrences++
+			bathSuggestions[suggestion.Card.CardID] = batchSuggestion
+		} else {
+			bathSuggestions[suggestion.Card.CardID] = model.CardReference{Card: suggestion.Card, Occurrences: 1}
+		}
 	}
 }
