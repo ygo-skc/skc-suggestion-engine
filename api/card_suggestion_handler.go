@@ -118,11 +118,9 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(tokens)
 
 	// get unique archetypes
-	uniqueArchetypalReferences := make([]string, len(archetypalReferences))
-	ind := 0
+	uniqueArchetypalReferences := make([]string, 0, len(archetypalReferences))
 	for ref := range archetypalReferences {
-		uniqueArchetypalReferences[ind] = ref
-		ind++
+		uniqueArchetypalReferences = append(uniqueArchetypalReferences, ref)
 	}
 	sort.Strings(uniqueArchetypalReferences) // needed as source of this array was a map and maps don't have predictable sorting - tests will fail randomly without sort
 
@@ -226,9 +224,17 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 			groupSuggestions(*s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials)
 			groupSuggestions(*s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences)
 		}
+		sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
+		sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
+	}
+}
+
+func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {
+	return func(i, j int) bool {
+		return refs[i].Occurrences > refs[j].Occurrences
 	}
 }
 
