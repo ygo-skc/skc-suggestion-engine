@@ -1,17 +1,21 @@
 services:
   skc-suggestion-engine:
-    image: golang:1.22.2-bullseye
-    command: go run .
+    image: alpine:latest
+    command: ./skc-suggestion-engine
     working_dir: /app
     ports:
       - "9001:9000"
     volumes:
-      - "./:/app"
+      - "./skc-suggestion-engine:/app/skc-suggestion-engine"
+      - "./data/:/app/data/"
+      - "./certs/:/app/certs/"
+      - "./.env_docker_local:/app/.env_docker_local"
+      - "/usr/share/zoneinfo/:/usr/share/zoneinfo/"
     restart: always
     deploy:
       resources:
         limits:
-          memory: 250m
+          memory: 75m
     networks:
       - skc-network
     environment:

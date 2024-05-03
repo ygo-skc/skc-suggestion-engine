@@ -45,7 +45,7 @@ func init() {
 
 	// init Location
 	if location, err := time.LoadLocation("America/Chicago"); err != nil {
-		log.Fatalln("Could not load Chicago location")
+		log.Fatalf("Could not load Chicago location - err %v", err)
 	} else {
 		chicagoLocation = location
 	}
