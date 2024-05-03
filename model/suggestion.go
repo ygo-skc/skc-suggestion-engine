@@ -18,6 +18,7 @@ type BatchCardSuggestions[IS IdentifierSlice] struct {
 	NamedMaterials   []CardReference `json:"namedMaterials"`
 	NamedReferences  []CardReference `json:"namedReferences"`
 	UnknownResources IS              `json:"unknownResources"`
+	FalsePositives   IS              `json:"falsePositives"`
 }
 
 type CardSupport struct {

@@ -207,22 +207,26 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		suggestionChan := make(chan *model.CardSuggestions)
 		unknownIDs := suggestionSubjectsCardData.CardInfo.FindMissingIDs(reqBody.CardIDs)
+		numValidIDs := len(suggestionSubjectsCardData.CardInfo) - len(unknownIDs)
+		uniqueRequestedIDs := make(map[string]bool, numValidIDs)
 		for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 			if slices.Contains(unknownIDs, cardInfo.CardID) {
 				continue
 			}
+
+			uniqueRequestedIDs[cardInfo.CardID] = true
 			go func(card model.Card) {
 				suggestionChan <- getSuggestions(card, ccIds)
 			}(cardInfo)
 		}
 
 		uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-		suggestions := model.BatchCardSuggestions[model.CardIDs]{UnknownResources: unknownIDs,
+		suggestions := model.BatchCardSuggestions[model.CardIDs]{UnknownResources: unknownIDs, FalsePositives: make(model.CardIDs, 0, 5),
 			NamedMaterials: make([]model.CardReference, 0, 5), NamedReferences: make([]model.CardReference, 0, 5)}
-		for i := 0; i < len(suggestionSubjectsCardData.CardInfo)-len(unknownIDs); i++ {
+		for i := 0; i < numValidIDs; i++ {
 			s := <-suggestionChan
-			groupSuggestions(*s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials)
-			groupSuggestions(*s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences)
+			groupSuggestions(*s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials, uniqueRequestedIDs, &suggestions.FalsePositives)
+			groupSuggestions(*s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences, uniqueRequestedIDs, &suggestions.FalsePositives)
 		}
 		sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
 		sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
@@ -239,12 +243,15 @@ func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {
 }
 
 // uses references for a card and builds upon uniqueReferencesByCardID and uniqueReferences
-func groupSuggestions(cardReferences []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference, uniqueReferences *[]model.CardReference) {
+func groupSuggestions(cardReferences []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference, uniqueReferences *[]model.CardReference,
+	uniqueRequestedIDs map[string]bool, falsePositives *model.CardIDs) {
 	for _, suggestion := range cardReferences {
-		if batchSuggestion, exists := uniqueReferencesByCardID[suggestion.Card.CardID]; exists {
+		if batchSuggestion, refPreviouslyAdded := uniqueReferencesByCardID[suggestion.Card.CardID]; refPreviouslyAdded {
 			batchSuggestion.Occurrences += suggestion.Occurrences
 			uniqueReferencesByCardID[suggestion.Card.CardID] = batchSuggestion
-		} else {
+		} else if _, wasRequested := uniqueRequestedIDs[suggestion.Card.CardID]; !refPreviouslyAdded && !slices.Contains(*falsePositives, suggestion.Card.CardID) && wasRequested {
+			*falsePositives = append(*falsePositives, suggestion.Card.CardID)
+		} else if !refPreviouslyAdded && !slices.Contains(*falsePositives, suggestion.Card.CardID) {
 			*uniqueReferences = append(*uniqueReferences, model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences})
 			uniqueReferencesByCardID[suggestion.Card.CardID] = &(*uniqueReferences)[len(*uniqueReferences)-1]
 		}
