@@ -15,10 +15,12 @@ type CardSuggestions struct {
 }
 
 type BatchCardSuggestions[IS IdentifierSlice] struct {
-	NamedMaterials   []CardReference `json:"namedMaterials"`
-	NamedReferences  []CardReference `json:"namedReferences"`
-	UnknownResources IS              `json:"unknownResources"`
-	FalsePositives   IS              `json:"falsePositives"`
+	NamedMaterials       []CardReference `json:"namedMaterials"`
+	NamedReferences      []CardReference `json:"namedReferences"`
+	MaterialArchetypes   []string        `json:"materialArchetypes"`
+	ReferencedArchetypes []string        `json:"referencedArchetypes"`
+	UnknownResources     IS              `json:"unknownResources"`
+	FalsePositives       IS              `json:"falsePositives"`
 }
 
 type CardSupport struct {

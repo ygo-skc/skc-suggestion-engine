@@ -221,13 +221,15 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		}
 
 		uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
+
 		suggestions := model.BatchCardSuggestions[model.CardIDs]{UnknownResources: unknownIDs, FalsePositives: make(model.CardIDs, 0, 5),
-			NamedMaterials: make([]model.CardReference, 0, 5), NamedReferences: make([]model.CardReference, 0, 5)}
+			NamedMaterials: make([]model.CardReference, 0, 5), NamedReferences: make([]model.CardReference, 0, 5), MaterialArchetypes: make([]string, 0), ReferencedArchetypes: make([]string, 0)}
 		for i := 0; i < numValidIDs; i++ {
 			s := <-suggestionChan
 			groupSuggestions(*s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials, uniqueRequestedIDs, &suggestions.FalsePositives)
 			groupSuggestions(*s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences, uniqueRequestedIDs, &suggestions.FalsePositives)
 		}
+
 		sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
 		sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
 
@@ -249,9 +251,9 @@ func groupSuggestions(cardReferences []model.CardReference, uniqueReferencesByCa
 		if batchSuggestion, refPreviouslyAdded := uniqueReferencesByCardID[suggestion.Card.CardID]; refPreviouslyAdded {
 			batchSuggestion.Occurrences += suggestion.Occurrences
 			uniqueReferencesByCardID[suggestion.Card.CardID] = batchSuggestion
-		} else if _, wasRequested := uniqueRequestedIDs[suggestion.Card.CardID]; !refPreviouslyAdded && !slices.Contains(*falsePositives, suggestion.Card.CardID) && wasRequested {
+		} else if _, isRequestedID := uniqueRequestedIDs[suggestion.Card.CardID]; isRequestedID && !slices.Contains(*falsePositives, suggestion.Card.CardID) {
 			*falsePositives = append(*falsePositives, suggestion.Card.CardID)
-		} else if !refPreviouslyAdded && !slices.Contains(*falsePositives, suggestion.Card.CardID) {
+		} else if !refPreviouslyAdded && !isRequestedID {
 			*uniqueReferences = append(*uniqueReferences, model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences})
 			uniqueReferencesByCardID[suggestion.Card.CardID] = &(*uniqueReferences)[len(*uniqueReferences)-1]
 		}
