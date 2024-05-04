@@ -26,15 +26,11 @@ settings.json
 # Mac
 .DS_Store
 
-# Environment Files
+# Senseitve Files
 .env*
-
-# Certs
 certs/*
-
-# Other Senseitve Files
 data/*.BIN
-
 coverage.*
 
 /**__debug**
+skc-suggestion-engine
