@@ -26,10 +26,11 @@ const (
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardID    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardIDs   = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
-	queryCardUsingCardNames = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
-	queryRandomCardID       = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+	queryCardUsingCardID     = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
+	queryCardUsingCardIDs    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
+	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
+	queryCardsUsingProductID = "SELECT DISTINCT(card_number),card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
+	queryRandomCardID        = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 
 	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
 )
@@ -43,6 +44,7 @@ type SKCDatabaseAccessObject interface {
 	GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
 	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardData[model.CardIDs], *model.APIError)
 	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (*model.BatchCardData[model.CardNames], *model.APIError)
+	GetCardsFoundInProduct(productID string) (*model.BatchCardData[model.CardIDs], *model.APIError)
 
 	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 
@@ -195,6 +197,28 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(card
 	}
 
 	return &model.BatchCardData[model.CardNames]{CardInfo: cardData, UnknownResources: cardData.FindMissingNames(cardNames)}, nil
+}
+
+// Uses card names to find instance of card
+func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (*model.BatchCardData[model.CardIDs], *model.APIError) {
+	log.Printf("Retrieving card data from DB found in product %v", productId)
+
+	cardData := make(model.CardDataMap) // used to store results
+
+	if rows, err := skcDBConn.Query(queryCardsUsingProductID, productId); err != nil {
+		log.Printf(queryErrorLog, err)
+		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+	} else {
+		if cards, err := parseRowsForCard(rows); err != nil {
+			return nil, err
+		} else {
+			for _, card := range cards {
+				cardData[card.CardName] = card
+			}
+		}
+	}
+
+	return &model.BatchCardData[model.CardIDs]{CardInfo: cardData}, nil
 }
 
 // TODO: document

@@ -98,6 +98,9 @@ func RunHttpServer() {
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
 	unprotectedRoutes.HandleFunc("/card", getBatchSuggestionsHandler).Methods(http.MethodPost).Name("Batch Suggestions")
 	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/support", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
+
+	unprotectedRoutes.HandleFunc("/product/{productID:[0-9A-Z]{3,4}}", getProductSuggestionsHandler).Methods(http.MethodGet).Name("Product Suggestion")
+
 	unprotectedRoutes.HandleFunc("/archetype/{archetypeName}", getArchetypeSupportHandler).Methods(http.MethodGet).Name("Archetype Suggestions")
 	unprotectedRoutes.HandleFunc("/trending/{resource:(?i)card|product}", trending).Methods(http.MethodGet).Name("Trending")
 

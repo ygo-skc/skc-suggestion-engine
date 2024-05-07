@@ -204,19 +204,18 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err)
 	} else {
 		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getBatchSuggestions(reqBody.CardIDs, suggestionSubjectsCardData, ccIds)
+		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIds)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(*suggestions)
 	}
 }
 
-func getBatchSuggestions(cardsRequestedByUser model.CardIDs, suggestionSubjectsCardData *model.BatchCardData[model.CardIDs], ccIds map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
+func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIds map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
 	suggestionChan := make(chan *model.CardSuggestions)
-	unknownIDs := suggestionSubjectsCardData.CardInfo.FindMissingIDs(cardsRequestedByUser)
-	numValidIDs := len(suggestionSubjectsCardData.CardInfo) - len(unknownIDs)
+	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
 	uniqueRequestedIDs := make(map[string]bool, numValidIDs)
-	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
+	for _, cardInfo := range *suggestionSubjectsCardData {
 		if slices.Contains(unknownIDs, cardInfo.CardID) {
 			continue
 		}
