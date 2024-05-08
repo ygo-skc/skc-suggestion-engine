@@ -38,10 +38,10 @@ func TestGetSuggestions(t *testing.T) {
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	ccIds, _ := skcDBInterface.GetCardColorIDs()
+	ccIDs, _ := skcDBInterface.GetCardColorIDs()
 	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
-		suggestions := getCardSuggestions(mock, ccIds)
+		suggestions := getCardSuggestions(mock, ccIDs)
 
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")

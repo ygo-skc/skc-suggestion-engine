@@ -20,8 +20,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardsInProductChan <- cardsInProduct
 	}()
 	go func() {
-		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		ccIDsChan <- ccIds
+		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		ccIDsChan <- ccIDs
 	}()
 
 	x := <-cardsInProductChan

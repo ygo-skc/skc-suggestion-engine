@@ -30,8 +30,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getCardSuggestions(*cardToGetSuggestionsFor, ccIds)
+		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		suggestions := getCardSuggestions(*cardToGetSuggestionsFor, ccIDs)
 
 		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
 		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
@@ -41,7 +41,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIds map[string]int) *model.CardSuggestions {
+func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int) *model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: &cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
@@ -50,7 +50,7 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIds map[string]int
 
 	// get materials if card is from extra deck
 	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-		go getMaterialRefs(&suggestions, materialString, ccIds, materialChannel)
+		go getMaterialRefs(&suggestions, materialString, ccIDs, materialChannel)
 	} else {
 		materialChannel = nil
 		suggestions.NamedMaterials = &[]model.CardReference{}
@@ -59,7 +59,7 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIds map[string]int
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
 
-	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIds, referenceChannel)
+	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIDs, referenceChannel)
 
 	// join channels
 	if materialChannel != nil {
@@ -70,24 +70,24 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIds map[string]int
 	return &suggestions
 }
 
-func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIds map[string]int, c chan bool) {
+func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[string]int, c chan bool) {
 	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
-	sortCardReferences(s.NamedMaterials, ccIds)
+	sortCardReferences(s.NamedMaterials, ccIDs)
 
 	c <- true
 }
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIds map[string]int, c chan bool) {
+func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, c chan bool) {
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
-	sortCardReferences(s.NamedReferences, ccIds)
+	sortCardReferences(s.NamedReferences, ccIDs)
 
 	c <- true
 }
 
-func sortCardReferences(cr *[]model.CardReference, ccIds map[string]int) {
+func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
 	// sorting alphabetically from a-z
 	sort.SliceStable(*cr, func(i, j int) bool {
 		return (*cr)[i].Card.CardName < (*cr)[j].Card.CardName
@@ -95,7 +95,7 @@ func sortCardReferences(cr *[]model.CardReference, ccIds map[string]int) {
 
 	// sorting by card color
 	sort.SliceStable(*cr, func(i, j int) bool {
-		return ccIds[(*cr)[i].Card.CardColor] < ccIds[(*cr)[j].Card.CardColor]
+		return ccIDs[(*cr)[i].Card.CardColor] < ccIDs[(*cr)[j].Card.CardColor]
 	})
 }
 
@@ -203,15 +203,15 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(err.StatusCode)
 		json.NewEncoder(res).Encode(err)
 	} else {
-		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIds)
+		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(*suggestions)
 	}
 }
 
-func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIds map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
+func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
 	suggestionChan := make(chan *model.CardSuggestions)
 	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
 	uniqueRequestedIDs := make(map[string]bool, numValidIDs)
@@ -222,7 +222,7 @@ func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownI
 
 		uniqueRequestedIDs[cardInfo.CardID] = true
 		go func(card model.Card) {
-			suggestionChan <- getCardSuggestions(card, ccIds)
+			suggestionChan <- getCardSuggestions(card, ccIDs)
 		}(cardInfo)
 	}
 
