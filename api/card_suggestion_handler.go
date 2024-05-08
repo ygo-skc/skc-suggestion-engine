@@ -31,18 +31,18 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		json.NewEncoder(res).Encode(err)
 	} else {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getCardSuggestions(*cardToGetSuggestionsFor, ccIDs)
+		suggestions := getCardSuggestions(cardToGetSuggestionsFor, ccIDs)
 
-		log.Printf("Found %d unique material references", len(*suggestions.NamedMaterials))
-		log.Printf("Found %d unique named references", len(*suggestions.NamedReferences))
+		log.Printf("Found %d unique material references", len(suggestions.NamedMaterials))
+		log.Printf("Found %d unique named references", len(suggestions.NamedReferences))
 		log.Printf("Has self reference: %t", suggestions.HasSelfReference)
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
-func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int) *model.CardSuggestions {
-	suggestions := model.CardSuggestions{Card: &cardToGetSuggestionsFor}
+func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int) model.CardSuggestions {
+	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
 	// setup channels
@@ -53,8 +53,8 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int
 		go getMaterialRefs(&suggestions, materialString, ccIDs, materialChannel)
 	} else {
 		materialChannel = nil
-		suggestions.NamedMaterials = &[]model.CardReference{}
-		suggestions.MaterialArchetypes = &[]string{}
+		suggestions.NamedMaterials = []model.CardReference{}
+		suggestions.MaterialArchetypes = []string{}
 
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
@@ -67,12 +67,12 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int
 	}
 	<-referenceChannel
 
-	return &suggestions
+	return suggestions
 }
 
 func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[string]int, c chan bool) {
 	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
-	sortCardReferences(s.NamedMaterials, ccIDs)
+	sortCardReferences(&s.NamedMaterials, ccIDs)
 
 	c <- true
 }
@@ -81,8 +81,8 @@ func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[
 // will also check and remove self references
 func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, c chan bool) {
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, s.NamedReferences)
-	sortCardReferences(s.NamedReferences, ccIDs)
+	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
+	sortCardReferences(&s.NamedReferences, ccIDs)
 
 	c <- true
 }
@@ -101,7 +101,7 @@ func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getReferences(s string) (*[]model.CardReference, *[]string) {
+func getReferences(s string) ([]model.CardReference, []string) {
 	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(s)
 
 	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
@@ -109,7 +109,7 @@ func getReferences(s string) (*[]model.CardReference, *[]string) {
 		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.CardID]})
 	}
 
-	return &uniqueReferences, &archetypalReferences
+	return uniqueReferences, archetypalReferences
 }
 
 func isolateReferences(s string) (map[string]model.Card, map[string]int, []string) {
@@ -212,7 +212,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
-	suggestionChan := make(chan *model.CardSuggestions)
+	suggestionChan := make(chan model.CardSuggestions)
 	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
 	uniqueRequestedIDs := make(map[string]bool, numValidIDs)
 	for _, cardInfo := range *suggestionSubjectsCardData {
@@ -233,10 +233,10 @@ func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownI
 		NamedMaterials: make([]model.CardReference, 0, 5), NamedReferences: make([]model.CardReference, 0, 5), MaterialArchetypes: make([]string, 0), ReferencedArchetypes: make([]string, 0)}
 	for i := 0; i < numValidIDs; i++ {
 		s := <-suggestionChan
-		groupSuggestionReferences(*s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials, uniqueRequestedIDs, &suggestions.FalsePositives)
-		groupSuggestionReferences(*s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences, uniqueRequestedIDs, &suggestions.FalsePositives)
-		groupArchetypes(*s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
-		groupArchetypes(*s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
+		groupSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials, uniqueRequestedIDs, &suggestions.FalsePositives)
+		groupSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences, uniqueRequestedIDs, &suggestions.FalsePositives)
+		groupArchetypes(s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
+		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
 	}
 
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))

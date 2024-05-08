@@ -40,9 +40,9 @@ func (mock SKCDatabaseAccessObjectMock) GetCardColorIDs() (map[string]int, *mode
 	return ids, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(cardID string) (model.Card, *model.APIError) {
 	log.Fatalln(notMocked)
-	return nil, nil
+	return model.Card{}, nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardData[model.CardIDs], *model.APIError) {

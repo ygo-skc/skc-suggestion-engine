@@ -32,7 +32,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	} else if len(s) == 0 {
 		log.Println("No support found")
 	} else {
-		support.ReferencedBy, support.MaterialFor = determineSupportCards(*support.Card, s)
+		support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
 		log.Printf("%s has %d cards that directly reference it (excluding cards referencing it as a material)", cardID, len(support.ReferencedBy))
 		log.Printf("%s can be used as a material for %d cards", cardID, len(support.MaterialFor))
 	}

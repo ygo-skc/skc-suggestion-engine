@@ -6,12 +6,12 @@ type CardReference struct {
 }
 
 type CardSuggestions struct {
-	Card                 *Card            `json:"card"`
-	HasSelfReference     bool             `json:"hasSelfReference"`
-	NamedMaterials       *[]CardReference `json:"namedMaterials"`
-	NamedReferences      *[]CardReference `json:"namedReferences"`
-	MaterialArchetypes   *[]string        `json:"materialArchetypes"`
-	ReferencedArchetypes *[]string        `json:"referencedArchetypes"`
+	Card                 Card            `json:"card"`
+	HasSelfReference     bool            `json:"hasSelfReference"`
+	NamedMaterials       []CardReference `json:"namedMaterials"`
+	NamedReferences      []CardReference `json:"namedReferences"`
+	MaterialArchetypes   []string        `json:"materialArchetypes"`
+	ReferencedArchetypes []string        `json:"referencedArchetypes"`
 }
 
 type BatchCardSuggestions[IS IdentifierSlice] struct {
@@ -24,7 +24,7 @@ type BatchCardSuggestions[IS IdentifierSlice] struct {
 }
 
 type CardSupport struct {
-	Card         *Card  `json:"card"`
+	Card         Card   `json:"card"`
 	ReferencedBy []Card `json:"referencedBy"`
 	MaterialFor  []Card `json:"materialFor"`
 }

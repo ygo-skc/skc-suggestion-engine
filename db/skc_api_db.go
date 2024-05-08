@@ -41,7 +41,7 @@ type SKCDatabaseAccessObject interface {
 
 	GetCardColorIDs() (map[string]int, *model.APIError)
 
-	GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError)
+	GetDesiredCardInDBUsingID(cardID string) (model.Card, *model.APIError)
 	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardData[model.CardIDs], *model.APIError)
 	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (*model.BatchCardData[model.CardNames], *model.APIError)
 	GetCardsFoundInProduct(productID string) (*model.BatchCardData[model.CardIDs], *model.APIError)
@@ -96,14 +96,14 @@ func (imp SKCDAOImplementation) GetCardColorIDs() (map[string]int, *model.APIErr
 }
 
 // Leverages GetDesiredCardInDBUsingMultipleCardIDs to get information on a specific card using its identifier
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (*model.Card, *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (model.Card, *model.APIError) {
 	if results, err := imp.GetDesiredCardInDBUsingMultipleCardIDs([]string{cardID}); err != nil {
-		return nil, err
+		return model.Card{}, err
 	} else {
 		if card, exists := results.CardInfo[cardID]; !exists {
-			return nil, &model.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
+			return model.Card{}, &model.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
 		} else {
-			return &card, nil
+			return card, nil
 		}
 	}
 }
