@@ -24,8 +24,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		ccIDsChan <- ccIDs
 	}()
 
-	x := <-cardsInProductChan
-	suggestions := getBatchSuggestions(&x.CardInfo, make([]string, 0), <-ccIDsChan)
+	cardsInProduct := <-cardsInProductChan
+	suggestions := getBatchSuggestions(&cardsInProduct.CardInfo, make([]string, 0), <-ccIDsChan)
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(suggestions)
