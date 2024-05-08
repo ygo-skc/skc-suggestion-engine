@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
@@ -13,10 +14,18 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	productID := pathVars["productID"]
 	log.Printf("Getting card suggestions for product w/ ID: %s", productID)
 
-	x, _ := skcDBInterface.GetCardsFoundInProduct(productID)
-	ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+	cardsInProductChan, ccIDsChan := make(chan *model.BatchCardData[model.CardIDs]), make(chan map[string]int)
+	go func() {
+		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(productID)
+		cardsInProductChan <- cardsInProduct
+	}()
+	go func() {
+		ccIds, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
+		ccIDsChan <- ccIds
+	}()
 
-	suggestions := getBatchSuggestions(&x.CardInfo, make([]string, 0), ccIds)
+	x := <-cardsInProductChan
+	suggestions := getBatchSuggestions(&x.CardInfo, make([]string, 0), <-ccIDsChan)
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(suggestions)
