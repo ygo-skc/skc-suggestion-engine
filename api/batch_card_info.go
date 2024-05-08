@@ -27,7 +27,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	batchCardInfo := &model.BatchCardData[model.CardIDs]{CardInfo: model.CardDataMap{}, UnknownResources: model.CardIDs{}}
+	batchCardInfo := model.BatchCardData[model.CardIDs]{CardInfo: model.CardDataMap{}, UnknownResources: model.CardIDs{}}
 	if len(reqBody.CardIDs) != 0 {
 		// get card details
 		var err *model.APIError

@@ -42,8 +42,8 @@ type SKCDatabaseAccessObject interface {
 	GetCardColorIDs() (map[string]int, *model.APIError)
 
 	GetDesiredCardInDBUsingID(cardID string) (model.Card, *model.APIError)
-	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (*model.BatchCardData[model.CardIDs], *model.APIError)
-	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (*model.BatchCardData[model.CardNames], *model.APIError)
+	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.BatchCardData[model.CardIDs], *model.APIError)
+	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (model.BatchCardData[model.CardNames], *model.APIError)
 	GetCardsFoundInProduct(productID string) (*model.BatchCardData[model.CardIDs], *model.APIError)
 
 	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
@@ -52,7 +52,7 @@ type SKCDatabaseAccessObject interface {
 	GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 	GetArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
 
-	GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (*model.BatchProductData[model.ProductIDs], *model.APIError)
+	GetDesiredProductInDBUsingMultipleProductIDs(cards []string) (model.BatchProductData[model.ProductIDs], *model.APIError)
 
 	GetRandomCard() (string, *model.APIError)
 }
@@ -108,7 +108,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(cardID string) (model.
 	}
 }
 
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (*model.BatchCardData[model.CardIDs], *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs []string) (model.BatchCardData[model.CardIDs], *model.APIError) {
 	log.Printf("Retrieving card data from DB for cards w/ IDs %v", cardIDs)
 
 	numCards := len(cardIDs)
@@ -123,10 +123,10 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs [
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Printf(queryErrorLog, err)
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		if cards, err := parseRowsForCard(rows); err != nil {
-			return nil, err
+			return model.BatchCardData[model.CardIDs]{}, err
 		} else {
 			for _, card := range cards {
 				cardData[card.CardID] = card
@@ -134,10 +134,10 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(cardIDs [
 		}
 	}
 
-	return &model.BatchCardData[model.CardIDs]{CardInfo: cardData, UnknownResources: cardData.FindMissingIDs(cardIDs)}, nil
+	return model.BatchCardData[model.CardIDs]{CardInfo: cardData, UnknownResources: cardData.FindMissingIDs(cardIDs)}, nil
 }
 
-func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(products []string) (*model.BatchProductData[model.ProductIDs], *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(products []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
 	log.Printf("Retrieving product data from DB for product w/ IDs %v", products)
 
 	numProducts := len(products)
@@ -152,25 +152,25 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(pro
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Printf(queryErrorLog, err)
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		for rows.Next() {
 			var product model.Product
 			if err := rows.Scan(&product.ProductID, &product.ProductLocale,
 				&product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
 				log.Printf(parseErrorLog, err)
-				return nil, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
+				return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
 			}
 
 			productData[product.ProductID] = product
 		}
 	}
 
-	return &model.BatchProductData[model.ProductIDs]{ProductInfo: productData, UnknownResources: productData.FindMissingIDs(products)}, nil
+	return model.BatchProductData[model.ProductIDs]{ProductInfo: productData, UnknownResources: productData.FindMissingIDs(products)}, nil
 }
 
 // Uses card names to find instance of card
-func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(cardNames []string) (*model.BatchCardData[model.CardNames], *model.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(cardNames []string) (model.BatchCardData[model.CardNames], *model.APIError) {
 	log.Printf("Retrieving card data from DB for cards w/ name %v", cardNames)
 
 	numCards := len(cardNames)
@@ -185,10 +185,10 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(card
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
 		log.Printf(queryErrorLog, err)
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardNames]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		if cards, err := parseRowsForCard(rows); err != nil {
-			return nil, err
+			return model.BatchCardData[model.CardNames]{}, err
 		} else {
 			for _, card := range cards {
 				cardData[card.CardName] = card
@@ -196,7 +196,7 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(card
 		}
 	}
 
-	return &model.BatchCardData[model.CardNames]{CardInfo: cardData, UnknownResources: cardData.FindMissingNames(cardNames)}, nil
+	return model.BatchCardData[model.CardNames]{CardInfo: cardData, UnknownResources: cardData.FindMissingNames(cardNames)}, nil
 }
 
 // Uses card names to find instance of card

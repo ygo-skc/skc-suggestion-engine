@@ -121,10 +121,7 @@ func updateTrendingMetric[T model.Card | model.Product](
 }
 
 func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](
-	metrics []model.TrafficResourceUtilizationMetric,
-	bathData *BD,
-	fetchResourceFromDB func([]string) (*BD, *model.APIError),
-	c chan *model.APIError) {
+	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func([]string) (BD, *model.APIError), c chan *model.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -134,7 +131,7 @@ func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](
 		log.Printf("Could not fetch data for trending resources")
 		c <- err
 	} else {
-		*bathData = *bri
+		*bathData = bri
 	}
 
 	c <- nil
