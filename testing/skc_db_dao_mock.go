@@ -62,9 +62,9 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNa
 
 	return model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
-func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(productId string) (*model.BatchCardData[model.CardIDs], *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(productId string) (model.BatchCardData[model.CardIDs], *model.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardName() not mocked")
-	return &model.BatchCardData[model.CardIDs]{}, nil
+	return model.BatchCardData[model.CardIDs]{}, nil
 }
 
 func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {

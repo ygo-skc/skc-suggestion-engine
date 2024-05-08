@@ -14,7 +14,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	productID := pathVars["productID"]
 	log.Printf("Getting card suggestions for product w/ ID: %s", productID)
 
-	cardsInProductChan, ccIDsChan := make(chan *model.BatchCardData[model.CardIDs]), make(chan map[string]int)
+	cardsInProductChan, ccIDsChan := make(chan model.BatchCardData[model.CardIDs]), make(chan map[string]int)
 	go func() {
 		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(productID)
 		cardsInProductChan <- cardsInProduct

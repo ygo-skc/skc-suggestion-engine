@@ -207,11 +207,11 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)
 
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(*suggestions)
+		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
-func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) *model.BatchCardSuggestions[model.CardIDs] {
+func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
 	suggestionChan := make(chan model.CardSuggestions)
 	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
 	uniqueRequestedIDs := make(map[string]bool, numValidIDs)
@@ -242,7 +242,7 @@ func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownI
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
 	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
 
-	return &suggestions
+	return suggestions
 }
 
 func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {

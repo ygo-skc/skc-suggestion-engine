@@ -44,7 +44,7 @@ type SKCDatabaseAccessObject interface {
 	GetDesiredCardInDBUsingID(cardID string) (model.Card, *model.APIError)
 	GetDesiredCardInDBUsingMultipleCardIDs(cards []string) (model.BatchCardData[model.CardIDs], *model.APIError)
 	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (model.BatchCardData[model.CardNames], *model.APIError)
-	GetCardsFoundInProduct(productID string) (*model.BatchCardData[model.CardIDs], *model.APIError)
+	GetCardsFoundInProduct(productID string) (model.BatchCardData[model.CardIDs], *model.APIError)
 
 	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
 
@@ -200,17 +200,17 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(card
 }
 
 // Uses card names to find instance of card
-func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (*model.BatchCardData[model.CardIDs], *model.APIError) {
+func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (model.BatchCardData[model.CardIDs], *model.APIError) {
 	log.Printf("Retrieving card data from DB found in product %v", productId)
 
 	cardData := make(model.CardDataMap) // used to store results
 
 	if rows, err := skcDBConn.Query(queryCardsUsingProductID, productId); err != nil {
 		log.Printf(queryErrorLog, err)
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		if cards, err := parseRowsForCard(rows); err != nil {
-			return nil, err
+			return model.BatchCardData[model.CardIDs]{}, err
 		} else {
 			for _, card := range cards {
 				cardData[card.CardName] = card
@@ -218,7 +218,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (*model
 		}
 	}
 
-	return &model.BatchCardData[model.CardIDs]{CardInfo: cardData}, nil
+	return model.BatchCardData[model.CardIDs]{CardInfo: cardData}, nil
 }
 
 // TODO: document
