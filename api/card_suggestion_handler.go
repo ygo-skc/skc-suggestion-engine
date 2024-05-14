@@ -24,7 +24,7 @@ var (
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Printf("Getting suggestions for card w/ ID: %s", cardID)
+	log.Printf("Card suggestions requested for ID %s", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
 		res.WriteHeader(err.StatusCode)
@@ -33,9 +33,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
 		suggestions := getCardSuggestions(cardToGetSuggestionsFor, ccIDs)
 
-		log.Printf("Found %d unique material references", len(suggestions.NamedMaterials))
-		log.Printf("Found %d unique named references", len(suggestions.NamedReferences))
-		log.Printf("Has self reference: %t", suggestions.HasSelfReference)
+		log.Printf("Suggestions for %s (%s): %d unique material references - %d unique named references", cardID, cardToGetSuggestionsFor.CardName,
+			len(suggestions.NamedMaterials), len(suggestions.NamedReferences))
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
@@ -124,10 +123,6 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 	}
 	sort.Strings(uniqueArchetypalReferences) // needed as source of this array was a map and maps don't have predictable sorting - tests will fail randomly without sort
 
-	if len(archetypalReferences) > 0 {
-		log.Printf("Could not find the following in DB: %v. Potentially archetypes?", archetypalReferences)
-	}
-
 	return namedReferences, referenceOccurrence, uniqueArchetypalReferences
 }
 
@@ -176,7 +171,7 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	log.Println("Getting batch suggestions")
+	log.Println("Batch card suggestions requested")
 
 	// deserialize body
 	var reqBody model.BatchCardIDs
