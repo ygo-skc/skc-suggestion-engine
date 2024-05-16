@@ -38,6 +38,8 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources)
 			}
 		}
+	} else {
+		log.Println("Nothing to process - missing cardID data")
 	}
 
 	res.WriteHeader(http.StatusOK)

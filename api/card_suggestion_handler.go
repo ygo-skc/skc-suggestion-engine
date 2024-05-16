@@ -16,7 +16,9 @@ import (
 )
 
 var (
-	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
+	quotedStringRegex  = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
+	noBatchSuggestions = model.BatchCardSuggestions[model.CardIDs]{NamedMaterials: []model.CardReference{}, NamedReferences: []model.CardReference{}, MaterialArchetypes: []string{},
+		ReferencedArchetypes: []string{}, UnknownResources: []string{}, FalsePositives: []string{}}
 )
 
 // Handler that will be used by suggestion endpoint.
@@ -176,8 +178,8 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	// deserialize body
 	var reqBody model.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		log.Printf("Error occurred while reading batch suggestions request body. Error %s", err)
-		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
+		log.Printf("Error occurred while reading batch suggestions request body: Error %s", err)
+		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
 
@@ -189,8 +191,9 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(reqBody.CardIDs) == 0 {
+		log.Println("Nothing to process - missing cardID data")
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode("Empty") //TODO: return appropriate body
+		json.NewEncoder(res).Encode(noBatchSuggestions)
 		return
 	}
 
