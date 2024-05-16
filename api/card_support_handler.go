@@ -8,6 +8,7 @@ import (
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
@@ -64,4 +65,34 @@ func determineSupportCards(subject model.Card, references []model.Card) ([]model
 	}
 
 	return referencedBy, materialFor
+}
+
+func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
+	log.Println("Batch card suggestions requested")
+
+	// TODO: below 3 conditions can be put in a method as they are shared in suggestions and support handler
+	// deserialize body
+	var reqBody model.BatchCardIDs
+	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
+		log.Printf("Error occurred while reading batch suggestions request body: Error %s", err)
+		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
+		return
+	}
+
+	// validate body
+	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
+		res.WriteHeader(http.StatusUnprocessableEntity)
+		json.NewEncoder(res).Encode(err)
+		return
+	}
+
+	if len(reqBody.CardIDs) == 0 {
+		log.Println("Nothing to process - missing cardID data")
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(noBatchSuggestions)
+		return
+	}
+
+	res.WriteHeader(http.StatusOK)
+	json.NewEncoder(res).Encode("TBD")
 }

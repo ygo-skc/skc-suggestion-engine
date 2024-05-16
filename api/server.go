@@ -95,9 +95,11 @@ func RunHttpServer() {
 	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
 	unprotectedRoutes.HandleFunc("/card-details", getBatchCardInfo).Methods(http.MethodPost).Name("Batch Card Data")
 	unprotectedRoutes.HandleFunc("/card-of-the-day", getCardOfTheDay).Methods(http.MethodGet).Name("Card of the Day")
-	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Material Suggestion")
-	unprotectedRoutes.HandleFunc("/card", getBatchSuggestionsHandler).Methods(http.MethodPost).Name("Batch Suggestions")
-	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}/support", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support Suggestions")
+
+	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Card Suggestions")
+	unprotectedRoutes.HandleFunc("/card", getBatchSuggestionsHandler).Methods(http.MethodPost).Name("Batch Card Suggestions")
+	unprotectedRoutes.HandleFunc("/card/support/{cardID:[0-9]{8}}", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support")
+	unprotectedRoutes.HandleFunc("/card/support", getBatchSupportHandler).Methods(http.MethodPost).Name("Batch Card Support")
 
 	unprotectedRoutes.HandleFunc("/product/{productID:[0-9A-Z]{3,4}}", getProductSuggestionsHandler).Methods(http.MethodGet).Name("Product Suggestion")
 
