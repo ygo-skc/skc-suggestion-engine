@@ -26,8 +26,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 
 	// validate body
 	if err := validation.Validate(trafficData); err != nil {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	}
 

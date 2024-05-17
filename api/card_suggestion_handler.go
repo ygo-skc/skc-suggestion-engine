@@ -29,8 +29,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	log.Printf("Card suggestions requested for ID %s", cardID)
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
+		return
 	} else {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
 		suggestions := getCardSuggestions(cardToGetSuggestionsFor, ccIDs)
@@ -185,8 +185,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	// validate body
 	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	}
 
@@ -198,8 +197,8 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
+		return
 	} else {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
 		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)

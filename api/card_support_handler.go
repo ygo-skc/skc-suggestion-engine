@@ -18,8 +18,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	support := model.CardSupport{ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
 	if cardToGetSupportFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	} else {
 		support.Card = cardToGetSupportFor
@@ -27,8 +26,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	// get support
 	if s, err := skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	} else if len(s) == 0 {
 		log.Println("No support found")
@@ -81,8 +79,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	// validate body
 	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	}
 

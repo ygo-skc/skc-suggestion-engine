@@ -22,8 +22,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 
 	// validate body
 	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
-		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(err)
+		err.HandleServerResponse(res)
 		return
 	}
 
@@ -33,6 +32,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		var err *model.APIError
 		if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
 			err.HandleServerResponse(res)
+			return
 		} else {
 			if len(batchCardInfo.UnknownResources) > 0 {
 				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources)
