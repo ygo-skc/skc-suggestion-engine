@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"slices"
 	"strings"
 
 	"github.com/gorilla/mux"
@@ -102,14 +103,31 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		referencedBy, materialFor := make([]model.Card, 0), make([]model.Card, 0)
-		for _, x := range suggestionSubjectsCardData.CardInfo {
-			y, _ := getCardSupport(x)
-			referencedBy = y.ReferencedBy
-			break
+		referencedBy, materialFor := make([]model.Card, 0, 30), make([]model.Card, 0, 30)
+
+		supportChan := make(chan model.CardSupport)
+		numValidIDs := len(reqBody.CardIDs) - len(suggestionSubjectsCardData.UnknownResources)
+		uniqueRequestedIDs := make(map[string]bool, numValidIDs)
+		for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
+			if _, exists := uniqueRequestedIDs[cardInfo.CardID]; exists || slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
+				continue
+			}
+
+			uniqueRequestedIDs[cardInfo.CardID] = true
+
+			go func(cardInfo model.Card) {
+				y, _ := getCardSupport(cardInfo)
+				supportChan <- y
+			}(cardInfo)
+		}
+
+		for i := 0; i < len(uniqueRequestedIDs); i++ {
+			s := <-supportChan
+			referencedBy = append(referencedBy, s.ReferencedBy...)
+			materialFor = append(materialFor, s.MaterialFor...)
 		}
 
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor})
+		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor, UnknownResources: suggestionSubjectsCardData.UnknownResources})
 	}
 }

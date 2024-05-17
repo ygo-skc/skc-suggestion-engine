@@ -217,6 +217,7 @@ func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownI
 			continue
 		}
 
+		// TODO: can we skip cards already processed
 		uniqueRequestedIDs[cardInfo.CardID] = true
 		go func(card model.Card) {
 			suggestionChan <- getCardSuggestions(card, ccIDs)

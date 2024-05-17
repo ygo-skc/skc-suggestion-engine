@@ -29,6 +29,13 @@ type CardSupport struct {
 	MaterialFor  []Card `json:"materialFor"`
 }
 
+type BatchCardSupport[IS IdentifierSlice] struct {
+	ReferencedBy     []Card `json:"referencedBy"`
+	MaterialFor      []Card `json:"materialFor"`
+	UnknownResources IS     `json:"unknownResources"`
+	FalsePositives   IS     `json:"falsePositives"`
+}
+
 type ArchetypalSuggestions struct {
 	Total      int    `json:"total"`
 	UsingName  []Card `json:"usingName"`
