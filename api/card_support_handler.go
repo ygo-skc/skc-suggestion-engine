@@ -16,28 +16,36 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := pathVars["cardID"]
 	log.Printf("Getting cards that support card w/ ID: %s", cardID)
 
-	support := model.CardSupport{ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
 	if cardToGetSupportFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		support.Card = cardToGetSupportFor
+		if support, err := getCardSupport(cardToGetSupportFor); err != nil {
+			err.HandleServerResponse(res)
+			return
+		} else {
+			res.WriteHeader(http.StatusOK)
+			json.NewEncoder(res).Encode(support)
+		}
 	}
+}
 
-	// get support
-	if s, err := skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
-		err.HandleServerResponse(res)
-		return
-	} else if len(s) == 0 {
-		log.Println("No support found")
-	} else {
-		support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
-		log.Printf("%s has %d cards that directly reference it (excluding cards referencing it as a material)", cardID, len(support.ReferencedBy))
-		log.Printf("%s can be used as a material for %d cards", cardID, len(support.MaterialFor))
+func getCardSupport(subject model.Card) (model.CardSupport, *model.APIError) {
+	support := model.CardSupport{Card: subject, ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
+	var s []model.Card
+	var err *model.APIError
+
+	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(subject.CardName, subject.CardID); err == nil {
+		if len(s) == 0 {
+			log.Println("No support found")
+			return support, nil
+		} else {
+			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
+			log.Printf("%s has %d cards that directly reference it (excluding cards referencing it as a material)", subject.CardID, len(support.ReferencedBy))
+			log.Printf("%s can be used as a material for %d cards", subject.CardID, len(support.MaterialFor))
+		}
 	}
-
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(support)
+	return support, err
 }
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
@@ -90,6 +98,18 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode("TBD")
+	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+		err.HandleServerResponse(res)
+		return
+	} else {
+		referencedBy, materialFor := make([]model.Card, 0), make([]model.Card, 0)
+		for _, x := range suggestionSubjectsCardData.CardInfo {
+			y, _ := getCardSupport(x)
+			referencedBy = y.ReferencedBy
+			break
+		}
+
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor})
+	}
 }
