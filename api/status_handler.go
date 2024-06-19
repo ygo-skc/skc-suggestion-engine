@@ -29,7 +29,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if dbVersion, err := skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(); err != nil {
+	if dbVersion, err := skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(ctx); err != nil {
 		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: model.Down})
 	} else {
 		downstreamHealth = append(downstreamHealth, model.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: model.Up})

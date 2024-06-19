@@ -45,7 +45,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if isBlackListed, err := skcSuggestionEngineDBInterface.IsBlackListed("archetype", archetypeName); err != nil {
+	if isBlackListed, err := skcSuggestionEngineDBInterface.IsBlackListed(ctx, "archetype", archetypeName); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else if isBlackListed {

@@ -17,7 +17,7 @@ import (
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, _ := util.NewRequestSetup(context.Background(), "traffic data submission")
+	logger, ctx := util.NewRequestSetup(context.Background(), "traffic data submission")
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -51,7 +51,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	source := model.TrafficSource{SystemName: trafficData.Source.SystemName, Version: trafficData.Source.Version}
 	trafficAnalysis := model.TrafficAnalysis{Timestamp: time.Now(), UserData: userData, ResourceUtilized: *trafficData.ResourceUtilized, Source: source}
 
-	if err := skcSuggestionEngineDBInterface.InsertTrafficData(trafficAnalysis); err != nil {
+	if err := skcSuggestionEngineDBInterface.InsertTrafficData(ctx, trafficAnalysis); err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
@@ -170,7 +170,7 @@ func determineTrendChange(
 
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
-	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to); err != nil {
+	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to); err != nil {
 		util.Logger(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
 	}
 	c <- err
