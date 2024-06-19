@@ -8,6 +8,7 @@ import (
 	"slices"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -46,46 +47,38 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
-	// setup channels
-	materialChannel, referenceChannel := make(chan bool), make(chan bool)
+	wg := sync.WaitGroup{}
 
 	// get materials if card is from extra deck
 	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
-		go getMaterialRefs(&suggestions, materialString, ccIDs, materialChannel)
+		wg.Add(2)
+		go getMaterialRefs(&suggestions, materialString, ccIDs, &wg)
 	} else {
-		materialChannel = nil
+		wg.Add(1)
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
 		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
 	}
+	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 
-	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIDs, referenceChannel)
-
-	// join channels
-	if materialChannel != nil {
-		<-materialChannel
-	}
-	<-referenceChannel
-
+	wg.Wait()
 	return suggestions
 }
 
-func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[string]int, c chan bool) {
+func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
 	sortCardReferences(&s.NamedMaterials, ccIDs)
-
-	c <- true
 }
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, c chan bool) {
+func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+	defer wg.Done()
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
 	sortCardReferences(&s.NamedReferences, ccIDs)
-
-	c <- true
 }
 
 func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
