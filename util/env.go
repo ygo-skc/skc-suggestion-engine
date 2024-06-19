@@ -17,13 +17,13 @@ const (
 func init() {
 	isCICD := os.Getenv("IS_CICD")
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
-		EnvMap = ConfigureEnv()
+		EnvMap = configureEnv()
 	}
 }
 
-func ConfigureEnv() map[string]string {
+func configureEnv() map[string]string {
 	if envFile, isOk := os.LookupEnv(ENV_VARIABLE_NAME); !isOk {
-		log.Fatalln("Could not find environment variable", ENV_VARIABLE_NAME, "in path.")
+		log.Fatalf("Could not find environment variable %s in path", ENV_VARIABLE_NAME)
 	} else {
 		log.Println("Loading env from file", envFile)
 		if env, err := godotenv.Read(envFile); err != nil {
