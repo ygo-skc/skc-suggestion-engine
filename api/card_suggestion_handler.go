@@ -1,8 +1,10 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"regexp"
 	"slices"
@@ -27,23 +29,25 @@ var (
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Printf("Card suggestions requested for ID %s", cardID)
 
-	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
+	logger, ctx := util.NewRequestSetup(context.Background(), "card suggestions", slog.String("cardID", cardID))
+	logger.Info("Card suggestions requested")
+
+	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getCardSuggestions(cardToGetSuggestionsFor, ccIDs)
+		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
+		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs)
 
-		log.Printf("Suggestions for %s (%s): %d unique material references - %d unique named references", cardID, cardToGetSuggestionsFor.CardName,
-			len(suggestions.NamedMaterials), len(suggestions.NamedReferences))
+		logger.Info(fmt.Sprintf("Suggestions for %s (%s): %d unique material references - %d unique named references", cardID, cardToGetSuggestionsFor.CardName,
+			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
-func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int) model.CardSuggestions {
+func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card, ccIDs map[string]int) model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 
@@ -52,31 +56,31 @@ func getCardSuggestions(cardToGetSuggestionsFor model.Card, ccIDs map[string]int
 	// get materials if card is from extra deck
 	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
 		wg.Add(2)
-		go getMaterialRefs(&suggestions, materialString, ccIDs, &wg)
+		go getMaterialRefs(ctx, &suggestions, materialString, ccIDs, &wg)
 	} else {
 		wg.Add(1)
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
-		log.Printf("%s is not an ED monster", cardToGetSuggestionsFor.CardID)
+		ctx.Value(util.Logger).(*slog.Logger).Debug("Not and extra deck monster")
 	}
-	go getNonMaterialRefs(&suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
+	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 
 	wg.Wait()
 	return suggestions
 }
 
-func getMaterialRefs(s *model.CardSuggestions, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	s.NamedMaterials, s.MaterialArchetypes = getReferences(materialString)
+	s.NamedMaterials, s.MaterialArchetypes = getReferences(ctx, materialString)
 	sortCardReferences(&s.NamedMaterials, ccIDs)
 }
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	s.NamedReferences, s.ReferencedArchetypes = getReferences(strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
+	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
 	sortCardReferences(&s.NamedReferences, ccIDs)
 }
@@ -95,7 +99,7 @@ func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
 
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getReferences(s string) ([]model.CardReference, []string) {
+func getReferences(ctx context.Context, s string) ([]model.CardReference, []string) {
 	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(s)
 
 	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
@@ -166,12 +170,13 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	log.Println("Batch card suggestions requested")
+	logger, ctx := util.NewRequestSetup(context.Background(), "batch card suggestions")
+	logger.Info("Batch card suggestions requested")
 
 	// deserialize body
 	var reqBody model.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		log.Printf("Error occurred while reading batch suggestions request body: Error %s", err)
+		logger.Error(fmt.Sprintf("Error occurred while reading batch suggestions request body: Error %s", err))
 		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
@@ -183,25 +188,25 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if len(reqBody.CardIDs) == 0 {
-		log.Println("Nothing to process - missing cardID data")
+		logger.Info("Nothing to process - missing cardID data")
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(noBatchSuggestions)
 		return
 	}
 
-	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := skcDBInterface.GetCardColorIDs() // retrieve card color IDs
-		suggestions := getBatchSuggestions(&suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)
+		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
+		suggestions := getBatchSuggestions(ctx, &suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
-func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
+func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
 	suggestionChan := make(chan model.CardSuggestions)
 	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
 	uniqueRequestedIDs := make(map[string]bool, numValidIDs)
@@ -213,7 +218,7 @@ func getBatchSuggestions(suggestionSubjectsCardData *model.CardDataMap, unknownI
 		// TODO: can we skip cards already processed
 		uniqueRequestedIDs[cardInfo.CardID] = true
 		go func(card model.Card) {
-			suggestionChan <- getCardSuggestions(card, ccIDs)
+			suggestionChan <- getCardSuggestions(ctx, card, ccIDs)
 		}(cardInfo)
 	}
 

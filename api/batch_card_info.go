@@ -1,21 +1,24 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
 	"net/http"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	log.Println("Getting batch card info...")
+	logger, ctx := util.NewRequestSetup(context.Background(), "batch card info")
+	logger.Info("Getting batch card info")
 
 	// deserialize body
 	var reqBody model.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		log.Printf("Error occurred while reading the request body. Error %s", err)
+		logger.Error(fmt.Sprintf("Error occurred while reading the request body. Error %s", err))
 		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
@@ -30,16 +33,16 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	if len(reqBody.CardIDs) != 0 {
 		// get card details
 		var err *model.APIError
-		if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(reqBody.CardIDs); err != nil {
+		if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
 			err.HandleServerResponse(res)
 			return
 		} else {
 			if len(batchCardInfo.UnknownResources) > 0 {
-				log.Printf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources)
+				logger.Warn(fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources))
 			}
 		}
 	} else {
-		log.Println("Nothing to process - missing cardID data")
+		logger.Info("Nothing to process - missing cardID data")
 	}
 
 	res.WriteHeader(http.StatusOK)
