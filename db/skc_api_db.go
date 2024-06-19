@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"fmt"
 	"log"
-	"log/slog"
 	"net/http"
 	"strings"
 
@@ -76,11 +75,11 @@ func (imp SKCDAOImplementation) GetSKCDBVersion() (string, error) {
 
 // Get IDs for all card colors currently in database.
 func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string]int, *model.APIError) {
-	ctx.Value(util.Logger).(*slog.Logger).Info("Retrieving card color IDs from DB")
+	util.Logger(ctx).Info("Retrieving card color IDs from DB")
 	cardColorIDs := map[string]int{}
 
 	if rows, err := skcDBConn.Query(queryCardColorIDs); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(queryErrorLog, err))
+		util.Logger(ctx).Error(fmt.Sprintf(queryErrorLog, err))
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		for rows.Next() {
@@ -88,7 +87,7 @@ func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string
 			var cardColor string
 
 			if err := rows.Scan(&colorId, &cardColor); err != nil {
-				ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(parseErrorLog, err))
+				util.Logger(ctx).Error(fmt.Sprintf(parseErrorLog, err))
 				return cardColorIDs, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 			}
 
@@ -112,7 +111,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(ctx context.Context, c
 }
 
 func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cardIDs []string) (model.BatchCardData[model.CardIDs], *model.APIError) {
-	ctx.Value(util.Logger).(*slog.Logger).Info("Retrieving card data from DB")
+	util.Logger(ctx).Info("Retrieving card data from DB")
 
 	numCards := len(cardIDs)
 	args := make([]interface{}, numCards)
@@ -125,7 +124,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 	query := fmt.Sprintf(queryCardUsingCardIDs, variablePlaceholders(numCards))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(queryErrorLog, err))
+		util.Logger(ctx).Error(fmt.Sprintf(queryErrorLog, err))
 		return model.BatchCardData[model.CardIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		if cards, err := parseRowsForCard(rows); err != nil {
@@ -141,7 +140,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 }
 
 func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, products []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
-	ctx.Value(util.Logger).(*slog.Logger).Info("Retrieving product data from DB")
+	util.Logger(ctx).Info("Retrieving product data from DB")
 
 	numProducts := len(products)
 	args := make([]interface{}, numProducts)
@@ -154,14 +153,14 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 	query := fmt.Sprintf("SELECT product_id, product_locale, product_name, product_release_date, product_content_total, product_type, product_sub_type FROM product_info WHERE product_id IN (%s)", variablePlaceholders(numProducts))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(queryErrorLog, err))
+		util.Logger(ctx).Error(fmt.Sprintf(queryErrorLog, err))
 		return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		for rows.Next() {
 			var product model.Product
 			if err := rows.Scan(&product.ProductID, &product.ProductLocale,
 				&product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
-				ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(parseErrorLog, err))
+				util.Logger(ctx).Error(fmt.Sprintf(parseErrorLog, err))
 				return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
 			}
 
@@ -227,13 +226,13 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (model.
 // TODO: document
 // TODO: find way to make code more readable
 func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError) {
-	ctx.Value(util.Logger).(*slog.Logger).Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
+	util.Logger(ctx).Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
 	cardNameWithDoubleQuotes := `%"` + cardName + `"%`
 	cardNameWithSingleQuotes := `%'` + cardName + `'%`
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, cardNameWithDoubleQuotes, cardNameWithSingleQuotes, cardId); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(queryErrorLog, err))
+		util.Logger(ctx).Error(fmt.Sprintf(queryErrorLog, err))
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)

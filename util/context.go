@@ -1,7 +1,21 @@
 package util
 
-type ContextKey string
+import (
+	"context"
+	"log/slog"
+)
+
+type contextKey string
 
 const (
-	Logger ContextKey = "logger"
+	loggerKey contextKey = "logger"
 )
+
+func Logger(ctx context.Context) *slog.Logger {
+	if l := ctx.Value(loggerKey); l == nil {
+		slog.Warn("Using default slog as context does not have logger info")
+		return slog.Default()
+	} else {
+		return l.(*slog.Logger)
+	}
+}

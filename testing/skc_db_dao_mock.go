@@ -68,7 +68,7 @@ func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(productId string) 
 	return model.BatchCardData[model.CardIDs]{}, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError) {
 	log.Fatalln(notMocked)
 	return nil, nil
 }

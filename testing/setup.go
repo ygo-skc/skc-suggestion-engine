@@ -2,12 +2,9 @@ package testing
 
 import (
 	"context"
-	"log/slog"
 	"os"
 	"path"
 	"runtime"
-
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 var TestContext context.Context
@@ -20,5 +17,5 @@ func init() {
 		panic(err)
 	}
 
-	TestContext = context.WithValue(context.Background(), util.Logger, slog.With())
+	TestContext = context.Background()
 }

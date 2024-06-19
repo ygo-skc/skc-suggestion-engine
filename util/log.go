@@ -23,5 +23,5 @@ func NewRequestSetup(ctx context.Context, operation string, customAttributes ...
 	}
 
 	l := slog.With(defaults...)
-	return l, context.WithValue(ctx, Logger, l)
+	return l, context.WithValue(ctx, loggerKey, l)
 }

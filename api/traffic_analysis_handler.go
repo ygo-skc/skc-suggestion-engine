@@ -113,13 +113,14 @@ func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForC
 	case model.ProductResource:
 		pdm := &model.BatchProductData[model.ProductIDs]{}
 		go fetchResourceInfo[model.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
-		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo) }
+		return c, func(tm []model.TrendingMetric) {
+			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
+		}
 	}
 	return nil, nil
 }
 
-func updateTrendingMetric[T model.Card | model.Product](ctx context.Context,
-	tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+func updateTrendingMetric[T model.Card | model.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}
@@ -133,7 +134,7 @@ func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](ctx con
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Info("Could not fetch data for trending resources")
+		util.Logger(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
 		*bathData = bri
@@ -170,7 +171,7 @@ func determineTrendChange(
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
 	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(r, from, to); err != nil {
-		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
+		util.Logger(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
 	}
 	c <- err
 }

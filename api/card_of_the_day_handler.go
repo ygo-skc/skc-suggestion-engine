@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"time"
 
@@ -44,7 +43,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 }
 
 func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *model.APIError {
-	ctx.Value(util.Logger).(*slog.Logger).Info(fmt.Sprintf("There was no card of the day found for %s, fetching random card from DB.", cotd.Date))
+	util.Logger(ctx).Info(fmt.Sprintf("There was no card of the day found for %s, fetching random card from DB.", cotd.Date))
 	e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
 
 	if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {

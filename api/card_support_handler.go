@@ -43,12 +43,12 @@ func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport,
 
 	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.CardName, subject.CardID); err == nil {
 		if len(s) == 0 {
-			ctx.Value(util.Logger).(*slog.Logger).Warn("No support found")
+			util.Logger(ctx).Warn("No support found")
 			return support, nil
 		} else {
 			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
-			ctx.Value(util.Logger).(*slog.Logger).Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
-			ctx.Value(util.Logger).(*slog.Logger).Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
+			util.Logger(ctx).Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
+			util.Logger(ctx).Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
 		}
 	}
 	return support, err
