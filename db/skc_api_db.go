@@ -49,7 +49,7 @@ type SKCDatabaseAccessObject interface {
 	GetDesiredCardsFromDBUsingMultipleCardNames(cardName []string) (model.BatchCardData[model.CardNames], *model.APIError)
 	GetCardsFoundInProduct(productID string) (model.BatchCardData[model.CardIDs], *model.APIError)
 
-	GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError)
+	GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError)
 
 	GetInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError)
 	GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError)
@@ -226,14 +226,14 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(productId string) (model.
 
 // TODO: document
 // TODO: find way to make code more readable
-func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(cardName string, cardId string) ([]model.Card, *model.APIError) {
-	log.Printf("Retrieving card data from DB for all cards that reference card %s in their text", cardName)
+func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError) {
+	ctx.Value(util.Logger).(*slog.Logger).Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
 	cardNameWithDoubleQuotes := `%"` + cardName + `"%`
 	cardNameWithSingleQuotes := `%'` + cardName + `'%`
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, cardNameWithDoubleQuotes, cardNameWithSingleQuotes, cardId); err != nil {
-		log.Printf(queryErrorLog, err)
+		ctx.Value(util.Logger).(*slog.Logger).Error(fmt.Sprintf(queryErrorLog, err))
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
 		return parseRowsForCard(rows)

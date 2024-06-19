@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -119,7 +118,7 @@ func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForC
 	return nil, nil
 }
 
-func updateTrendingMetric[T model.Card | model.Product](
+func updateTrendingMetric[T model.Card | model.Product](ctx context.Context,
 	tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
@@ -134,7 +133,7 @@ func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](ctx con
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		log.Printf("Could not fetch data for trending resources")
+		ctx.Value(util.Logger).(*slog.Logger).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
 		*bathData = bri
