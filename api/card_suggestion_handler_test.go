@@ -11,7 +11,7 @@ import (
 
 func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
 	materialString := card.GetPotentialMaterialsAsString()
-	refs, archetypes := getReferences(materialString)
+	refs, archetypes := getReferences(skc_testing.TestContext, materialString)
 
 	assert.Len(expectedNamedMaterials, len(refs), "Len of NamedMaterials mismatch")
 	assert.Len(expectedMaterialArchetypes, len(archetypes), "Len of MaterialArchetypes mismatch")
@@ -23,7 +23,7 @@ func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.
 func validateReferences(card model.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
 	materialString := card.GetPotentialMaterialsAsString()
 	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
-	refs, archetypes := getReferences(effectWithoutMaterial)
+	refs, archetypes := getReferences(skc_testing.TestContext, effectWithoutMaterial)
 
 	assert.Len(expectedNamedReferences, len(refs), "Len of NamedReferences mismatch")
 	assert.Len(expectedReferencedArchetypes, len(archetypes), "Len of ReferencedArchetypes mismatch")
@@ -38,10 +38,10 @@ func TestGetSuggestions(t *testing.T) {
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	ccIDs, _ := skcDBInterface.GetCardColorIDs()
+	ccIDs, _ := skcDBInterface.GetCardColorIDs(skc_testing.TestContext)
 	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
-		suggestions := getCardSuggestions(mock, ccIDs)
+		suggestions := getCardSuggestions(skc_testing.TestContext, mock, ccIDs)
 
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
 		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
