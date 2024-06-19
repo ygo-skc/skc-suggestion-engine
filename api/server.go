@@ -4,6 +4,7 @@ package api
 import (
 	"encoding/json"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 	"strings"
@@ -33,14 +34,14 @@ func init() {
 	// init IP DB
 	isCICD := os.Getenv("IS_CICD")
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
-		log.Println("Loading IP DB...")
+		slog.Debug("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB9.BIN"); err != nil {
 			log.Fatalln("Could not load IP DB file...")
 		} else {
 			ipDB = ip
 		}
 	} else {
-		log.Println("Not loading IP DB")
+		slog.Warn("Not loading IP DB")
 	}
 
 	// init Location
@@ -55,7 +56,7 @@ func verifyApiKey(headers http.Header) *model.APIError {
 	clientKey := headers.Get("API-Key")
 
 	if clientKey != serverAPIKey {
-		log.Println("Client is using incorrect API Key. Cannot process request.")
+		slog.Error("Client is using incorrect API Key. Cannot process request")
 		return &model.APIError{Message: "Request has incorrect or missing API Key."}
 	}
 
@@ -135,7 +136,7 @@ func RunHttpServer() {
 
 // configure server to handle HTTPS (secured) calls
 func serveTLS(router *mux.Router, corsOpts *cors.Cors) {
-	log.Println("Starting server in port 9000 (secured)")
+	slog.Debug("Starting server in port 9000 (secured)")
 	if err := http.ListenAndServeTLS(":9000", "certs/certificate.crt", "certs/private.key", corsOpts.Handler(router)); err != nil { // docker does not like localhost:9000 so im just using port number
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
@@ -143,7 +144,7 @@ func serveTLS(router *mux.Router, corsOpts *cors.Cors) {
 
 // configure server to handle HTTPs (un-secured) calls
 func serveUnsecured(router *mux.Router, corsOpts *cors.Cors) {
-	log.Println("Starting server in port 90 (unsecured)")
+	slog.Debug("Starting server in port 90 (unsecured)")
 	if err := http.ListenAndServe(":90", corsOpts.Handler(router)); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}

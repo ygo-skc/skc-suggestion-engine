@@ -13,7 +13,7 @@ const (
 
 type SKCDatabaseAccessObjectMock struct{}
 
-func (mock SKCDatabaseAccessObjectMock) GetSKCDBVersion() (string, error) {
+func (mock SKCDatabaseAccessObjectMock) GetSKCDBVersion(ctx context.Context) (string, error) {
 	log.Fatalln(notMocked)
 	return "", nil
 }
@@ -51,7 +51,7 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(c
 	return model.BatchCardData[model.CardIDs]{}, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNames(cardNames []string) (model.BatchCardData[model.CardNames], *model.APIError) {
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardNames []string) (model.BatchCardData[model.CardNames], *model.APIError) {
 	found, notFound := make(model.CardDataMap, 0), make(model.CardNames, 0)
 	for _, cardName := range cardNames {
 		if card, isPresent := CardMocks[cardName]; isPresent {
@@ -63,7 +63,7 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNa
 
 	return model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
-func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(productId string) (model.BatchCardData[model.CardIDs], *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(ctx context.Context, productId string) (model.BatchCardData[model.CardIDs], *model.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardName() not mocked")
 	return model.BatchCardData[model.CardIDs]{}, nil
 }
@@ -73,17 +73,17 @@ func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(ct
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardName(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardName() not mocked")
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardText() not mocked")
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(archetypeName string) ([]model.Card, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
 	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
 	return nil, nil
 }
@@ -93,7 +93,7 @@ func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProduct
 	return model.BatchProductData[model.ProductIDs]{}, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetRandomCard() (string, *model.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetRandomCard(ctx context.Context) (string, *model.APIError) {
 	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
 	return "", nil
 }

@@ -37,18 +37,19 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport, *model.APIError) {
+	logger := util.Logger(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
 	var s []model.Card
 	var err *model.APIError
 
 	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.CardName, subject.CardID); err == nil {
 		if len(s) == 0 {
-			util.Logger(ctx).Warn("No support found")
+			logger.Warn("No support found")
 			return support, nil
 		} else {
 			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
-			util.Logger(ctx).Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
-			util.Logger(ctx).Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
+			logger.Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
+			logger.Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
 		}
 	}
 	return support, err

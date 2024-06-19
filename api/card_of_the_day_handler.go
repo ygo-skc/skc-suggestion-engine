@@ -46,7 +46,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 	util.Logger(ctx).Info(fmt.Sprintf("There was no card of the day found for %s, fetching random card from DB.", cotd.Date))
 	e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
 
-	if randomCardId, err := skcDBInterface.GetRandomCard(); err != nil {
+	if randomCardId, err := skcDBInterface.GetRandomCard(ctx); err != nil {
 		return e
 	} else {
 		cotd.CardID = randomCardId

@@ -40,7 +40,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
 		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs)
 
-		logger.Info(fmt.Sprintf("Suggestions for %s (%s): %d unique material references - %d unique named references", cardID, cardToGetSuggestionsFor.CardName,
+		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.CardName,
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
 		json.NewEncoder(res).Encode(suggestions)
@@ -100,7 +100,7 @@ func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
 // Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
 // If a direct name reference is found in the DB, then it is returned as a suggestion.
 func getReferences(ctx context.Context, s string) ([]model.CardReference, []string) {
-	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(s)
+	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(ctx, s)
 
 	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
 	for _, card := range namedReferences {
@@ -110,10 +110,10 @@ func getReferences(ctx context.Context, s string) ([]model.CardReference, []stri
 	return uniqueReferences, archetypalReferences
 }
 
-func isolateReferences(s string) (map[string]model.Card, map[string]int, []string) {
+func isolateReferences(ctx context.Context, s string) (map[string]model.Card, map[string]int, []string) {
 	tokens := quotedStringRegex.FindAllString(s, -1)
 
-	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(tokens)
+	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(ctx, tokens)
 
 	// get unique archetypes
 	uniqueArchetypalReferences := make([]string, 0, len(archetypalReferences))
@@ -126,7 +126,7 @@ func isolateReferences(s string) (map[string]model.Card, map[string]int, []strin
 }
 
 // cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]int, map[string]bool) {
+func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]model.Card, map[string]int, map[string]bool) {
 	namedReferences := map[string]model.Card{}
 	referenceOccurrence := map[string]int{}
 	archetypalReferences := map[string]bool{}
@@ -138,7 +138,7 @@ func buildReferenceObjects(tokens []string) (map[string]model.Card, map[string]i
 			model.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(tokens)
+		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(ctx, tokens)
 
 		for _, token := range tokens {
 			// if we already searched the token before we don't need to waste time re-searching it in DB

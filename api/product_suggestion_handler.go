@@ -20,7 +20,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	cardsInProductChan, ccIDsChan := make(chan model.BatchCardData[model.CardIDs]), make(chan map[string]int)
 	go func() {
-		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(productID)
+		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(ctx, productID)
 		cardsInProductChan <- cardsInProduct
 	}()
 	go func() {
@@ -29,7 +29,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}()
 
 	cardsInProduct := <-cardsInProductChan
-	suggestions := getBatchSuggestions(context.TODO(), &cardsInProduct.CardInfo, make([]string, 0), <-ccIDsChan)
+	suggestions := getBatchSuggestions(ctx, &cardsInProduct.CardInfo, make([]string, 0), <-ccIDsChan)
 
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(suggestions)
