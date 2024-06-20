@@ -134,7 +134,7 @@ func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](ctx con
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		util.Logger(ctx).Info("Could not fetch data for trending resources")
+		util.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
 		*bathData = bri
@@ -171,7 +171,7 @@ func determineTrendChange(
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
 	var err *model.APIError
 	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to); err != nil {
-		util.Logger(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
+		util.LoggerFromContext(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
 	}
 	c <- err
 }

@@ -11,7 +11,7 @@ const (
 	loggerKey contextKey = "logger"
 )
 
-func Logger(ctx context.Context) *slog.Logger {
+func LoggerFromContext(ctx context.Context) *slog.Logger {
 	if l := ctx.Value(loggerKey); l == nil {
 		slog.Warn("Using default slog as context does not have logger info")
 		return slog.Default()

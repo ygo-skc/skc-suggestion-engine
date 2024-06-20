@@ -37,7 +37,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
 	var s []model.Card
 	var err *model.APIError

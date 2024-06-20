@@ -65,7 +65,7 @@ type SKCDAOImplementation struct{}
 func (imp SKCDAOImplementation) GetSKCDBVersion(ctx context.Context) (string, error) {
 	var version string
 	if err := skcDBConn.QueryRow(queryDBVersion).Scan(&version); err != nil {
-		util.Logger(ctx).Info(fmt.Sprintf("Error getting SKC DB version - %v", err))
+		util.LoggerFromContext(ctx).Info(fmt.Sprintf("Error getting SKC DB version - %v", err))
 		return version, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	}
 
@@ -74,7 +74,7 @@ func (imp SKCDAOImplementation) GetSKCDBVersion(ctx context.Context) (string, er
 
 // Get IDs for all card colors currently in database.
 func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string]int, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card color IDs from DB")
 	cardColorIDs := map[string]int{}
 
@@ -111,7 +111,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(ctx context.Context, c
 }
 
 func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cardIDs []string) (model.BatchCardData[model.CardIDs], *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB")
 
 	numCards := len(cardIDs)
@@ -141,7 +141,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 }
 
 func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, products []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving product data from DB")
 
 	numProducts := len(products)
@@ -175,7 +175,7 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 
 // Uses card names to find instance of card
 func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardNames []string) (model.BatchCardData[model.CardNames], *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for cards w/ name %v", cardNames))
 
 	numCards := len(cardNames)
@@ -206,7 +206,7 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx 
 
 // Uses card names to find instance of card
 func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, productId string) (model.BatchCardData[model.CardIDs], *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving cards found in product")
 
 	cardData := make(model.CardDataMap) // used to store results
@@ -230,7 +230,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 // TODO: document
 // TODO: find way to make code more readable
 func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
 	cardNameWithDoubleQuotes := `%"` + cardName + `"%`
@@ -245,7 +245,7 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 }
 
 func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards that reference archetype in their name")
 	searchTerm := `%` + archetypeName + `%`
 
@@ -258,7 +258,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.C
 }
 
 func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards treated as archetype")
 	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
 
@@ -271,7 +271,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.C
 }
 
 func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards explicitly not treated as archetype")
 	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
 
@@ -284,7 +284,7 @@ func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.
 }
 
 func (imp SKCDAOImplementation) GetRandomCard(ctx context.Context) (string, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	var randomCardId string
 
 	if err := skcDBConn.QueryRow(queryRandomCardID).Scan(&randomCardId); err != nil {
@@ -295,7 +295,7 @@ func (imp SKCDAOImplementation) GetRandomCard(ctx context.Context) (string, *mod
 }
 
 func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]model.Card, *model.APIError) {
-	logger := util.Logger(ctx)
+	logger := util.LoggerFromContext(ctx)
 	cards := []model.Card{}
 
 	for rows.Next() {

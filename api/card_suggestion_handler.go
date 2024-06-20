@@ -62,7 +62,7 @@ func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card,
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
-		util.Logger(ctx).Debug("Not and extra deck monster")
+		util.LoggerFromContext(ctx).Debug("Not and extra deck monster")
 	}
 	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 
