@@ -153,3 +153,51 @@ func groupSuggestionReferences(referencesToParse []model.CardReference, uniqueRe
 		}
 	}
 }
+func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
+	logger, ctx := util.NewRequestSetup(context.Background(), "batch card support")
+	logger.Info("Batch card support requested")
+
+	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {
+		return
+	} else if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
+		err.HandleServerResponse(res)
+		return
+	} else {
+		referencedBy, materialFor := make([]model.Card, 0, 10), make([]model.Card, 0, 10)
+
+		supportChan := make(chan model.CardSupport, 5)
+		go fetchSupportForBatch(ctx, suggestionSubjectsCardData, supportChan)
+
+		for s := range supportChan {
+			referencedBy = append(referencedBy, s.ReferencedBy...)
+			materialFor = append(materialFor, s.MaterialFor...)
+		}
+
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor, UnknownResources: suggestionSubjectsCardData.UnknownResources})
+	}
+}
+
+func fetchSupportForBatch(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs], supportChan chan<- model.CardSupport) {
+	uniqueRequestedIDs := make(map[string]bool)
+	var wg sync.WaitGroup
+
+	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
+		// card ID is processed or invalid
+		if _, exists := uniqueRequestedIDs[cardInfo.CardID]; exists || slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
+			continue
+		}
+
+		uniqueRequestedIDs[cardInfo.CardID] = true
+
+		wg.Add(1)
+		go func(cardInfo model.Card) {
+			defer wg.Done()
+			y, _ := getCardSupport(ctx, cardInfo)
+			supportChan <- y
+		}(cardInfo)
+	}
+
+	wg.Wait()
+	close(supportChan)
+}
