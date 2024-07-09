@@ -45,7 +45,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card, ccIDs map[string]int) model.CardSuggestions {
+func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card,
+	ccIDs map[string]int) model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
 

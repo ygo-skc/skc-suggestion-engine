@@ -152,8 +152,6 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		referencedBy, materialFor := make([]model.Card, 0, 10), make([]model.Card, 0, 10)
-
 		supportChan := make(chan model.CardSupport, 5)
 		go fetchBatchSuggestions(suggestionSubjectsCardData,
 			func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSupport) {
@@ -162,13 +160,18 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 				c <- cardSupport
 			}, supportChan)
 
+		support := model.BatchCardSupport[model.CardIDs]{
+			ReferencedBy:     make([]model.Card, 0, 10),
+			MaterialFor:      make([]model.Card, 0, 10),
+			FalsePositives:   make(model.CardIDs, 0, 5),
+			UnknownResources: suggestionSubjectsCardData.UnknownResources}
 		for s := range supportChan {
-			referencedBy = append(referencedBy, s.ReferencedBy...)
-			materialFor = append(materialFor, s.MaterialFor...)
+			support.ReferencedBy = append(support.ReferencedBy, s.ReferencedBy...)
+			support.MaterialFor = append(support.MaterialFor, s.MaterialFor...)
 		}
 
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor, UnknownResources: suggestionSubjectsCardData.UnknownResources})
+		json.NewEncoder(res).Encode(support)
 	}
 }
 
