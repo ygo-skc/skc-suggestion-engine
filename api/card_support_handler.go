@@ -90,10 +90,9 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		numValidIDs := len(reqBody.CardIDs) - len(suggestionSubjectsCardData.UnknownResources)
-		referencedBy, materialFor := make([]model.Card, 0, 5), make([]model.Card, 0, 5)
+		referencedBy, materialFor := make([]model.Card, 0, 10), make([]model.Card, 0, 10)
 
-		supportChan := make(chan model.CardSupport, numValidIDs)
+		supportChan := make(chan model.CardSupport, 5)
 		go fetchSupportForBatch(ctx, suggestionSubjectsCardData, supportChan)
 
 		for s := range supportChan {
