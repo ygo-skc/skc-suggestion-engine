@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"slices"
 	"strings"
+	"sync"
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -110,26 +111,13 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		referencedBy, materialFor := make([]model.Card, 0, 30), make([]model.Card, 0, 30)
-
-		supportChan := make(chan model.CardSupport)
 		numValidIDs := len(reqBody.CardIDs) - len(suggestionSubjectsCardData.UnknownResources)
-		uniqueRequestedIDs := make(map[string]bool, numValidIDs)
-		for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
-			if _, exists := uniqueRequestedIDs[cardInfo.CardID]; exists || slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
-				continue
-			}
+		referencedBy, materialFor := make([]model.Card, 0, 5), make([]model.Card, 0, 5)
 
-			uniqueRequestedIDs[cardInfo.CardID] = true
+		supportChan := make(chan model.CardSupport, numValidIDs)
+		go fetchSupportForBatch(ctx, suggestionSubjectsCardData, supportChan)
 
-			go func(cardInfo model.Card) {
-				y, _ := getCardSupport(ctx, cardInfo)
-				supportChan <- y
-			}(cardInfo)
-		}
-
-		for i := 0; i < len(uniqueRequestedIDs); i++ {
-			s := <-supportChan
+		for s := range supportChan {
 			referencedBy = append(referencedBy, s.ReferencedBy...)
 			materialFor = append(materialFor, s.MaterialFor...)
 		}
@@ -137,4 +125,28 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(model.BatchCardSupport[model.CardIDs]{ReferencedBy: referencedBy, MaterialFor: materialFor, UnknownResources: suggestionSubjectsCardData.UnknownResources})
 	}
+}
+
+func fetchSupportForBatch(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs], supportChan chan<- model.CardSupport) {
+	uniqueRequestedIDs := make(map[string]bool)
+	var wg sync.WaitGroup
+
+	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
+		// card ID is processed or invalid
+		if _, exists := uniqueRequestedIDs[cardInfo.CardID]; exists || slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
+			continue
+		}
+
+		uniqueRequestedIDs[cardInfo.CardID] = true
+
+		wg.Add(1)
+		go func(cardInfo model.Card) {
+			defer wg.Done()
+			y, _ := getCardSupport(ctx, cardInfo)
+			supportChan <- y
+		}(cardInfo)
+	}
+
+	wg.Wait()
+	close(supportChan)
 }
