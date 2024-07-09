@@ -7,7 +7,6 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
-	"slices"
 	"sort"
 	"strings"
 	"sync"
@@ -166,101 +165,4 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]mod
 	}
 
 	return namedReferences, referenceOccurrence, archetypalReferences
-}
-
-func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "batch card suggestions")
-	logger.Info("Batch card suggestions requested")
-
-	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
-		return
-	} else if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
-		err.HandleServerResponse(res)
-		return
-	} else {
-		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
-		suggestions := getBatchSuggestions(ctx, &suggestionSubjectsCardData.CardInfo, suggestionSubjectsCardData.UnknownResources, ccIDs)
-
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(suggestions)
-	}
-
-}
-
-func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
-	suggestionChan := make(chan model.CardSuggestions, 5)
-	numValidIDs := len(*suggestionSubjectsCardData) - len(unknownIDs)
-	uniqueCardIDs := make(map[string]bool, numValidIDs)
-
-	go func() {
-		var wg sync.WaitGroup
-		for _, cardInfo := range *suggestionSubjectsCardData {
-			if slices.Contains(unknownIDs, cardInfo.CardID) {
-				continue
-			}
-
-			// TODO: can we skip cards already processed
-			uniqueCardIDs[cardInfo.CardID] = true
-			wg.Add(1)
-			go func(card model.Card) {
-				defer wg.Done()
-				suggestionChan <- getCardSuggestions(ctx, card, ccIDs)
-			}(cardInfo)
-		}
-		wg.Wait()
-		close(suggestionChan)
-	}()
-
-	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]bool), make(map[string]bool)
-
-	suggestions := model.BatchCardSuggestions[model.CardIDs]{
-		UnknownResources:     unknownIDs,
-		FalsePositives:       make(model.CardIDs, 0, 5),
-		NamedMaterials:       make([]model.CardReference, 0, 5),
-		NamedReferences:      make([]model.CardReference, 0, 5),
-		MaterialArchetypes:   make([]string, 0),
-		ReferencedArchetypes: make([]string, 0)}
-	for s := range suggestionChan {
-		groupSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials, uniqueCardIDs, &suggestions.FalsePositives)
-		groupSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences, uniqueCardIDs, &suggestions.FalsePositives)
-		groupArchetypes(s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
-		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
-	}
-
-	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
-	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
-
-	return suggestions
-}
-
-func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {
-	return func(i, j int) bool {
-		return refs[i].Occurrences > refs[j].Occurrences
-	}
-}
-
-func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]bool, uniqueArchetypes *[]string) {
-	for _, archetype := range archetypesToParse {
-		if _, exists := uniqueArchetypeSet[archetype]; !exists {
-			uniqueArchetypeSet[archetype] = true
-			*uniqueArchetypes = append(*uniqueArchetypes, archetype)
-		}
-	}
-}
-
-// uses references for a card and builds upon uniqueReferencesByCardID and uniqueReferences
-func groupSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference, uniqueReferences *[]model.CardReference,
-	uniqueCardIDs map[string]bool, falsePositives *model.CardIDs) {
-	for _, suggestion := range referencesToParse {
-		if batchSuggestion, refPreviouslyAdded := uniqueReferencesByCardID[suggestion.Card.CardID]; refPreviouslyAdded {
-			batchSuggestion.Occurrences += suggestion.Occurrences
-			uniqueReferencesByCardID[suggestion.Card.CardID] = batchSuggestion
-		} else if _, isFalsePositive := uniqueCardIDs[suggestion.Card.CardID]; isFalsePositive && !slices.Contains(*falsePositives, suggestion.Card.CardID) {
-			*falsePositives = append(*falsePositives, suggestion.Card.CardID)
-		} else if !refPreviouslyAdded && !isFalsePositive {
-			*uniqueReferences = append(*uniqueReferences, model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences})
-			uniqueReferencesByCardID[suggestion.Card.CardID] = &(*uniqueReferences)[len(*uniqueReferences)-1]
-		}
-	}
 }
