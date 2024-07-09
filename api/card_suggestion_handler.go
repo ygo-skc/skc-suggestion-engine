@@ -15,7 +15,6 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
-	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 var (
@@ -173,28 +172,9 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := util.NewRequestSetup(context.Background(), "batch card suggestions")
 	logger.Info("Batch card suggestions requested")
 
-	// deserialize body
-	var reqBody model.BatchCardIDs
-	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		logger.Error(fmt.Sprintf("Error occurred while reading batch suggestions request body: Error %s", err))
-		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
+	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
 		return
-	}
-
-	// validate body
-	if err := validation.ValidateBatchCardIDs(reqBody); err != nil {
-		err.HandleServerResponse(res)
-		return
-	}
-
-	if len(reqBody.CardIDs) == 0 {
-		logger.Info("Nothing to process - missing cardID data")
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(noBatchSuggestions)
-		return
-	}
-
-	if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
+	} else if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -204,6 +184,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
 	}
+
 }
 
 func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData *model.CardDataMap, unknownIDs model.CardIDs, ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
