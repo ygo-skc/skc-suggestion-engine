@@ -98,13 +98,16 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 		MaterialArchetypes:   make([]string, 0),
 		ReferencedArchetypes: make([]string, 0)}
 	for s := range suggestionChan {
-		groupSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, &suggestions.NamedMaterials,
+		parseSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID,
 			suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
-		groupSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, &suggestions.NamedReferences,
+		parseSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs,
 			suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
 		groupArchetypes(s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
 		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
 	}
+
+	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
+	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
 	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
@@ -114,7 +117,13 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 
 func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {
 	return func(i, j int) bool {
-		return refs[i].Occurrences > refs[j].Occurrences
+		iv, jv := refs[i], refs[j]
+		switch {
+		case iv.Occurrences != jv.Occurrences:
+			return iv.Occurrences > jv.Occurrences
+		default:
+			return iv.Card.CardName < jv.Card.CardName
+		}
 	}
 }
 
@@ -128,18 +137,27 @@ func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]b
 }
 
 // uses references for a card and builds upon uniqueReferencesByCardID and uniqueReferences
-func groupSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference, uniqueReferences *[]model.CardReference, uniqueCardIDs model.CardDataMap, falsePositives *model.CardIDs) {
+func parseSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference,
+	subjects model.CardDataMap, falsePositives *model.CardIDs) {
 	for _, suggestion := range referencesToParse {
-		if batchSuggestion, refPreviouslyAdded := uniqueReferencesByCardID[suggestion.Card.CardID]; refPreviouslyAdded {
-			batchSuggestion.Occurrences += suggestion.Occurrences
-			uniqueReferencesByCardID[suggestion.Card.CardID] = batchSuggestion
-		} else if _, isFalsePositive := uniqueCardIDs[suggestion.Card.CardID]; isFalsePositive && !slices.Contains(*falsePositives, suggestion.Card.CardID) {
-			*falsePositives = append(*falsePositives, suggestion.Card.CardID)
+		suggestionID := suggestion.Card.CardID
+		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
+			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
+		} else if _, isFalsePositive := subjects[suggestionID]; isFalsePositive && !slices.Contains(*falsePositives, suggestionID) {
+			*falsePositives = append(*falsePositives, suggestionID)
 		} else if !refPreviouslyAdded && !isFalsePositive {
-			*uniqueReferences = append(*uniqueReferences, model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences})
-			uniqueReferencesByCardID[suggestion.Card.CardID] = &(*uniqueReferences)[len(*uniqueReferences)-1]
+			uniqueReferencesByCardID[suggestionID] = &model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences}
 		}
 	}
+}
+
+func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []model.CardReference {
+	references := []model.CardReference{}
+	for _, ref := range uniqueReferences {
+		references = append(references, *ref)
+	}
+
+	return references
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
@@ -161,14 +179,22 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 			}, supportChan)
 
 		support := model.BatchCardSupport[model.CardIDs]{
-			ReferencedBy:     make([]model.Card, 0, 10),
-			MaterialFor:      make([]model.Card, 0, 10),
 			FalsePositives:   make(model.CardIDs, 0, 5),
 			UnknownResources: suggestionSubjectsCardData.UnknownResources}
+		uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
+
 		for s := range supportChan {
-			support.ReferencedBy = append(support.ReferencedBy, s.ReferencedBy...)
-			support.MaterialFor = append(support.MaterialFor, s.MaterialFor...)
+			parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
+				suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
+			parseSuggestionReferences(s.MaterialFor, uniqueMaterialByCardIDs,
+				suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
 		}
+
+		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
+		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
+
+		sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy))
+		sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor))
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(support)

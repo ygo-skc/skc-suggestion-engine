@@ -36,7 +36,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport, *model.APIError) {
 	logger := util.LoggerFromContext(ctx)
-	support := model.CardSupport{Card: subject, ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
+	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
 	var s []model.Card
 	var err *model.APIError
 
@@ -55,9 +55,9 @@ func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport,
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
 // If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
-func determineSupportCards(subject model.Card, references []model.Card) ([]model.Card, []model.Card) {
-	referencedBy := []model.Card{}
-	materialFor := []model.Card{}
+func determineSupportCards(subject model.Card, references []model.Card) ([]model.CardReference, []model.CardReference) {
+	referencedBy := []model.CardReference{}
+	materialFor := []model.CardReference{}
 
 	for _, reference := range references {
 		materialString := reference.GetPotentialMaterialsAsString()
@@ -67,11 +67,11 @@ func determineSupportCards(subject model.Card, references []model.Card) ([]model
 		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
 
 		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(materialStringTokens) {
-			materialFor = append(materialFor, reference)
+			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
 		}
 
 		if subject.IsCardNameInTokens(remainingEffectTokens) {
-			referencedBy = append(referencedBy, reference)
+			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}
 

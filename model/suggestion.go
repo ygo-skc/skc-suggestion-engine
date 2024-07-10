@@ -24,16 +24,16 @@ type BatchCardSuggestions[IS IdentifierSlice] struct {
 }
 
 type CardSupport struct {
-	Card         Card   `json:"card"`
-	ReferencedBy []Card `json:"referencedBy"`
-	MaterialFor  []Card `json:"materialFor"`
+	Card         Card            `json:"card"`
+	ReferencedBy []CardReference `json:"referencedBy"`
+	MaterialFor  []CardReference `json:"materialFor"`
 }
 
 type BatchCardSupport[IS IdentifierSlice] struct {
-	ReferencedBy     []Card `json:"referencedBy"`
-	MaterialFor      []Card `json:"materialFor"`
-	UnknownResources IS     `json:"unknownResources"`
-	FalsePositives   IS     `json:"falsePositives"`
+	ReferencedBy     []CardReference `json:"referencedBy"`
+	MaterialFor      []CardReference `json:"materialFor"`
+	UnknownResources IS              `json:"unknownResources"`
+	FalsePositives   IS              `json:"falsePositives"`
 }
 
 type ArchetypalSuggestions struct {
