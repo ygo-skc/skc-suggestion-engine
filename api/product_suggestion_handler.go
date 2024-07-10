@@ -21,6 +21,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardsInProductChan, ccIDsChan := make(chan model.BatchCardData[model.CardIDs]), make(chan map[string]int)
 	go func() {
 		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(ctx, productID)
+		cardsInProduct.UnknownResources = make(model.CardIDs, 0) // by default, no unknown ids
 		cardsInProductChan <- cardsInProduct
 	}()
 	go func() {
@@ -30,7 +31,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	cardsInProduct := <-cardsInProductChan
 	suggestions := getBatchSuggestions(ctx, cardsInProduct, <-ccIDsChan)
+	support := getBatchSupport(ctx, cardsInProduct)
 
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(suggestions)
+	json.NewEncoder(res).Encode(model.ProductSuggestions[model.CardIDs]{Suggestions: suggestions, Support: support})
 }

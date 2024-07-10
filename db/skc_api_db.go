@@ -219,7 +219,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 			return model.BatchCardData[model.CardIDs]{}, err
 		} else {
 			for _, card := range cards {
-				cardData[card.CardName] = card
+				cardData[card.CardID] = card
 			}
 		}
 	}

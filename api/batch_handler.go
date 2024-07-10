@@ -170,35 +170,39 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		supportChan := make(chan model.CardSupport, 5)
-		go fetchBatchSuggestions(suggestionSubjectsCardData,
-			func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSupport) {
-				defer wg.Done()
-				cardSupport, _ := getCardSupport(ctx, cardInfo)
-				c <- cardSupport
-			}, supportChan)
-
-		support := model.BatchCardSupport[model.CardIDs]{
-			FalsePositives:   make(model.CardIDs, 0, 5),
-			UnknownResources: suggestionSubjectsCardData.UnknownResources}
-		uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-
-		for s := range supportChan {
-			parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
-				suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
-			parseSuggestionReferences(s.MaterialFor, uniqueMaterialByCardIDs,
-				suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
-		}
-
-		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
-		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
-
-		sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy))
-		sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor))
-
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(support)
+		json.NewEncoder(res).Encode(getBatchSupport(ctx, suggestionSubjectsCardData))
 	}
+}
+
+func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs]) model.BatchCardSupport[model.CardIDs] {
+	supportChan := make(chan model.CardSupport, 5)
+	go fetchBatchSuggestions(suggestionSubjectsCardData,
+		func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSupport) {
+			defer wg.Done()
+			cardSupport, _ := getCardSupport(ctx, cardInfo)
+			c <- cardSupport
+		}, supportChan)
+
+	support := model.BatchCardSupport[model.CardIDs]{
+		FalsePositives:   make(model.CardIDs, 0, 5),
+		UnknownResources: suggestionSubjectsCardData.UnknownResources}
+	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
+
+	for s := range supportChan {
+		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
+			suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
+		parseSuggestionReferences(s.MaterialFor, uniqueMaterialByCardIDs,
+			suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
+	}
+
+	support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
+	support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
+
+	sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy))
+	sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor))
+
+	return support
 }
 
 func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggestionSubjectsCardData model.BatchCardData[model.CardIDs],

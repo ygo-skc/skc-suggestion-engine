@@ -36,6 +36,11 @@ type BatchCardSupport[IS IdentifierSlice] struct {
 	FalsePositives   IS              `json:"falsePositives"`
 }
 
+type ProductSuggestions[IS IdentifierSlice] struct {
+	Suggestions BatchCardSuggestions[IS] `json:"suggestions"`
+	Support     BatchCardSupport[IS]     `json:"support"`
+}
+
 type ArchetypalSuggestions struct {
 	Total      int    `json:"total"`
 	UsingName  []Card `json:"usingName"`
