@@ -90,7 +90,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(archetypalSuggestions)
 }
 
-func getArchetypeSuggestion(ctx context.Context, archetypeName string, as *model.ArchetypalSuggestions, c chan *model.APIError, handlers archetypeSuggestionHandlers) {
+func getArchetypeSuggestion(ctx context.Context, archetypeName string, as *model.ArchetypalSuggestions, c chan<- *model.APIError, handlers archetypeSuggestionHandlers) {
 	if dbData, err := handlers.fetchArchetypeSuggestionsHandler(ctx, archetypeName); err != nil {
 		c <- err
 	} else {

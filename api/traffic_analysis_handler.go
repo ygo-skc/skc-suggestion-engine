@@ -127,7 +127,7 @@ func updateTrendingMetric[T model.Card | model.Product](tm []model.TrendingMetri
 }
 
 func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](ctx context.Context,
-	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func(context.Context, []string) (BD, *model.APIError), c chan *model.APIError) {
+	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func(context.Context, []string) (BD, *model.APIError), c chan<- *model.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -168,7 +168,7 @@ func determineTrendChange(
 	return tm
 }
 
-func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan *model.APIError) {
+func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan<- *model.APIError) {
 	var err *model.APIError
 	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to); err != nil {
 		util.LoggerFromContext(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
