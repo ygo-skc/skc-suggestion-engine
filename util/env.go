@@ -1,7 +1,9 @@
 package util
 
 import (
+	"fmt"
 	"log"
+	"log/slog"
 	"os"
 	"strings"
 
@@ -17,15 +19,15 @@ const (
 func init() {
 	isCICD := os.Getenv("IS_CICD")
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
-		EnvMap = ConfigureEnv()
+		EnvMap = configureEnv()
 	}
 }
 
-func ConfigureEnv() map[string]string {
+func configureEnv() map[string]string {
 	if envFile, isOk := os.LookupEnv(ENV_VARIABLE_NAME); !isOk {
-		log.Fatalln("Could not find environment variable", ENV_VARIABLE_NAME, "in path.")
+		log.Fatalf("Could not find environment variable %s in path", ENV_VARIABLE_NAME)
 	} else {
-		log.Println("Loading env from file", envFile)
+		slog.Info(fmt.Sprintf("Loading env from file %s", envFile))
 		if env, err := godotenv.Read(envFile); err != nil {
 			log.Fatalln("Could not load environment file (does it exist?). Terminating program.")
 		} else {

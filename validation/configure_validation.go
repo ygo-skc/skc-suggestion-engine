@@ -2,7 +2,9 @@ package validation
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"regexp"
 
@@ -66,6 +68,6 @@ func HandleValidationErrors(err validator.ValidationErrors) *ValidationErrors {
 	}
 
 	ve := ValidationErrors{Errors: validationErrors, TotalErrors: len(validationErrors)}
-	log.Printf("There were %d errors while validating input. Errors: %s", ve.TotalErrors, ve.Errors)
+	slog.Info(fmt.Sprintf("There were %d errors while validating input. Errors: %s", ve.TotalErrors, ve.Errors))
 	return &ve
 }

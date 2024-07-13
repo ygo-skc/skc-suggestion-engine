@@ -1,19 +1,21 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 type archetypeSuggestionHandlers struct {
-	fetchArchetypeSuggestionsHandler func(archetypeName string) ([]model.Card, *model.APIError)
+	fetchArchetypeSuggestionsHandler func(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError)
 	archetypeSuggestionCBHandler     func([]model.Card, *model.ArchetypalSuggestions)
 }
 
@@ -32,16 +34,18 @@ var (
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	archetypeName := pathVars["archetypeName"]
-	log.Printf("Getting cards belonging to archetype: %s", archetypeName)
+
+	logger, ctx := util.NewRequestSetup(context.Background(), "archetype support", slog.String("archetypeName", archetypeName))
+	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
-		log.Printf("%s failed archetype validation", archetypeName)
+		logger.Error("Failed archetype validation")
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
 		validationErr.HandleServerResponse(res)
 		return
 	}
 
-	if isBlackListed, err := skcSuggestionEngineDBInterface.IsBlackListed("archetype", archetypeName); err != nil {
+	if isBlackListed, err := skcSuggestionEngineDBInterface.IsBlackListed(ctx, "archetype", archetypeName); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else if isBlackListed {
@@ -55,9 +59,9 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	// setup channels
 	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan *model.APIError), make(chan *model.APIError), make(chan *model.APIError)
 
-	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, supportUsingCardNameChannel, cardNameArchetypeSuggestionHandlers)
-	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, supportUsingTextChannel, cardTextArchetypeSuggestionHandlers)
-	go getArchetypeSuggestion(archetypeName, &archetypalSuggestions, exclusionsChannel, archetypeExclusionHandlers)
+	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, supportUsingCardNameChannel, cardNameArchetypeSuggestionHandlers)
+	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, supportUsingTextChannel, cardTextArchetypeSuggestionHandlers)
+	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, exclusionsChannel, archetypeExclusionHandlers)
 
 	if err1, err2, err3 := <-supportUsingCardNameChannel, <-supportUsingTextChannel, <-exclusionsChannel; err1 != nil {
 		err1.HandleServerResponse(res)
@@ -77,17 +81,17 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	removeExclusions(&archetypalSuggestions)
+	removeExclusions(ctx, &archetypalSuggestions)
 	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
-	log.Printf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d. cards", archetypeName,
-		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText))
+	logger.Info(fmt.Sprintf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d cards", archetypeName,
+		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText)))
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(archetypalSuggestions)
 }
 
-func getArchetypeSuggestion(archetypeName string, as *model.ArchetypalSuggestions, c chan *model.APIError, handlers archetypeSuggestionHandlers) {
-	if dbData, err := handlers.fetchArchetypeSuggestionsHandler(archetypeName); err != nil {
+func getArchetypeSuggestion(ctx context.Context, archetypeName string, as *model.ArchetypalSuggestions, c chan<- *model.APIError, handlers archetypeSuggestionHandlers) {
+	if dbData, err := handlers.fetchArchetypeSuggestionsHandler(ctx, archetypeName); err != nil {
 		c <- err
 	} else {
 		handlers.archetypeSuggestionCBHandler(dbData, as)
@@ -96,7 +100,7 @@ func getArchetypeSuggestion(archetypeName string, as *model.ArchetypalSuggestion
 }
 
 // TODO: add method level documentation, use better variable names, add more inline comments
-func removeExclusions(archetypalSuggestions *model.ArchetypalSuggestions) {
+func removeExclusions(ctx context.Context, archetypalSuggestions *model.ArchetypalSuggestions) {
 	if len(archetypalSuggestions.Exclusions) == 0 {
 		return
 	}
@@ -105,7 +109,7 @@ func removeExclusions(archetypalSuggestions *model.ArchetypalSuggestions) {
 	uniqueExclusions := map[string]bool{}
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.CardName] = true
-		log.Printf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.CardName)
+		util.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.CardName))
 	}
 
 	newList := []model.Card{}

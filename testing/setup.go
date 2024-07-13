@@ -1,10 +1,13 @@
 package testing
 
 import (
+	"context"
 	"os"
 	"path"
 	"runtime"
 )
+
+var TestContext context.Context
 
 func init() {
 	_, filename, _, _ := runtime.Caller(0)
@@ -13,4 +16,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	TestContext = context.Background()
 }

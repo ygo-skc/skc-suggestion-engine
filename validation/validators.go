@@ -1,7 +1,7 @@
 package validation
 
 import (
-	"log"
+	"log/slog"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -26,7 +26,7 @@ func configureCustomValidators() {
 
 		for _, cardID := range cardIDs {
 			if len(cardIDRegex.FindAllString(cardID, -1)) == 0 {
-				log.Println("Deck Mascot ID not in proper format.")
+				slog.Info("Deck Mascot ID not in proper format")
 				return false
 			}
 		}

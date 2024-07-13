@@ -1,51 +1,63 @@
 package api
 
 import (
+	"context"
 	"encoding/json"
-	"log"
+	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/gorilla/mux"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
-	log.Printf("Getting cards that support card w/ ID: %s", cardID)
 
-	support := model.CardSupport{ReferencedBy: []model.Card{}, MaterialFor: []model.Card{}}
-	if cardToGetSupportFor, err := skcDBInterface.GetDesiredCardInDBUsingID(cardID); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
+	logger, ctx := util.NewRequestSetup(context.Background(), "card support", slog.String("cardID", cardID))
+	logger.Info("Getting support cards")
+
+	if cardToGetSupportFor, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardID); err != nil {
+		err.HandleServerResponse(res)
 		return
 	} else {
-		support.Card = cardToGetSupportFor
+		if support, err := getCardSupport(ctx, cardToGetSupportFor); err != nil {
+			err.HandleServerResponse(res)
+			return
+		} else {
+			res.WriteHeader(http.StatusOK)
+			json.NewEncoder(res).Encode(support)
+		}
 	}
+}
 
-	// get support
-	if s, err := skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(support.Card.CardName, cardID); err != nil {
-		res.WriteHeader(err.StatusCode)
-		json.NewEncoder(res).Encode(err)
-		return
-	} else if len(s) == 0 {
-		log.Println("No support found")
-	} else {
-		support.ReferencedBy, support.MaterialFor = determineSupportCards(*support.Card, s)
-		log.Printf("%s has %d cards that directly reference it (excluding cards referencing it as a material)", cardID, len(support.ReferencedBy))
-		log.Printf("%s can be used as a material for %d cards", cardID, len(support.MaterialFor))
+func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport, *model.APIError) {
+	logger := util.LoggerFromContext(ctx)
+	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
+	var s []model.Card
+	var err *model.APIError
+
+	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.CardName, subject.CardID); err == nil {
+		if len(s) == 0 {
+			logger.Warn("No support found")
+			return support, nil
+		} else {
+			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
+			logger.Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
+			logger.Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
+		}
 	}
-
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(support)
+	return support, err
 }
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
 // If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
-func determineSupportCards(subject model.Card, references []model.Card) ([]model.Card, []model.Card) {
-	referencedBy := []model.Card{}
-	materialFor := []model.Card{}
+func determineSupportCards(subject model.Card, references []model.Card) ([]model.CardReference, []model.CardReference) {
+	referencedBy := []model.CardReference{}
+	materialFor := []model.CardReference{}
 
 	for _, reference := range references {
 		materialString := reference.GetPotentialMaterialsAsString()
@@ -55,11 +67,11 @@ func determineSupportCards(subject model.Card, references []model.Card) ([]model
 		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
 
 		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(materialStringTokens) {
-			materialFor = append(materialFor, reference)
+			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
 		}
 
 		if subject.IsCardNameInTokens(remainingEffectTokens) {
-			referencedBy = append(referencedBy, reference)
+			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}
 

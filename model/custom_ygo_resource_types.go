@@ -19,7 +19,7 @@ type ProductDataMap map[string]Product
 
 // finds all card IDs not found in CardDataMap keys
 func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
-	missingIDs := make(CardIDs, 0)
+	missingIDs := make(CardIDs, 0, len(cardData))
 
 	for _, cardID := range cardIDs {
 		if _, containsKey := cardData[cardID]; !containsKey {
@@ -32,7 +32,7 @@ func (cardData CardDataMap) FindMissingIDs(cardIDs CardIDs) CardIDs {
 
 // finds all card IDs not found in CardDataMap keys
 func (cardData CardDataMap) FindMissingNames(cardNames CardNames) CardNames {
-	missingNames := make(CardNames, 0)
+	missingNames := make(CardNames, 0, len(cardNames))
 
 	for _, cardName := range cardNames {
 		if _, containsKey := cardData[cardName]; !containsKey {
@@ -45,7 +45,7 @@ func (cardData CardDataMap) FindMissingNames(cardNames CardNames) CardNames {
 
 // finds all product IDs not found in ProductDataMap keys
 func (productData ProductDataMap) FindMissingIDs(productIDs ProductIDs) ProductIDs {
-	missingIDs := make(ProductIDs, 0)
+	missingIDs := make(ProductIDs, 0, len(productIDs))
 
 	for _, productID := range productIDs {
 		if _, containsKey := productData[productID]; !containsKey {

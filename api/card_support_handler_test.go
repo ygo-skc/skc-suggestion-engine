@@ -20,16 +20,22 @@ var (
 	// expected output when fetching support cards
 	expectedSupportCardsMocks = map[string]model.CardSupport{
 		"Dark Magician": {
-			ReferencedBy: []model.Card{skc_testing.CardMocks["Magicians' Souls"], skc_testing.CardMocks["The Dark Magicians"]},
-			MaterialFor:  []model.Card{skc_testing.CardMocks["Dark Paladin"], skc_testing.CardMocks["The Dark Magicians"]},
+			ReferencedBy: []model.CardReference{
+				{Card: skc_testing.CardMocks["Magicians' Souls"], Occurrences: 1},
+				{Card: skc_testing.CardMocks["The Dark Magicians"], Occurrences: 1}},
+			MaterialFor: []model.CardReference{
+				{Card: skc_testing.CardMocks["Dark Paladin"], Occurrences: 1},
+				{Card: skc_testing.CardMocks["The Dark Magicians"], Occurrences: 1}},
 		},
 		"Hamon, Lord of Striking Thunder": {
-			ReferencedBy: []model.Card{},
-			MaterialFor:  []model.Card{skc_testing.CardMocks["Armityle the Chaos Phantasm"], skc_testing.CardMocks["Armityle the Chaos Phantasm - Phantom of Fury"]},
+			ReferencedBy: []model.CardReference{},
+			MaterialFor: []model.CardReference{
+				{Card: skc_testing.CardMocks["Armityle the Chaos Phantasm"], Occurrences: 1},
+				{Card: skc_testing.CardMocks["Armityle the Chaos Phantasm - Phantom of Fury"], Occurrences: 1}},
 		},
 		"Elemental HERO Neos": {
-			ReferencedBy: []model.Card{skc_testing.CardMocks["Neos Wiseman"]},
-			MaterialFor:  []model.Card{skc_testing.CardMocks["Elemental HERO Air Neos"]},
+			ReferencedBy: []model.CardReference{{Card: skc_testing.CardMocks["Neos Wiseman"], Occurrences: 1}},
+			MaterialFor:  []model.CardReference{{Card: skc_testing.CardMocks["Elemental HERO Air Neos"], Occurrences: 1}},
 		},
 	}
 )

@@ -6,18 +6,39 @@ type CardReference struct {
 }
 
 type CardSuggestions struct {
-	Card                 *Card            `json:"card"`
-	HasSelfReference     bool             `json:"hasSelfReference"`
-	NamedMaterials       *[]CardReference `json:"namedMaterials"`
-	NamedReferences      *[]CardReference `json:"namedReferences"`
-	MaterialArchetypes   *[]string        `json:"materialArchetypes"`
-	ReferencedArchetypes *[]string        `json:"referencedArchetypes"`
+	Card                 Card            `json:"card"`
+	HasSelfReference     bool            `json:"hasSelfReference"`
+	NamedMaterials       []CardReference `json:"namedMaterials"`
+	NamedReferences      []CardReference `json:"namedReferences"`
+	MaterialArchetypes   []string        `json:"materialArchetypes"`
+	ReferencedArchetypes []string        `json:"referencedArchetypes"`
+}
+
+type BatchCardSuggestions[IS IdentifierSlice] struct {
+	NamedMaterials       []CardReference `json:"namedMaterials"`
+	NamedReferences      []CardReference `json:"namedReferences"`
+	MaterialArchetypes   []string        `json:"materialArchetypes"`
+	ReferencedArchetypes []string        `json:"referencedArchetypes"`
+	UnknownResources     IS              `json:"unknownResources"`
+	FalsePositives       IS              `json:"falsePositives"`
 }
 
 type CardSupport struct {
-	Card         *Card  `json:"card"`
-	ReferencedBy []Card `json:"referencedBy"`
-	MaterialFor  []Card `json:"materialFor"`
+	Card         Card            `json:"card"`
+	ReferencedBy []CardReference `json:"referencedBy"`
+	MaterialFor  []CardReference `json:"materialFor"`
+}
+
+type BatchCardSupport[IS IdentifierSlice] struct {
+	ReferencedBy     []CardReference `json:"referencedBy"`
+	MaterialFor      []CardReference `json:"materialFor"`
+	UnknownResources IS              `json:"unknownResources"`
+	FalsePositives   IS              `json:"falsePositives"`
+}
+
+type ProductSuggestions[IS IdentifierSlice] struct {
+	Suggestions BatchCardSuggestions[IS] `json:"suggestions"`
+	Support     BatchCardSupport[IS]     `json:"support"`
 }
 
 type ArchetypalSuggestions struct {
