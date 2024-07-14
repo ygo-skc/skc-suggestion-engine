@@ -38,24 +38,24 @@ const (
 
 // interface
 type SKCDatabaseAccessObject interface {
-	GetSKCDBVersion(ctx context.Context) (string, error)
+	GetSKCDBVersion(context.Context) (string, error)
 
-	GetCardColorIDs(ctx context.Context) (map[string]int, *model.APIError)
+	GetCardColorIDs(context.Context) (map[string]int, *model.APIError)
 
-	GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (model.Card, *model.APIError)
-	GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cards []string) (model.BatchCardData[model.CardIDs], *model.APIError)
-	GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardName []string) (model.BatchCardData[model.CardNames], *model.APIError)
-	GetCardsFoundInProduct(ctx context.Context, productID string) (model.BatchCardData[model.CardIDs], *model.APIError)
+	GetDesiredCardInDBUsingID(context.Context, string) (model.Card, *model.APIError)
+	GetDesiredCardInDBUsingMultipleCardIDs(context.Context, []string) (model.BatchCardData[model.CardIDs], *model.APIError)
+	GetDesiredCardsFromDBUsingMultipleCardNames(context.Context, []string) (model.BatchCardData[model.CardNames], *model.APIError)
+	GetCardsFoundInProduct(context.Context, string) (model.BatchCardData[model.CardIDs], *model.APIError)
 
-	GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]model.Card, *model.APIError)
+	GetOccurrenceOfCardNameInAllCardEffect(context.Context, string, string) ([]model.Card, *model.APIError)
 
-	GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError)
-	GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError)
-	GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError)
+	GetInArchetypeSupportUsingCardName(context.Context, string) ([]model.Card, *model.APIError)
+	GetInArchetypeSupportUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
+	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
 
-	GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, cards []string) (model.BatchProductData[model.ProductIDs], *model.APIError)
+	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (model.BatchProductData[model.ProductIDs], *model.APIError)
 
-	GetRandomCard(ctx context.Context) (string, *model.APIError)
+	GetRandomCard(context.Context) (string, *model.APIError)
 }
 
 // impl
