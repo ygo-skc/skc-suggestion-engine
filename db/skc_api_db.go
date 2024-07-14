@@ -33,8 +33,34 @@ const (
 	queryCardsUsingProductID = "SELECT DISTINCT(card_number),card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
 	queryRandomCardID        = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
 
-	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE (card_effect LIKE ? OR card_effect LIKE ?) AND card_number != ? ORDER BY color_id, card_name"
+	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) AND card_number != ? ORDER BY color_id, card_name"
 )
+
+func convertToFullText(subject string) string {
+	fullTextSubject := strings.ReplaceAll(strings.ReplaceAll(subject, "-", " "), " ", " +")
+	return fmt.Sprintf("+%s", fullTextSubject)
+}
+
+func buildVariableQuerySubjects(subjects []string) ([]interface{}, int) {
+	numSubjects := len(subjects)
+	args := make([]interface{}, numSubjects)
+
+	for index, cardId := range subjects {
+		args[index] = cardId
+	}
+
+	return args, numSubjects
+}
+
+func variablePlaceholders(totalFields int) string {
+	if totalFields == 0 {
+		return ""
+	} else if totalFields == 1 {
+		return "?"
+	} else {
+		return fmt.Sprintf("?%s", strings.Repeat(", ?", totalFields-1))
+	}
+}
 
 // interface
 type SKCDatabaseAccessObject interface {
@@ -114,13 +140,8 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB")
 
-	numCards := len(cardIDs)
-	args := make([]interface{}, numCards)
+	args, numCards := buildVariableQuerySubjects(cardIDs)
 	cardData := make(model.CardDataMap, numCards) // used to store results
-
-	for index, cardId := range cardIDs {
-		args[index] = cardId
-	}
 
 	query := fmt.Sprintf(queryCardUsingCardIDs, variablePlaceholders(numCards))
 
@@ -144,13 +165,8 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving product data from DB")
 
-	numProducts := len(products)
-	args := make([]interface{}, numProducts)
+	args, numProducts := buildVariableQuerySubjects(products)
 	productData := make(model.ProductDataMap, numProducts)
-
-	for index, cardId := range products {
-		args[index] = cardId
-	}
 
 	query := fmt.Sprintf("SELECT product_id, product_locale, product_name, product_release_date, product_content_total, product_type, product_sub_type FROM product_info WHERE product_id IN (%s)", variablePlaceholders(numProducts))
 
@@ -178,13 +194,8 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx 
 	logger := util.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for cards w/ name %v", cardNames))
 
-	numCards := len(cardNames)
-	args := make([]interface{}, numCards)
+	args, numCards := buildVariableQuerySubjects(cardNames)
 	cardData := make(model.CardDataMap, numCards) // used to store results
-
-	for index, cardId := range cardNames {
-		args[index] = cardId
-	}
 
 	query := fmt.Sprintf(queryCardUsingCardNames, variablePlaceholders(numCards))
 
@@ -233,10 +244,7 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 	logger := util.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
-	cardNameWithDoubleQuotes := `%"` + cardName + `"%`
-	cardNameWithSingleQuotes := `%'` + cardName + `'%`
-
-	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, cardNameWithDoubleQuotes, cardNameWithSingleQuotes, cardId); err != nil {
+	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, convertToFullText(cardName), cardId); err != nil {
 		logger.Error(fmt.Sprintf(queryErrorLog, err))
 		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 	} else {
@@ -309,14 +317,4 @@ func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]model.Card, *model
 	}
 
 	return cards, nil // no parsing error
-}
-
-func variablePlaceholders(totalFields int) string {
-	if totalFields == 0 {
-		return ""
-	} else if totalFields == 1 {
-		return "?"
-	} else {
-		return fmt.Sprintf("?%s", strings.Repeat(", ?", totalFields-1))
-	}
 }
