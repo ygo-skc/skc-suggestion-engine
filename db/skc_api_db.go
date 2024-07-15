@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 
@@ -19,21 +20,16 @@ const (
 	// errors
 	genericError = "Error occurred while querying DB"
 
-	// logs
-	queryErrorLog = "Error fetching data from DB - %v"
-	parseErrorLog = "Error parsing data from DB - %v"
-
 	// queries
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardID     = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardIDs    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
-	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
-	queryCardsUsingProductID = "SELECT DISTINCT(card_number),card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
-	queryRandomCardID        = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
-
-	findRelatedCardsUsingCardEffect string = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) AND card_number != ? ORDER BY color_id, card_name"
+	queryCardUsingCardID            = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
+	queryCardUsingCardIDs           = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
+	queryCardUsingCardNames         = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
+	queryCardsUsingProductID        = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
+	queryRandomCardID               = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+	findRelatedCardsUsingCardEffect = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) AND card_number != ? ORDER BY color_id, card_name"
 )
 
 func convertToFullText(subject string) string {
@@ -60,6 +56,16 @@ func variablePlaceholders(totalFields int) string {
 	} else {
 		return fmt.Sprintf("?%s", strings.Repeat(", ?", totalFields-1))
 	}
+}
+
+func handleQueryError(logger *slog.Logger, err error) *model.APIError {
+	logger.Error(fmt.Sprintf("Error fetching data from DB - %v", err))
+	return &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+}
+
+func handleRowParsingError(logger *slog.Logger, err error) *model.APIError {
+	logger.Error(fmt.Sprintf("Error parsing data from DB - %v", err))
+	return &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
 }
 
 // interface
@@ -105,16 +111,14 @@ func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string
 	cardColorIDs := map[string]int{}
 
 	if rows, err := skcDBConn.Query(queryCardColorIDs); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return nil, handleQueryError(logger, err)
 	} else {
 		for rows.Next() {
 			var colorId int
 			var cardColor string
 
 			if err := rows.Scan(&colorId, &cardColor); err != nil {
-				logger.Error(fmt.Sprintf(parseErrorLog, err))
-				return cardColorIDs, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+				return cardColorIDs, handleRowParsingError(logger, err)
 			}
 
 			cardColorIDs[cardColor] = colorId
@@ -146,8 +150,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 	query := fmt.Sprintf(queryCardUsingCardIDs, variablePlaceholders(numCards))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return model.BatchCardData[model.CardIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardIDs]{}, handleQueryError(logger, err)
 	} else {
 		if cards, err := parseRowsForCard(ctx, rows); err != nil {
 			return model.BatchCardData[model.CardIDs]{}, err
@@ -171,15 +174,13 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 	query := fmt.Sprintf("SELECT product_id, product_locale, product_name, product_release_date, product_content_total, product_type, product_sub_type FROM product_info WHERE product_id IN (%s)", variablePlaceholders(numProducts))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchProductData[model.ProductIDs]{}, handleQueryError(logger, err)
 	} else {
 		for rows.Next() {
 			var product model.Product
 			if err := rows.Scan(&product.ProductID, &product.ProductLocale,
 				&product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
-				logger.Error(fmt.Sprintf(parseErrorLog, err))
-				return model.BatchProductData[model.ProductIDs]{}, &model.APIError{Message: "Error parsing data from DB.", StatusCode: http.StatusInternalServerError}
+				return model.BatchProductData[model.ProductIDs]{}, handleRowParsingError(logger, err)
 			}
 
 			productData[product.ProductID] = product
@@ -200,8 +201,7 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx 
 	query := fmt.Sprintf(queryCardUsingCardNames, variablePlaceholders(numCards))
 
 	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return model.BatchCardData[model.CardNames]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardNames]{}, handleQueryError(logger, err)
 	} else {
 		if cards, err := parseRowsForCard(ctx, rows); err != nil {
 			return model.BatchCardData[model.CardNames]{}, err
@@ -223,8 +223,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 	cardData := make(model.CardDataMap) // used to store results
 
 	if rows, err := skcDBConn.Query(queryCardsUsingProductID, productId); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return model.BatchCardData[model.CardIDs]{}, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return model.BatchCardData[model.CardIDs]{}, handleQueryError(logger, err)
 	} else {
 		if cards, err := parseRowsForCard(ctx, rows); err != nil {
 			return model.BatchCardData[model.CardIDs]{}, err
@@ -245,8 +244,7 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, convertToFullText(cardName), cardId); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
 	}
@@ -258,8 +256,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.C
 	searchTerm := `%` + archetypeName + `%`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name", searchTerm); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
 	}
@@ -271,8 +268,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.C
 	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
 	}
@@ -284,8 +280,7 @@ func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.
 	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
 
 	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return nil, &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
 	}
@@ -296,8 +291,7 @@ func (imp SKCDAOImplementation) GetRandomCard(ctx context.Context) (string, *mod
 	var randomCardId string
 
 	if err := skcDBConn.QueryRow(queryRandomCardID).Scan(&randomCardId); err != nil {
-		logger.Error(fmt.Sprintf(queryErrorLog, err))
-		return "", &model.APIError{Message: genericError, StatusCode: http.StatusInternalServerError}
+		return "", handleQueryError(logger, err)
 	}
 	return randomCardId, nil
 }
@@ -309,8 +303,7 @@ func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]model.Card, *model
 	for rows.Next() {
 		var card model.Card
 		if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect, &card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
-			logger.Error(fmt.Sprintf(parseErrorLog, err))
-			return nil, &model.APIError{Message: "Error parsing card data from DB.", StatusCode: http.StatusInternalServerError}
+			return nil, handleRowParsingError(logger, err)
 		} else {
 			cards = append(cards, card)
 		}
