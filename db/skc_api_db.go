@@ -52,11 +52,12 @@ func buildVariableQuerySubjects(subjects []string) ([]interface{}, int) {
 }
 
 func variablePlaceholders(totalFields int) string {
-	if totalFields == 0 {
+	switch totalFields {
+	case 0:
 		return ""
-	} else if totalFields == 1 {
+	case 1:
 		return "?"
-	} else {
+	default:
 		return fmt.Sprintf("?%s", strings.Repeat(", ?", totalFields-1))
 	}
 }
