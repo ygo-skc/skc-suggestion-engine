@@ -4,7 +4,6 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"log"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -37,7 +36,7 @@ const (
 
 func convertToFullText(subject string) string {
 	fullTextSubject := spaceRegex.ReplaceAllString(strings.ReplaceAll(subject, "-", " "), " +")
-	return fmt.Sprintf("+%s", fullTextSubject)
+	return fmt.Sprintf(`"+%s"`, fullTextSubject) // match phrase, not all words in text will match only consecutive matches of words in phrase
 }
 
 func buildVariableQuerySubjects(subjects []string) ([]interface{}, int) {
@@ -247,7 +246,6 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 	logger := util.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
-	log.Println(convertToFullText(cardName))
 	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, convertToFullText(cardName), cardId); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
