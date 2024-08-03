@@ -29,7 +29,7 @@ func (card Card) GetPotentialMaterialsAsString() string {
 	}
 
 	color := strings.ToUpper(card.CardColor)
-	if strings.Contains(color, "PENDULUM") && color != "PENDULUM-EFFECT" {
+	if strings.Contains(color, "PENDULUM") && color != "PENDULUM-EFFECT" && color != "PENDULUM-NORMAL" {
 		effectTokens = strings.SplitAfter(strings.SplitAfter(card.CardEffect, "\n\nMonster Effect\n")[1], "\n")
 	} else {
 		effectTokens = strings.SplitAfter(card.CardEffect, "\n")
