@@ -87,6 +87,10 @@ func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(ctx c
 	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
 	return nil, nil
 }
+func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*model.Product, *model.APIError) {
+	log.Fatalln("GetDesiredProductInDBUsingID() not mocked")
+	return nil, nil
+}
 
 func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, cards []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
 	log.Fatalln("GetDesiredProductInDBUsingMultipleProductIDs() not mocked")

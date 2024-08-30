@@ -34,6 +34,24 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// ensure resource is valid before storing it
+	switch trafficData.ResourceUtilized.Name {
+	case model.CardResource:
+		if _, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
+			res.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(res).Encode(model.APIError{Message: "Resource is not valid"})
+			return
+		}
+	case model.ProductResource:
+		if _, err := skcDBInterface.GetDesiredProductInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+			logger.Error(fmt.Sprintf("Product resource %s not valid", trafficData.ResourceUtilized.Value))
+			res.WriteHeader(http.StatusUnprocessableEntity)
+			json.NewEncoder(res).Encode(model.APIError{Message: "Resource is not valid"})
+			return
+		}
+	}
+
 	// get IP number info
 	var location model.Location
 	if ipData, err := ipDB.Get_all(trafficData.IP); err != nil {

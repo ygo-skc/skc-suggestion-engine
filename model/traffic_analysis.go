@@ -38,8 +38,8 @@ type Location struct {
 }
 
 type TrafficResource struct {
-	Name  string `bson:"name" json:"name" validate:"required"`
-	Value string `bson:"value" json:"value" validate:"required"`
+	Name  ResourceName `bson:"name" json:"name" validate:"required,trendingresource"`
+	Value string       `bson:"value" json:"value" validate:"required"`
 }
 
 type TrafficData struct {

@@ -93,6 +93,7 @@ type SKCDatabaseAccessObject interface {
 	GetInArchetypeSupportUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
 	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
 
+	GetDesiredProductInDBUsingID(context.Context, string) (*model.Product, *model.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (model.BatchProductData[model.ProductIDs], *model.APIError)
 
 	GetRandomCard(context.Context) (string, *model.APIError)
@@ -170,6 +171,19 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 	}
 
 	return model.BatchCardData[model.CardIDs]{CardInfo: cardData, UnknownResources: cardData.FindMissingIDs(cardIDs)}, nil
+}
+
+// Leverages GetDesiredProductInDBUsingMultipleProductIDs to get information on a specific product using its identifier
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*model.Product, *model.APIError) {
+	if results, err := imp.GetDesiredProductInDBUsingMultipleProductIDs(ctx, []string{productID}); err != nil {
+		return nil, err
+	} else {
+		if product, exists := results.ProductInfo[productID]; !exists {
+			return nil, &model.APIError{Message: fmt.Sprintf("No results found when querying by product ID %s", productID), StatusCode: http.StatusNotFound}
+		} else {
+			return &product, nil
+		}
+	}
 }
 
 func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, products []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
