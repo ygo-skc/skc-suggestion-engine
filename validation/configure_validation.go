@@ -24,12 +24,13 @@ var (
 )
 
 const (
-	requiredValidator      = "required"
-	systemNameValidator    = "systemname"
-	systemVersionValidator = "systemversion"
-	ipv4Validator          = "ipv4"
-	ArchetypeValidator     = "archetype"
-	ygoCardIDsValidator    = "ygocardids"
+	requiredValidator         = "required"
+	systemNameValidator       = "systemname"
+	systemVersionValidator    = "systemversion"
+	ipv4Validator             = "ipv4"
+	ArchetypeValidator        = "archetype"
+	ygoCardIDsValidator       = "ygocardids"
+	trendingResourceValidator = "trendingresource"
 )
 
 func init() {

@@ -26,11 +26,16 @@ const (
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardID            = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardIDs           = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
-	queryCardUsingCardNames         = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
-	queryCardsUsingProductID        = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
-	queryRandomCardID               = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+	queryCardUsingCardID     = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
+	queryCardUsingCardIDs    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
+	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
+	queryCardsUsingProductID = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
+	queryRandomCardID        = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
+
+	queryCardsInArchetypeUsingName  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name"
+	queryCardsTreatedAsArchetype    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
+	queryCardsNotTreatedAsArchetype = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
+
 	findRelatedCardsUsingCardEffect = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) AND card_number != ? ORDER BY color_id, card_name"
 )
 
@@ -88,6 +93,7 @@ type SKCDatabaseAccessObject interface {
 	GetInArchetypeSupportUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
 	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]model.Card, *model.APIError)
 
+	GetDesiredProductInDBUsingID(context.Context, string) (*model.Product, *model.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (model.BatchProductData[model.ProductIDs], *model.APIError)
 
 	GetRandomCard(context.Context) (string, *model.APIError)
@@ -165,6 +171,19 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 	}
 
 	return model.BatchCardData[model.CardIDs]{CardInfo: cardData, UnknownResources: cardData.FindMissingIDs(cardIDs)}, nil
+}
+
+// Leverages GetDesiredProductInDBUsingMultipleProductIDs to get information on a specific product using its identifier
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*model.Product, *model.APIError) {
+	if results, err := imp.GetDesiredProductInDBUsingMultipleProductIDs(ctx, []string{productID}); err != nil {
+		return nil, err
+	} else {
+		if product, exists := results.ProductInfo[productID]; !exists {
+			return nil, &model.APIError{Message: fmt.Sprintf("No results found when querying by product ID %s", productID), StatusCode: http.StatusNotFound}
+		} else {
+			return &product, nil
+		}
+	}
 }
 
 func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, products []string) (model.BatchProductData[model.ProductIDs], *model.APIError) {
@@ -258,7 +277,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.C
 	logger.Info("Retrieving card data from DB for all cards that reference archetype in their name")
 	searchTerm := `%` + archetypeName + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name", searchTerm); err != nil {
+	if rows, err := skcDBConn.Query(queryCardsInArchetypeUsingName, searchTerm); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
@@ -268,9 +287,8 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.C
 func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
 	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards treated as archetype")
-	archetypeName = `%` + fmt.Sprintf(`This card is always treated as an "%s" card`, archetypeName) + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
+	if rows, err := skcDBConn.Query(queryCardsTreatedAsArchetype, fmt.Sprintf(`+"This card is always treated as" +"%s card"`, archetypeName)); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)
@@ -280,9 +298,8 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.C
 func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]model.Card, *model.APIError) {
 	logger := util.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards explicitly not treated as archetype")
-	archetypeName = `%` + fmt.Sprintf(`This card is not treated as a "%s" card`, archetypeName) + `%`
 
-	if rows, err := skcDBConn.Query("SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_effect LIKE ? ORDER BY card_name", archetypeName); err != nil {
+	if rows, err := skcDBConn.Query(queryCardsNotTreatedAsArchetype, fmt.Sprintf(`+"This card is not treated as" +"%s card"`, archetypeName)); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
 		return parseRowsForCard(ctx, rows)

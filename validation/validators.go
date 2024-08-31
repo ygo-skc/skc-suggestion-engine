@@ -33,4 +33,8 @@ func configureCustomValidators() {
 
 		return true
 	})
+
+	V.RegisterValidation(trendingResourceValidator, func(fl validator.FieldLevel) bool {
+		return fl.Field().String() == string(model.CardResource) || fl.Field().String() == string(model.ProductResource)
+	})
 }

@@ -33,4 +33,5 @@ func configureTranslations() {
 	registerTranslation(ipv4Validator, "{0} should use ipv4 format.")
 	registerTranslation(ArchetypeValidator, "{0} should be valid archetype.")
 	registerTranslation(ygoCardIDsValidator, "One or more Card IDs are not in correct format. IDs are given to cards by Konami and are numeric with 8 digits.")
+	registerTranslation(trendingResourceValidator, "Trending resource can be one of two types: CARD, PRODUCT.")
 }

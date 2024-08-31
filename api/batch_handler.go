@@ -109,18 +109,20 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials))
-	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences))
+	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
+	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
 
 	return suggestions
 }
 
-func sortBatchReferences(refs []model.CardReference) func(i, j int) bool {
+func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(i, j int) bool {
 	return func(i, j int) bool {
 		iv, jv := refs[i], refs[j]
 		switch {
 		case iv.Occurrences != jv.Occurrences:
 			return iv.Occurrences > jv.Occurrences
+		case iv.Card.CardColor != jv.Card.CardColor:
+			return ccIDs[iv.Card.CardColor] < ccIDs[jv.Card.CardColor]
 		default:
 			return iv.Card.CardName < jv.Card.CardName
 		}
@@ -189,6 +191,8 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.Batch
 		UnknownResources: suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
+	ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
+
 	for s := range supportChan {
 		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
 			suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
@@ -199,8 +203,8 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.Batch
 	support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 	support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
-	sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy))
-	sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor))
+	sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy, ccIDs))
+	sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor, ccIDs))
 
 	return support
 }
