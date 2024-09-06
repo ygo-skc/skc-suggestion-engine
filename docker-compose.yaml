@@ -20,6 +20,21 @@ services:
       - skc-network
     environment:
       - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_prod
+    labels:
+      com.datadoghq.ad.init_configs: "[{}]"
+      com.datadoghq.ad.instances: '[{"host":"%%host%%", "port": "%%port%%"}]'
+      com.datadoghq.ad.logs: >-
+        [{
+          "source": "go",
+          "service": "skc-suggestion-engine",
+          "log_processing_rules": [{
+            "type": "exclude_at_match",
+            "name": "exclude_health_check",
+            "pattern" : "\"operation\":\"status\""
+          }]
+        }]
+      com.datadoghq.tags.env: "prod"
+      com.datadoghq.tags.service: "skc-suggestion-engine"
 
 networks:
   skc-network:
