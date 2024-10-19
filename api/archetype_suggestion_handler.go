@@ -49,7 +49,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else if isBlackListed {
-		err := model.APIError{Message: fmt.Sprintf("%s is a blacklisted archetype. Common english words are blacklisted. This is done to prevent queries that make no logical sense.", archetypeName), StatusCode: http.StatusBadRequest}
+		err := model.APIError{Message: fmt.Sprintf("%s is a blacklisted archetype. Common english words are blacklisted. This is done to prevent queries that make no logical sense.", archetypeName), StatusCode: http.StatusUnprocessableEntity}
 		err.HandleServerResponse(res)
 		return
 	}
