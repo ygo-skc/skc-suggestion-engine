@@ -2,7 +2,9 @@
 package api
 
 import (
+	"compress/gzip"
 	"encoding/json"
+	"io"
 	"log"
 	"log/slog"
 	"net/http"
@@ -52,6 +54,15 @@ func init() {
 	}
 }
 
+type gzipResponseWriter struct {
+	io.Writer
+	http.ResponseWriter
+}
+
+func (w gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.Writer.Write(b)
+}
+
 func verifyApiKey(headers http.Header) *model.APIError {
 	clientKey := headers.Get("API-Key")
 
@@ -76,12 +87,20 @@ func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 }
 
 // sets common headers for response
-func commonHeadersMiddleware(next http.Handler) http.Handler {
+func commonResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		res.Header().Add("Content-Type", "application/json")
 		res.Header().Add("Cache-Control", "max-age=300")
 
-		next.ServeHTTP(res, req)
+		// gzip
+		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+			res.Header().Set("Content-Encoding", "gzip")
+			zip := gzip.NewWriter(res)
+			defer zip.Close()
+			next.ServeHTTP(gzipResponseWriter{Writer: zip, ResponseWriter: res}, req)
+		} else {
+			next.ServeHTTP(res, req)
+		}
 	})
 }
 
@@ -113,7 +132,7 @@ func RunHttpServer() {
 	protectedRoutes.HandleFunc("/traffic-analysis", submitNewTrafficDataHandler).Methods(http.MethodPost).Name("Traffic Analysis")
 
 	// common middleware
-	router.Use(commonHeadersMiddleware)
+	router.Use(commonResponseMiddleware)
 
 	// Cors
 	corsOpts := cors.New(cors.Options{
