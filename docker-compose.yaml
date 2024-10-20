@@ -17,7 +17,7 @@ services:
         limits:
           memory: 75m
     networks:
-      - skc-network
+      - skc
     environment:
       - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_prod
     labels:
@@ -37,7 +37,7 @@ services:
       com.datadoghq.tags.service: "skc-suggestion-engine"
 
 networks:
-  skc-network:
-    name: skc-network
+  skc:
+    name: skc
     driver: bridge
-    external: true
+    external: true # network was alredy created, if you need to recreate the network - make this false
