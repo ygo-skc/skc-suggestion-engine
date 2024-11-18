@@ -35,6 +35,11 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx cont
 	return nil, nil
 }
 
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(ctx context.Context, version int) ([]string, *model.APIError) {
+	log.Fatalln("GetHistoricalCardOfTheDayData() not mocked")
+	return nil, nil
+}
+
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *model.APIError {
 	log.Fatalln("InsertCardOfTheDay() not mocked")
 	return nil
