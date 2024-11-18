@@ -30,7 +30,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx contex
 	return false, nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string) (*string, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *model.APIError) {
 	log.Fatalln("GetCardOfTheDay() not mocked")
 	return nil, nil
 }

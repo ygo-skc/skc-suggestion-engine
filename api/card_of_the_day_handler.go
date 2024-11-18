@@ -14,11 +14,10 @@ import (
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := util.NewRequestSetup(context.Background(), "card of the day")
 
-	date := time.Now().In(chicagoLocation).Format("2006-01-02")
-	cardOfTheDay := model.CardOfTheDay{Date: date, Version: 1}
-	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", date))
+	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
+	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))
 
-	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, date); cardID == nil {
+	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, cardOfTheDay.Date, cardOfTheDay.Version); cardID == nil {
 		if err := fetchNewCardOfTheDayAndPersist(ctx, &cardOfTheDay); err != nil {
 			err.HandleServerResponse(res)
 			return

@@ -22,16 +22,16 @@ var (
 
 // interface
 type SKCSuggestionEngineDAO interface {
-	GetSKCSuggestionDBVersion(ctx context.Context) (string, error)
+	GetSKCSuggestionDBVersion(context.Context) (string, error)
 
-	InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *model.APIError
-	GetTrafficData(ctx context.Context, resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
+	InsertTrafficData(context.Context, model.TrafficAnalysis) *model.APIError
+	GetTrafficData(context.Context, model.ResourceName, time.Time, time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
 
-	IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *model.APIError)
+	IsBlackListed(context.Context, string, string) (bool, *model.APIError)
 
-	GetCardOfTheDay(ctx context.Context, date string) (*string, *model.APIError)
+	GetCardOfTheDay(context.Context, string, int) (*string, *model.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *model.APIError)
-	InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *model.APIError
+	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *model.APIError
 }
 
 // impl
@@ -136,12 +136,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx contex
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string) (*string, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *model.APIError) {
 	logger := util.LoggerFromContext(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	query := bson.M{"date": date, "version": 1}
+	query := bson.M{"date": date, "version": version}
 	opts := options.FindOne().SetProjection( // select only these fields from collection
 		bson.D{
 			{Key: "cardID", Value: 1},
