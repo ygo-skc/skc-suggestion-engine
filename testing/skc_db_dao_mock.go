@@ -97,8 +97,8 @@ func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProduct
 	return model.BatchProductData[model.ProductIDs]{}, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetRandomCard(ctx context.Context) (string, *model.APIError) {
-	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
+func (imp SKCDatabaseAccessObjectMock) GetRandomCard(ctx context.Context, blacklistedCards []string) (string, *model.APIError) {
+	log.Fatalln("GetRandomCard() not mocked")
 	return "", nil
 }
 

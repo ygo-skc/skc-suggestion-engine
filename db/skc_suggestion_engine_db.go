@@ -195,7 +195,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx c
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	logger.Info(fmt.Sprintf("Inserting new card of the day for date %s. Card being saved is %s. Using version %d.", cotd.Date, cotd.CardID, cotd.Version))
+	logger.Info(fmt.Sprintf("Inserting new COTD - ID: %s version %d", cotd.CardID, cotd.Version))
 
 	if _, err := cardOfTheDayCollection.InsertOne(ctx, cotd); err != nil {
 		logger.Error(fmt.Sprintf("Could not insert card of the day, err %s", err))
