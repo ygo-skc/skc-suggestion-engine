@@ -106,12 +106,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
 		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
-		return nil, &model.APIError{Message: "Could not get traffic data."}
+		return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
 			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
-			return nil, &model.APIError{Message: "Could not get traffic data."}
+			return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
 		return td, nil
@@ -154,7 +154,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx cont
 			return nil, nil
 		}
 		logger.Error(fmt.Sprintf("Error retrieving card of the day for given date: %s. Err: %s", date, err))
-		return nil, &model.APIError{Message: "Could not get card of the day."}
+		return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get card of the day."}
 	}
 
 	return &cotd.CardID, nil
