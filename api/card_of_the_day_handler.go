@@ -53,7 +53,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 		return e
 	}
 
-	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total: %d", len(previousCOTDData)))
+	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
 
 	if randomCardId, err := skcDBInterface.GetRandomCard(ctx, previousCOTDData); err != nil {
 		return e
