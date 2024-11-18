@@ -88,7 +88,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
 	today := time.Now()
-	firstInterval, secondInterval := today.AddDate(0, 0, -7), today.AddDate(0, 0, -14)
+	firstInterval, secondInterval := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
 
 	go getMetrics(ctx, r, firstInterval, today, &metricsForCurrentPeriod, c1)
 	go getMetrics(ctx, r, secondInterval, firstInterval, &metricsForLastPeriod, c2)
