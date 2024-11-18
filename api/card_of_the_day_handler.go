@@ -14,11 +14,10 @@ import (
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := util.NewRequestSetup(context.Background(), "card of the day")
 
-	date := time.Now().In(chicagoLocation).Format("2006-01-02")
-	cardOfTheDay := model.CardOfTheDay{Date: date, Version: 1}
-	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", date))
+	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
+	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))
 
-	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, date); cardID == nil {
+	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, cardOfTheDay.Date, cardOfTheDay.Version); cardID == nil {
 		if err := fetchNewCardOfTheDayAndPersist(ctx, &cardOfTheDay); err != nil {
 			err.HandleServerResponse(res)
 			return
@@ -26,7 +25,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	} else if err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		logger.Warn(fmt.Sprintf("Existing card of the day for %s found! Card of the day: %s", date, *cardID))
+		logger.Warn(fmt.Sprintf("Existing card of the day found! COTD: %s", *cardID))
 		cardOfTheDay.CardID = *cardID
 	}
 
@@ -43,10 +42,19 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 }
 
 func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *model.APIError {
-	util.LoggerFromContext(ctx).Info(fmt.Sprintf("There was no card of the day found for %s, fetching random card from DB.", cotd.Date))
+	logger := util.LoggerFromContext(ctx)
+	logger.Info("There was no COTD picked for today - getting random card")
 	e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
 
-	if randomCardId, err := skcDBInterface.GetRandomCard(ctx); err != nil {
+	var err *model.APIError
+	var previousCOTDData []string
+	if previousCOTDData, err = skcSuggestionEngineDBInterface.GetHistoricalCardOfTheDayData(ctx, cotd.Version); err != nil {
+		return e
+	}
+
+	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
+
+	if randomCardId, err := skcDBInterface.GetRandomCard(ctx, previousCOTDData); err != nil {
 		return e
 	} else {
 		cotd.CardID = randomCardId

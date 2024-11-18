@@ -22,15 +22,16 @@ var (
 
 // interface
 type SKCSuggestionEngineDAO interface {
-	GetSKCSuggestionDBVersion(ctx context.Context) (string, error)
+	GetSKCSuggestionDBVersion(context.Context) (string, error)
 
-	InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *model.APIError
-	GetTrafficData(ctx context.Context, resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
+	InsertTrafficData(context.Context, model.TrafficAnalysis) *model.APIError
+	GetTrafficData(context.Context, model.ResourceName, time.Time, time.Time) ([]model.TrafficResourceUtilizationMetric, *model.APIError)
 
-	IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *model.APIError)
+	IsBlackListed(context.Context, string, string) (bool, *model.APIError)
 
-	GetCardOfTheDay(ctx context.Context, date string) (*string, *model.APIError)
-	InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *model.APIError
+	GetCardOfTheDay(context.Context, string, int) (*string, *model.APIError)
+	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *model.APIError)
+	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *model.APIError
 }
 
 // impl
@@ -105,12 +106,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
 		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
-		return nil, &model.APIError{Message: "Could not get traffic data."}
+		return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
 			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
-			return nil, &model.APIError{Message: "Could not get traffic data."}
+			return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
 		return td, nil
@@ -135,12 +136,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx contex
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string) (*string, *model.APIError) {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *model.APIError) {
 	logger := util.LoggerFromContext(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	query := bson.M{"date": date, "version": 1}
+	query := bson.M{"date": date, "version": version}
 	opts := options.FindOne().SetProjection( // select only these fields from collection
 		bson.D{
 			{Key: "cardID", Value: 1},
@@ -153,10 +154,40 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx cont
 			return nil, nil
 		}
 		logger.Error(fmt.Sprintf("Error retrieving card of the day for given date: %s. Err: %s", date, err))
-		return nil, &model.APIError{Message: "Could not get card of the day."}
+		return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get card of the day."}
 	}
 
 	return &cotd.CardID, nil
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(ctx context.Context, version int) ([]string, *model.APIError) {
+	logger := util.LoggerFromContext(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{"version": version}
+	opts := options.Find().SetProjection( // select only these fields from collection
+		bson.D{
+			{Key: "cardID", Value: 1},
+		},
+	)
+
+	if cursor, err := cardOfTheDayCollection.Find(ctx, query, opts); err != nil {
+		logger.Error(fmt.Sprintf("Error retrieving card of the day history. Version: %d. Err: %s", version, err))
+	} else {
+		historicalCOTD := make([]string, 0, 100)
+		defer cursor.Close(ctx)
+
+		for cursor.Next(ctx) {
+			var cotd model.CardOfTheDay
+			if err := cursor.Decode(&cotd); err != nil {
+				logger.Error(fmt.Sprintf("Error transforming DB data to COTD struct. Version: %d. Err: %s", version, err))
+			}
+			historicalCOTD = append(historicalCOTD, cotd.CardID)
+		}
+		return historicalCOTD, nil
+	}
+	return nil, &model.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *model.APIError {
@@ -164,7 +195,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx c
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	logger.Info(fmt.Sprintf("Inserting new card of the day for date %s. Card being saved is %s. Using version %d.", cotd.Date, cotd.CardID, cotd.Version))
+	logger.Info(fmt.Sprintf("Inserting new COTD - ID: %s version %d", cotd.CardID, cotd.Version))
 
 	if _, err := cardOfTheDayCollection.InsertOne(ctx, cotd); err != nil {
 		logger.Error(fmt.Sprintf("Could not insert card of the day, err %s", err))
