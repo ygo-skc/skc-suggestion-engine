@@ -80,7 +80,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
 	ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
 	suggestionChan := make(chan model.CardSuggestions, 20)
-	go fetchBatchSuggestions(suggestionSubjectsCardData, suggestionChan, func(cardInfo model.Card) model.CardSuggestions {
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo model.Card) model.CardSuggestions {
 		return getCardSuggestions(ctx, cardInfo, ccIDs)
 	})
 
@@ -176,7 +176,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs]) model.BatchCardSupport[model.CardIDs] {
 	supportChan := make(chan model.CardSupport, 20)
-	go fetchBatchSuggestions(suggestionSubjectsCardData, supportChan, func(cardInfo model.Card) model.CardSupport {
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, supportChan, func(cardInfo model.Card) model.CardSupport {
 		cardSupport, _ := getCardSupport(ctx, cardInfo)
 		return cardSupport
 	})
@@ -214,7 +214,8 @@ func (t batchSuggestionTask[T]) Process() {
 	t.resultChan <- t.process(t.card)
 }
 
-func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggestionSubjectsCardData model.BatchCardData[model.CardIDs], resultChan chan<- T, process func(card model.Card) T) {
+func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
+	resultChan chan<- T, process func(card model.Card) T) {
 	tasks := []util.Task{}
 	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 		// card ID is invalid
@@ -225,7 +226,7 @@ func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggesti
 		tasks = append(tasks, batchSuggestionTask[T]{card: cardInfo, resultChan: resultChan, process: process})
 	}
 
-	pool := util.WorkerPool{Tasks: tasks, Workers: 10}
+	pool := util.WorkerPool{Tasks: tasks, Workers: 10, Context: ctx}
 	pool.Run()
 	close(resultChan)
 }

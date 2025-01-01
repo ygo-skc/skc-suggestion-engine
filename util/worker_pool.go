@@ -1,6 +1,9 @@
 package util
 
-import "sync"
+import (
+	"context"
+	"sync"
+)
 
 type Task interface {
 	Process()
@@ -9,13 +12,23 @@ type Task interface {
 type WorkerPool struct {
 	Tasks   []Task
 	Workers int
+	Context context.Context
 	tChan   chan Task
 }
 
 func (wp *WorkerPool) worker(wg *sync.WaitGroup) {
 	defer wg.Done()
-	for task := range wp.tChan {
-		task.Process()
+
+	for {
+		select {
+		case <-wp.Context.Done():
+			return
+		case task, ok := <-wp.tChan:
+			if !ok {
+				return
+			}
+			task.Process()
+		}
 	}
 }
 
