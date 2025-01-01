@@ -7,7 +7,6 @@ import (
 	"net/http"
 	"slices"
 	"sort"
-	"sync"
 
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
@@ -80,12 +79,10 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
 	ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
-	suggestionChan := make(chan model.CardSuggestions, 5)
-	go fetchBatchSuggestions(suggestionSubjectsCardData,
-		func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSuggestions) {
-			defer wg.Done()
-			suggestionChan <- getCardSuggestions(ctx, cardInfo, ccIDs)
-		}, suggestionChan)
+	suggestionChan := make(chan model.CardSuggestions, 20)
+	go fetchBatchSuggestions(suggestionSubjectsCardData, suggestionChan, func(cardInfo model.Card) model.CardSuggestions {
+		return getCardSuggestions(ctx, cardInfo, ccIDs)
+	})
 
 	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}), make(map[string]struct{})
@@ -178,13 +175,11 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs]) model.BatchCardSupport[model.CardIDs] {
-	supportChan := make(chan model.CardSupport, 5)
-	go fetchBatchSuggestions(suggestionSubjectsCardData,
-		func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSupport) {
-			defer wg.Done()
-			cardSupport, _ := getCardSupport(ctx, cardInfo)
-			c <- cardSupport
-		}, supportChan)
+	supportChan := make(chan model.CardSupport, 20)
+	go fetchBatchSuggestions(suggestionSubjectsCardData, supportChan, func(cardInfo model.Card) model.CardSupport {
+		cardSupport, _ := getCardSupport(ctx, cardInfo)
+		return cardSupport
+	})
 
 	support := model.BatchCardSupport[model.CardIDs]{
 		FalsePositives:   make(model.CardIDs, 0, 5),
@@ -209,18 +204,28 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.Batch
 	return support
 }
 
-func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
-	fetchSuggestions func(model.Card, *sync.WaitGroup, chan<- T), c chan<- T) {
-	var wg sync.WaitGroup
+type batchSuggestionTask[T model.CardSupport | model.CardSuggestions] struct {
+	card       model.Card
+	resultChan chan<- T
+	process    func(card model.Card) T
+}
+
+func (t batchSuggestionTask[T]) Process() {
+	t.resultChan <- t.process(t.card)
+}
+
+func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggestionSubjectsCardData model.BatchCardData[model.CardIDs], resultChan chan<- T, process func(card model.Card) T) {
+	tasks := []util.Task{}
 	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 		// card ID is invalid
 		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
 			continue
 		}
 
-		wg.Add(1)
-		go fetchSuggestions(cardInfo, &wg, c)
+		tasks = append(tasks, batchSuggestionTask[T]{card: cardInfo, resultChan: resultChan, process: process})
 	}
-	wg.Wait()
-	close(c)
+
+	pool := util.WorkerPool{Tasks: tasks, Workers: 10}
+	pool.Run()
+	close(resultChan)
 }

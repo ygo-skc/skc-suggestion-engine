@@ -19,7 +19,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := util.NewRequestSetup(context.Background(), "product card suggestions", slog.String("productID", productID))
 	logger.Info("Getting product card suggestions")
 
-	cardsInProductChan, ccIDsChan := make(chan model.BatchCardData[model.CardIDs], 1), make(chan map[string]int, 1)
+	cardsInProductChan, ccIDsChan := make(chan model.BatchCardData[model.CardIDs]), make(chan map[string]int)
 	go func() {
 		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(ctx, productID)
 		cardsInProduct.UnknownResources = make(model.CardIDs, 0) // by default, no unknown ids
