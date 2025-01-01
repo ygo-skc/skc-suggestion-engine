@@ -125,10 +125,10 @@ func isolateReferences(ctx context.Context, s string) (map[string]model.Card, ma
 }
 
 // cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]model.Card, map[string]int, map[string]bool) {
+func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]model.Card, map[string]int, map[string]struct{}) {
 	namedReferences := map[string]model.Card{}
 	referenceOccurrence := map[string]int{}
-	archetypalReferences := map[string]bool{}
+	archetypalReferences := make(map[string]struct{})
 	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
 	totalTokens := len(tokens)
 
@@ -154,8 +154,8 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]mod
 			}
 
 			if card, isPresent := batchCardData.CardInfo[token]; !isPresent {
-				// add occurrence of archetype to map
-				archetypalReferences[token] = true
+				// add occurrence of archetype to set
+				archetypalReferences[token] = struct{}{}
 			} else {
 				// add occurrence of referenced card to maps
 				namedReferences[card.CardID] = card

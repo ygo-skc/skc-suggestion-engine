@@ -106,9 +106,9 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	}
 
 	// setting up a map of unique exclusions - should prevent multiple traversing of the same list - effectively making the method O(2n)
-	uniqueExclusions := map[string]bool{}
+	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
-		uniqueExclusions[uniqueExclusion.CardName] = true
+		uniqueExclusions[uniqueExclusion.CardName] = struct{}{}
 		util.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.CardName))
 	}
 
