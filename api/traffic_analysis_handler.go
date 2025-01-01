@@ -93,13 +93,20 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	go getMetrics(ctx, r, firstInterval, today, &metricsForCurrentPeriod, c1)
 	go getMetrics(ctx, r, secondInterval, firstInterval, &metricsForLastPeriod, c2)
 
-	// get channel data and check for errors
-	if err1, err2 := <-c1, <-c2; err1 != nil {
-		err1.HandleServerResponse(res)
-		return
-	} else if err2 != nil {
-		err2.HandleServerResponse(res)
-		return
+	// verify go routines exited with no errors
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-c1:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		case err := <-c2:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		}
 	}
 
 	if c3, afterResourcesAreFetchedCB := initResourceInfoFlow(ctx, r, metricsForCurrentPeriod); c3 == nil || afterResourcesAreFetchedCB == nil {

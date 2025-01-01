@@ -63,22 +63,31 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, supportUsingTextChannel, cardTextArchetypeSuggestionHandlers)
 	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, exclusionsChannel, archetypeExclusionHandlers)
 
-	if err1, err2, err3 := <-supportUsingCardNameChannel, <-supportUsingTextChannel, <-exclusionsChannel; err1 != nil {
-		err1.HandleServerResponse(res)
-		return
-	} else if err2 != nil {
-		err2.HandleServerResponse(res)
-		return
-	} else if err3 != nil {
-		err3.HandleServerResponse(res)
-		return
-	} else if len(archetypalSuggestions.UsingName) < 2 {
-		notAnArchetypeErr := model.APIError{
-			Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
-			StatusCode: http.StatusNotFound}
-		res.WriteHeader(notAnArchetypeErr.StatusCode)
-		json.NewEncoder(res).Encode(notAnArchetypeErr)
-		return
+	for i := 0; i < 3; i++ {
+		select {
+		case err := <-supportUsingCardNameChannel:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			} else if len(archetypalSuggestions.UsingName) < 2 {
+				notAnArchetypeErr := model.APIError{
+					Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
+					StatusCode: http.StatusNotFound}
+				res.WriteHeader(notAnArchetypeErr.StatusCode)
+				json.NewEncoder(res).Encode(notAnArchetypeErr)
+				return
+			}
+		case err := <-supportUsingTextChannel:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		case err := <-exclusionsChannel:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		}
 	}
 
 	removeExclusions(ctx, &archetypalSuggestions)
