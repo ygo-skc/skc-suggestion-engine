@@ -88,7 +88,7 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 		}, suggestionChan)
 
 	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]bool), make(map[string]bool)
+	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}), make(map[string]struct{})
 
 	suggestions := model.BatchCardSuggestions[model.CardIDs]{
 		UnknownResources:     suggestionSubjectsCardData.UnknownResources,
@@ -129,10 +129,10 @@ func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(
 	}
 }
 
-func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]bool, uniqueArchetypes *[]string) {
+func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]struct{}, uniqueArchetypes *[]string) {
 	for _, archetype := range archetypesToParse {
 		if _, exists := uniqueArchetypeSet[archetype]; !exists {
-			uniqueArchetypeSet[archetype] = true
+			uniqueArchetypeSet[archetype] = struct{}{}
 			*uniqueArchetypes = append(*uniqueArchetypes, archetype)
 		}
 	}
