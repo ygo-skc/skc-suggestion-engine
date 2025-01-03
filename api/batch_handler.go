@@ -106,8 +106,13 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
+	// sort output
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
 	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
+	sort.Strings(suggestions.MaterialArchetypes)
+	sort.Strings(suggestions.ReferencedArchetypes)
+	sort.Strings(suggestions.FalsePositives)
+	sort.Strings(suggestions.UnknownResources)
 
 	return suggestions
 }
