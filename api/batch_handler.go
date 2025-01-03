@@ -226,7 +226,7 @@ func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx cont
 		tasks = append(tasks, batchSuggestionTask[T]{card: cardInfo, resultChan: resultChan, process: process})
 	}
 
-	pool := util.WorkerPool{Tasks: tasks, Workers: 10, Context: ctx}
+	pool := *util.NewWorkerPool(tasks, util.WithContext(ctx), util.WithWorkers(10))
 	pool.Run()
 	close(resultChan)
 }
