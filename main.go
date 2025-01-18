@@ -9,5 +9,6 @@ import (
 func main() {
 	db.EstablishDBConn()
 	db.EstablishSKCSuggestionEngineDBConn()
-	api.RunHttpServer()
+	go api.RunHttpServer()
+	select {}
 }
