@@ -43,7 +43,6 @@ func EstablishSKCSuggestionEngineDBConn() {
 	if client, err := mongo.Connect(options.Client().
 		ApplyURI(uri).
 		SetAuth(credential).
-		SetMinPoolSize(minPoolSize).
 		SetMaxPoolSize(maxPoolSize).
 		SetMaxConnIdleTime(10 * time.Minute).
 		SetTimeout(2 * time.Second).
