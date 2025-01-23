@@ -9,6 +9,8 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
+	"go.mongodb.org/mongo-driver/v2/mongo/writeconcern"
 )
 
 const (
@@ -44,6 +46,9 @@ func EstablishSKCSuggestionEngineDBConn() {
 		SetMinPoolSize(minPoolSize).
 		SetMaxPoolSize(maxPoolSize).
 		SetMaxConnIdleTime(10 * time.Minute).
+		SetTimeout(2 * time.Second).
+		SetReadConcern(readconcern.Majority()).   // prefer strongly consistent reeds
+		SetWriteConcern(writeconcern.Majority()). // writes to most replicas before acknowledging the write is complete
 		SetAppName("SKC Suggestion Engine")); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine DB", err)
 	} else {
