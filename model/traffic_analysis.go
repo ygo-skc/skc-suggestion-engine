@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"go.mongodb.org/mongo-driver/bson/primitive"
+	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
 type ResourceName string
@@ -14,11 +14,11 @@ const (
 )
 
 type TrafficAnalysis struct {
-	ID               primitive.ObjectID `bson:"_id,omitempty"`
-	Timestamp        time.Time          `bson:"timestamp" json:"timestamp"`
-	Source           TrafficSource      `bson:"source" json:"source"`
-	ResourceUtilized TrafficResource    `bson:"resourceUtilized" json:"resourceUtilized"`
-	UserData         UserData           `bson:"userData" json:"userData"`
+	ID               bson.ObjectID   `bson:"_id,omitempty"`
+	Timestamp        time.Time       `bson:"timestamp" json:"timestamp"`
+	Source           TrafficSource   `bson:"source" json:"source"`
+	ResourceUtilized TrafficResource `bson:"resourceUtilized" json:"resourceUtilized"`
+	UserData         UserData        `bson:"userData" json:"userData"`
 }
 
 type TrafficSource struct {
