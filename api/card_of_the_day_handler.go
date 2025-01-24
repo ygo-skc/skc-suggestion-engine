@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "card of the day")
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "card of the day")
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
 	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))
@@ -30,7 +31,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	}
 
 	if card, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardOfTheDay.CardID); err != nil {
-		e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
+		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
 	} else {
@@ -41,12 +42,12 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(cardOfTheDay)
 }
 
-func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *model.APIError {
-	logger := util.LoggerFromContext(ctx)
+func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *cModel.APIError {
+	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("There was no COTD picked for today - getting random card")
-	e := &model.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
+	e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
 
-	var err *model.APIError
+	var err *cModel.APIError
 	var previousCOTDData []string
 	if previousCOTDData, err = skcSuggestionEngineDBInterface.GetHistoricalCardOfTheDayData(ctx, cotd.Version); err != nil {
 		return e

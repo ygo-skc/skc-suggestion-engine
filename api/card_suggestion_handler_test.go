@@ -5,11 +5,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	cModel "github.com/ygo-skc/skc-go/common/model"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )
 
-func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
+func validateMaterialReferences(card cModel.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
 	materialString := card.GetPotentialMaterialsAsString()
 	refs, archetypes := getReferences(skc_testing.TestContext, materialString)
 
@@ -20,7 +21,7 @@ func validateMaterialReferences(card model.Card, expectedNamedMaterials []model.
 	assert.Equal(expectedMaterialArchetypes, archetypes, "Expected contents of MaterialArchetypes slice is different than what is actually received")
 }
 
-func validateReferences(card model.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
+func validateReferences(card cModel.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
 	materialString := card.GetPotentialMaterialsAsString()
 	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
 	refs, archetypes := getReferences(skc_testing.TestContext, effectWithoutMaterial)
@@ -56,13 +57,13 @@ func TestCleanupReference(t *testing.T) {
 
 	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
 	for _, value := range baseCases {
-		model.CleanupToken(&value)
+		cModel.CleanupToken(&value)
 		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
 	}
 
 	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
 	for _, value := range specialCases {
-		model.CleanupToken(&value)
+		cModel.CleanupToken(&value)
 		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }

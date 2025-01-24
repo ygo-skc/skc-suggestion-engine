@@ -12,13 +12,15 @@ import (
 	"sync"
 
 	"github.com/gorilla/mux"
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 var (
 	quotedStringRegex  = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
-	noBatchSuggestions = model.BatchCardSuggestions[model.CardIDs]{NamedMaterials: []model.CardReference{}, NamedReferences: []model.CardReference{}, MaterialArchetypes: []string{},
+	noBatchSuggestions = model.BatchCardSuggestions[cModel.CardIDs]{NamedMaterials: []model.CardReference{}, NamedReferences: []model.CardReference{}, MaterialArchetypes: []string{},
 		ReferencedArchetypes: []string{}, UnknownResources: []string{}, FalsePositives: []string{}}
 )
 
@@ -28,7 +30,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := util.NewRequestSetup(context.Background(), "card suggestions", slog.String("cardID", cardID))
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "card suggestions", slog.String("cardID", cardID))
 	logger.Info("Card suggestions requested")
 
 	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardID); err != nil {
@@ -45,7 +47,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card,
+func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.Card,
 	ccIDs map[string]int) model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
@@ -61,7 +63,7 @@ func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor model.Card,
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
-		util.LoggerFromContext(ctx).Debug("Not and extra deck monster")
+		cUtil.LoggerFromContext(ctx).Debug("Not and extra deck monster")
 	}
 	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 
@@ -77,7 +79,7 @@ func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialStri
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor model.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
 	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
@@ -109,7 +111,7 @@ func getReferences(ctx context.Context, s string) ([]model.CardReference, []stri
 	return uniqueReferences, archetypalReferences
 }
 
-func isolateReferences(ctx context.Context, s string) (map[string]model.Card, map[string]int, []string) {
+func isolateReferences(ctx context.Context, s string) (map[string]cModel.Card, map[string]int, []string) {
 	tokens := quotedStringRegex.FindAllString(s, -1)
 
 	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(ctx, tokens)
@@ -125,8 +127,8 @@ func isolateReferences(ctx context.Context, s string) (map[string]model.Card, ma
 }
 
 // cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]model.Card, map[string]int, map[string]struct{}) {
-	namedReferences := map[string]model.Card{}
+func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]cModel.Card, map[string]int, map[string]struct{}) {
+	namedReferences := map[string]cModel.Card{}
 	referenceOccurrence := map[string]int{}
 	archetypalReferences := make(map[string]struct{})
 	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
@@ -134,7 +136,7 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]mod
 
 	if totalTokens != 0 {
 		for i := 0; i < totalTokens; i++ {
-			model.CleanupToken(&tokens[i])
+			cModel.CleanupToken(&tokens[i])
 		}
 
 		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(ctx, tokens)

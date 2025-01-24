@@ -4,6 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/go-playground/validator/v10"
+	cModel "github.com/ygo-skc/skc-go/common/model"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -22,7 +23,7 @@ func configureCustomValidators() {
 	})
 
 	V.RegisterValidation(ygoCardIDsValidator, func(fl validator.FieldLevel) bool {
-		cardIDs := fl.Field().Interface().(model.CardIDs)
+		cardIDs := fl.Field().Interface().(cModel.CardIDs)
 
 		for _, cardID := range cardIDs {
 			if len(cardIDRegex.FindAllString(cardID, -1)) == 0 {
