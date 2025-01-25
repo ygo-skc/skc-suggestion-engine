@@ -9,7 +9,6 @@ require (
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/mux v1.8.1
 	github.com/ip2location/ip2location-go/v9 v9.7.1
-	github.com/joho/godotenv v1.5.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
 	github.com/ygo-skc/skc-go/common v0.0.0-20250125014508-6b36cc993f58
@@ -22,6 +21,7 @@ require (
 	github.com/gabriel-vasile/mimetype v1.4.8 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/uuid v1.6.0 // indirect
+	github.com/joho/godotenv v1.5.1 // indirect
 	github.com/klauspost/compress v1.17.11 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect
 	github.com/pmezard/go-difflib v1.0.0 // indirect
