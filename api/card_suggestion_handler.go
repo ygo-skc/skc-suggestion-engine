@@ -15,7 +15,6 @@ import (
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 var (
@@ -82,7 +81,7 @@ func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialStri
 func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
 	defer wg.Done()
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-	s.HasSelfReference = util.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
+	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
 	sortCardReferences(&s.NamedReferences, ccIDs)
 }
 

@@ -6,7 +6,7 @@ import (
 	"log"
 	"time"
 
-	"github.com/ygo-skc/skc-suggestion-engine/util"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
@@ -21,7 +21,7 @@ const (
 // Connect to SKC database.
 func EstablishDBConn() {
 	uri := "%s:%s@tcp(%s)/%s"
-	dataSourceName := fmt.Sprintf(uri, util.EnvMap["SKC_DB_USERNAME"], util.EnvMap["SKC_DB_PASSWORD"], util.EnvMap["SKC_DB_HOST"], util.EnvMap["SKC_DB_NAME"])
+	dataSourceName := fmt.Sprintf(uri, cUtil.EnvMap["SKC_DB_USERNAME"], cUtil.EnvMap["SKC_DB_PASSWORD"], cUtil.EnvMap["SKC_DB_HOST"], cUtil.EnvMap["SKC_DB_NAME"])
 
 	var err error
 	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
@@ -34,7 +34,7 @@ func EstablishDBConn() {
 
 func EstablishSKCSuggestionEngineDBConn() {
 	certificateKeyFilePath := "./certs/skc-suggestion-engine-db.pem"
-	uri := fmt.Sprintf("%s/?tlsCertificateKeyFile=%s", util.EnvMap["DB_HOST"], certificateKeyFilePath)
+	uri := fmt.Sprintf("%s/?tlsCertificateKeyFile=%s", cUtil.EnvMap["DB_HOST"], certificateKeyFilePath)
 
 	credential := options.Credential{
 		AuthMechanism: "MONGODB-X509",
