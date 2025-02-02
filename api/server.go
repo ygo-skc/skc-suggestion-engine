@@ -15,9 +15,9 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/ip2location/ip2location-go/v9"
 	"github.com/rs/cors"
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
-	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 const (
@@ -63,12 +63,12 @@ func (w gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-func verifyApiKey(headers http.Header) *model.APIError {
+func verifyApiKey(headers http.Header) *cModel.APIError {
 	clientKey := headers.Get("API-Key")
 
 	if clientKey != serverAPIKey {
 		slog.Error("Client is using incorrect API Key. Cannot process request")
-		return &model.APIError{Message: "Request has incorrect or missing API Key."}
+		return &cModel.APIError{Message: "Request has incorrect or missing API Key."}
 	}
 
 	return nil
@@ -107,7 +107,7 @@ func commonResponseMiddleware(next http.Handler) http.Handler {
 // Configures routes and their middle wares
 // This method should be called before the environment is set up as the API Key will be set according to the value found in environment
 func RunHttpServer() {
-	serverAPIKey = util.EnvMap["API_KEY"] // configure API Key
+	serverAPIKey = cUtil.EnvMap["API_KEY"] // configure API Key
 	router := mux.NewRouter()
 
 	// configure non-admin routes

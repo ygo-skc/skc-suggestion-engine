@@ -10,21 +10,22 @@ import (
 	"time"
 
 	"github.com/gorilla/mux"
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "traffic data submission")
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "traffic data submission")
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
 	var trafficData model.TrafficData
 	if err := json.NewDecoder(req.Body).Decode(&trafficData); err != nil {
 		logger.Error("Error occurred while reading the request body")
-		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
+		cModel.HandleServerResponse(cModel.APIError{Message: "Body could not be deserialized.", StatusCode: http.StatusBadRequest}, res)
 		return
 	}
 
@@ -40,14 +41,14 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 		if _, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(res).Encode(model.APIError{Message: "Resource is not valid"})
+			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
 			return
 		}
 	case model.ProductResource:
 		if _, err := skcDBInterface.GetDesiredProductInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Product resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(res).Encode(model.APIError{Message: "Resource is not valid"})
+			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
 			return
 		}
 	}
@@ -58,7 +59,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 		logger.Error(fmt.Sprintf("Error getting info for IP address %s. Error %v", trafficData.IP, err))
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(model.APIError{Message: "The IP provided was not found in the IP Database. Therefor, not storing traffic pattern."})
+		json.NewEncoder(res).Encode(cModel.APIError{Message: "The IP provided was not found in the IP Database. Therefor, not storing traffic pattern."})
 		return
 	} else {
 		location = model.Location{Zip: ipData.Zipcode, City: ipData.City, Country: ipData.Country_short}
@@ -75,17 +76,17 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(model.Success{Message: "Successfully inserted new traffic data."})
+	json.NewEncoder(res).Encode(cModel.Success{Message: "Successfully inserted new traffic data."})
 }
 
 func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	r := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := util.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(r)))
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(r)))
 	logger.Info("Getting trending data")
 
-	c1, c2 := make(chan *model.APIError), make(chan *model.APIError)
+	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
 	today := time.Now()
 	firstInterval, secondInterval := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
@@ -93,17 +94,24 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	go getMetrics(ctx, r, firstInterval, today, &metricsForCurrentPeriod, c1)
 	go getMetrics(ctx, r, secondInterval, firstInterval, &metricsForLastPeriod, c2)
 
-	// get channel data and check for errors
-	if err1, err2 := <-c1, <-c2; err1 != nil {
-		err1.HandleServerResponse(res)
-		return
-	} else if err2 != nil {
-		err2.HandleServerResponse(res)
-		return
+	// verify go routines exited with no errors
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-c1:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		case err := <-c2:
+			if err != nil {
+				err.HandleServerResponse(res)
+				return
+			}
+		}
 	}
 
 	if c3, afterResourcesAreFetchedCB := initResourceInfoFlow(ctx, r, metricsForCurrentPeriod); c3 == nil || afterResourcesAreFetchedCB == nil {
-		(&model.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
+		(&cModel.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
 		return
 	} else {
 		tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
@@ -120,17 +128,17 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *model.APIError, func([]model.TrendingMetric)) {
-	c := make(chan *model.APIError)
+func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *cModel.APIError, func([]model.TrendingMetric)) {
+	c := make(chan *cModel.APIError)
 
 	switch r {
 	case model.CardResource:
-		cdm := &model.BatchCardData[model.CardIDs]{}
-		go fetchResourceInfo[model.CardIDs](ctx, metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
+		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
+		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
 		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo) }
 	case model.ProductResource:
-		pdm := &model.BatchProductData[model.ProductIDs]{}
-		go fetchResourceInfo[model.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
+		pdm := &cModel.BatchProductData[cModel.ProductIDs]{}
+		go fetchResourceInfo[cModel.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
 		return c, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
@@ -138,21 +146,21 @@ func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForC
 	return nil, nil
 }
 
-func updateTrendingMetric[T model.Card | model.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+func updateTrendingMetric[T cModel.Card | cModel.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}
 }
 
-func fetchResourceInfo[IS model.IdentifierSlice, BD model.BatchData[IS]](ctx context.Context,
-	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func(context.Context, []string) (BD, *model.APIError), c chan<- *model.APIError) {
+func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx context.Context,
+	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func(context.Context, []string) (BD, *cModel.APIError), c chan<- *cModel.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		util.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
+		cUtil.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
 		*bathData = bri
@@ -186,10 +194,10 @@ func determineTrendChange(
 	return tm
 }
 
-func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan<- *model.APIError) {
-	var err *model.APIError
+func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan<- *cModel.APIError) {
+	var err *cModel.APIError
 	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to); err != nil {
-		util.LoggerFromContext(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
+		cUtil.LoggerFromContext(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
 	}
 	c <- err
 }

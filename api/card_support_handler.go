@@ -9,8 +9,10 @@ import (
 	"strings"
 
 	"github.com/gorilla/mux"
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/util"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 )
 
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
@@ -34,11 +36,11 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport, *model.APIError) {
-	logger := util.LoggerFromContext(ctx)
+func getCardSupport(ctx context.Context, subject cModel.Card) (model.CardSupport, *cModel.APIError) {
+	logger := cUtil.LoggerFromContext(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
-	var s []model.Card
-	var err *model.APIError
+	var s []cModel.Card
+	var err *cModel.APIError
 
 	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.CardName, subject.CardID); err == nil {
 		if len(s) == 0 {
@@ -55,7 +57,7 @@ func getCardSupport(ctx context.Context, subject model.Card) (model.CardSupport,
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
 // If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
-func determineSupportCards(subject model.Card, references []model.Card) ([]model.CardReference, []model.CardReference) {
+func determineSupportCards(subject cModel.Card, references []cModel.Card) ([]model.CardReference, []model.CardReference) {
 	referencedBy := []model.CardReference{}
 	materialFor := []model.CardReference{}
 

@@ -7,19 +7,19 @@ import (
 	"net/http"
 	"slices"
 	"sort"
-	"sync"
 
+	cModel "github.com/ygo-skc/skc-go/common/model"
+	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-	"github.com/ygo-skc/skc-suggestion-engine/util"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "batch card info")
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card info")
 	logger.Info("Getting batch card info")
 
-	batchCardInfo := model.BatchCardData[model.CardIDs]{CardInfo: model.CardDataMap{}, UnknownResources: model.CardIDs{}}
-	var err *model.APIError
+	batchCardInfo := cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
+	var err *cModel.APIError
 	if reqBody := batchRequestValidator(ctx, res, req, batchCardInfo, "card info"); reqBody == nil {
 		return
 	} else if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
@@ -34,12 +34,12 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 }
 
 func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *http.Request, nothingToProcessBody interface{},
-	op string) *model.BatchCardIDs {
-	logger := util.LoggerFromContext(ctx)
-	var reqBody model.BatchCardIDs
+	op string) *cModel.BatchCardIDs {
+	logger := cUtil.LoggerFromContext(ctx)
+	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 		logger.Error(fmt.Sprintf("Error occurred while reading batch %s request body: Error %v", op, err))
-		model.HandleServerResponse(model.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
+		cModel.HandleServerResponse(cModel.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return nil
 	}
 
@@ -60,7 +60,7 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "batch card suggestions")
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card suggestions")
 	logger.Info("Batch card suggestions requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
@@ -78,21 +78,19 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 }
 
-func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
-	ccIDs map[string]int) model.BatchCardSuggestions[model.CardIDs] {
-	suggestionChan := make(chan model.CardSuggestions, 5)
-	go fetchBatchSuggestions(suggestionSubjectsCardData,
-		func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSuggestions) {
-			defer wg.Done()
-			suggestionChan <- getCardSuggestions(ctx, cardInfo, ccIDs)
-		}, suggestionChan)
+func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
+	ccIDs map[string]int) model.BatchCardSuggestions[cModel.CardIDs] {
+	suggestionChan := make(chan model.CardSuggestions, 20)
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo cModel.Card) model.CardSuggestions {
+		return getCardSuggestions(ctx, cardInfo, ccIDs)
+	})
 
 	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]bool), make(map[string]bool)
+	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}), make(map[string]struct{})
 
-	suggestions := model.BatchCardSuggestions[model.CardIDs]{
+	suggestions := model.BatchCardSuggestions[cModel.CardIDs]{
 		UnknownResources:     suggestionSubjectsCardData.UnknownResources,
-		FalsePositives:       make(model.CardIDs, 0, 5),
+		FalsePositives:       make(cModel.CardIDs, 0, 5),
 		NamedMaterials:       make([]model.CardReference, 0, 5),
 		NamedReferences:      make([]model.CardReference, 0, 5),
 		MaterialArchetypes:   make([]string, 0),
@@ -109,8 +107,13 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData model.B
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
+	// sort output
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
 	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
+	sort.Strings(suggestions.MaterialArchetypes)
+	sort.Strings(suggestions.ReferencedArchetypes)
+	sort.Strings(suggestions.FalsePositives)
+	sort.Strings(suggestions.UnknownResources)
 
 	return suggestions
 }
@@ -129,10 +132,10 @@ func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(
 	}
 }
 
-func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]bool, uniqueArchetypes *[]string) {
+func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]struct{}, uniqueArchetypes *[]string) {
 	for _, archetype := range archetypesToParse {
 		if _, exists := uniqueArchetypeSet[archetype]; !exists {
-			uniqueArchetypeSet[archetype] = true
+			uniqueArchetypeSet[archetype] = struct{}{}
 			*uniqueArchetypes = append(*uniqueArchetypes, archetype)
 		}
 	}
@@ -140,7 +143,7 @@ func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]b
 
 // uses references for a card and builds upon uniqueReferencesByCardID and uniqueReferences
 func parseSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference,
-	subjects model.CardDataMap, falsePositives *model.CardIDs) {
+	subjects cModel.CardDataMap, falsePositives *cModel.CardIDs) {
 	for _, suggestion := range referencesToParse {
 		suggestionID := suggestion.Card.CardID
 		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
@@ -163,7 +166,7 @@ func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []mod
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := util.NewRequestSetup(context.Background(), "batch card support")
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card support")
 	logger.Info("Batch card support requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {
@@ -177,17 +180,15 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.BatchCardData[model.CardIDs]) model.BatchCardSupport[model.CardIDs] {
-	supportChan := make(chan model.CardSupport, 5)
-	go fetchBatchSuggestions(suggestionSubjectsCardData,
-		func(cardInfo model.Card, wg *sync.WaitGroup, c chan<- model.CardSupport) {
-			defer wg.Done()
-			cardSupport, _ := getCardSupport(ctx, cardInfo)
-			c <- cardSupport
-		}, supportChan)
+func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
+	supportChan := make(chan model.CardSupport, 20)
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, supportChan, func(cardInfo cModel.Card) model.CardSupport {
+		cardSupport, _ := getCardSupport(ctx, cardInfo)
+		return cardSupport
+	})
 
-	support := model.BatchCardSupport[model.CardIDs]{
-		FalsePositives:   make(model.CardIDs, 0, 5),
+	support := model.BatchCardSupport[cModel.CardIDs]{
+		FalsePositives:   make(cModel.CardIDs, 0, 5),
 		UnknownResources: suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
@@ -209,18 +210,29 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData model.Batch
 	return support
 }
 
-func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](suggestionSubjectsCardData model.BatchCardData[model.CardIDs],
-	fetchSuggestions func(model.Card, *sync.WaitGroup, chan<- T), c chan<- T) {
-	var wg sync.WaitGroup
+type batchSuggestionTask[T model.CardSupport | model.CardSuggestions] struct {
+	card       cModel.Card
+	resultChan chan<- T
+	process    func(card cModel.Card) T
+}
+
+func (t batchSuggestionTask[T]) Process() {
+	t.resultChan <- t.process(t.card)
+}
+
+func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
+	resultChan chan<- T, process func(card cModel.Card) T) {
+	tasks := []cUtil.Task{}
 	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 		// card ID is invalid
 		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
 			continue
 		}
 
-		wg.Add(1)
-		go fetchSuggestions(cardInfo, &wg, c)
+		tasks = append(tasks, batchSuggestionTask[T]{card: cardInfo, resultChan: resultChan, process: process})
 	}
-	wg.Wait()
-	close(c)
+
+	pool := *cUtil.NewWorkerPool(tasks, cUtil.WithContext(ctx), cUtil.WithWorkers(10))
+	pool.Run()
+	close(resultChan)
 }
