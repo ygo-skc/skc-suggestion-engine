@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	minPoolSize = 20
 	maxPoolSize = 30
 )
 
@@ -28,8 +27,8 @@ func EstablishDBConn() {
 		log.Fatalln("Error occurred while trying to establish DB connection: ", err)
 	}
 
-	skcDBConn.SetMaxIdleConns(minPoolSize)
 	skcDBConn.SetMaxOpenConns(maxPoolSize)
+	skcDBConn.SetConnMaxIdleTime(10 * time.Minute)
 }
 
 func EstablishSKCSuggestionEngineDBConn() {
