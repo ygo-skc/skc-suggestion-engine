@@ -1,11 +1,11 @@
 module github.com/ygo-skc/skc-suggestion-engine
 
-go 1.23.4
+go 1.24
 
 require (
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.1
-	github.com/go-playground/validator/v10 v10.24.0
+	github.com/go-playground/validator/v10 v10.25.0
 	github.com/go-sql-driver/mysql v1.8.1
 	github.com/gorilla/mux v1.8.1
 	github.com/ip2location/ip2location-go/v9 v9.7.1
