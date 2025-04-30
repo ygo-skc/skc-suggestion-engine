@@ -47,7 +47,7 @@ func TestDetermineSupportCards(t *testing.T) {
 
 	for cardName, references := range cardReferenceSubjects {
 		cardMock := skc_testing.CardMocks[cardName]
-		assert.Equal(cardName, cardMock.CardName, fmt.Sprintf("Mock not setup for %s", cardName))
+		assert.Equal(cardName, cardMock.Name, fmt.Sprintf("Mock not setup for %s", cardName))
 
 		actualReferencedBy, actualMaterialFor := determineSupportCards(cardMock, references)
 

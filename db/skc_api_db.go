@@ -334,7 +334,7 @@ func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]cModel.Card, *cMod
 
 	for rows.Next() {
 		var card cModel.Card
-		if err := rows.Scan(&card.ID, &card.Color, &card.Name, &card.Attribute, &card.Effect, &card.Type, &card.Attack, &card.Defense); err != nil {
+		if err := rows.Scan(&card.ID, &card.Color, &card.Name, &card.Attribute, &card.Effect, &card.MonsterType, &card.Attack, &card.Defense); err != nil {
 			return nil, handleRowParsingError(logger, err)
 		} else {
 			cards = append(cards, card)

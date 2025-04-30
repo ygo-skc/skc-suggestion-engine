@@ -23,7 +23,7 @@ func validateMaterialReferences(card cModel.Card, expectedNamedMaterials []model
 
 func validateReferences(card cModel.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
 	materialString := card.GetPotentialMaterialsAsString()
-	effectWithoutMaterial := strings.ReplaceAll(card.CardEffect, materialString, "")
+	effectWithoutMaterial := strings.ReplaceAll(card.Effect, materialString, "")
 	refs, archetypes := getReferences(skc_testing.TestContext, effectWithoutMaterial)
 
 	assert.Len(expectedNamedReferences, len(refs), "Len of NamedReferences mismatch")

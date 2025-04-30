@@ -55,7 +55,7 @@ func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNa
 	found, notFound := make(cModel.CardDataMap, 0), make(cModel.CardNames, 0)
 	for _, cardName := range cardNames {
 		if card, isPresent := CardMocks[cardName]; isPresent {
-			found[card.CardName] = card
+			found[card.Name] = card
 		} else {
 			notFound = append(notFound, cardName)
 		}
