@@ -42,7 +42,7 @@ func getCardSupport(ctx context.Context, subject cModel.Card) (model.CardSupport
 	var s []cModel.Card
 	var err *cModel.APIError
 
-	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.CardName, subject.CardID); err == nil {
+	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.Name, subject.ID); err == nil {
 		if len(s) == 0 {
 			logger.Warn("No support found")
 			return support, nil
@@ -65,7 +65,7 @@ func determineSupportCards(subject cModel.Card, references []cModel.Card) ([]mod
 		materialString := reference.GetPotentialMaterialsAsString()
 		materialStringTokens := quotedStringRegex.FindAllString(materialString, -1)
 
-		remainingEffect := strings.Replace(reference.CardEffect, materialString, "", -1) // effect without materials
+		remainingEffect := strings.Replace(reference.Effect, materialString, "", -1) // effect without materials
 		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
 
 		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(materialStringTokens) {

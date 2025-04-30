@@ -118,13 +118,13 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	// setting up a map of unique exclusions - should prevent multiple traversing of the same list - effectively making the method O(2n)
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
-		uniqueExclusions[uniqueExclusion.CardName] = struct{}{}
-		cUtil.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.CardName))
+		uniqueExclusions[uniqueExclusion.Name] = struct{}{}
+		cUtil.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.Name))
 	}
 
 	newList := []cModel.Card{}
 	for _, suggestion := range archetypalSuggestions.UsingName {
-		if _, isKey := uniqueExclusions[suggestion.CardName]; !isKey {
+		if _, isKey := uniqueExclusions[suggestion.Name]; !isKey {
 			newList = append(newList, suggestion)
 		}
 	}

@@ -60,7 +60,7 @@ func RemoveSelfReference(self string, cr *[]CardReference) bool {
 	if cr != nil {
 		x := 0
 		for _, ref := range *cr {
-			if ref.Card.CardName != self {
+			if ref.Card.Name != self {
 				(*cr)[x] = ref
 				x++
 			} else {

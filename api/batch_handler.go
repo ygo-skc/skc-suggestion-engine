@@ -124,10 +124,10 @@ func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(
 		switch {
 		case iv.Occurrences != jv.Occurrences:
 			return iv.Occurrences > jv.Occurrences
-		case iv.Card.CardColor != jv.Card.CardColor:
-			return ccIDs[iv.Card.CardColor] < ccIDs[jv.Card.CardColor]
+		case iv.Card.Color != jv.Card.Color:
+			return ccIDs[iv.Card.Color] < ccIDs[jv.Card.Color]
 		default:
-			return iv.Card.CardName < jv.Card.CardName
+			return iv.Card.Name < jv.Card.Name
 		}
 	}
 }
@@ -145,7 +145,7 @@ func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]s
 func parseSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference,
 	subjects cModel.CardDataMap, falsePositives *cModel.CardIDs) {
 	for _, suggestion := range referencesToParse {
-		suggestionID := suggestion.Card.CardID
+		suggestionID := suggestion.Card.ID
 		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
 			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
 		} else if _, isFalsePositive := subjects[suggestionID]; isFalsePositive && !slices.Contains(*falsePositives, suggestionID) {
@@ -225,7 +225,7 @@ func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx cont
 	tasks := []cUtil.Task{}
 	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 		// card ID is invalid
-		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.CardID) {
+		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.ID) {
 			continue
 		}
 

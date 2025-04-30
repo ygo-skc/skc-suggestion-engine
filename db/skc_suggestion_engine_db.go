@@ -21,6 +21,10 @@ var (
 	cardOfTheDayCollection    *mongo.Collection
 )
 
+const (
+	intervalFormat = "2006-01-02"
+)
+
 // interface
 type SKCSuggestionEngineDAO interface {
 	GetSKCSuggestionDBVersion(context.Context) (string, error)
@@ -99,19 +103,29 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 				},
 			},
 		},
-		bson.D{{Key: "$sort", Value: bson.D{
-			{Key: "occurrences", Value: -1}, {Key: "_id", Value: 1},
-		}}},
+		bson.D{
+			{Key: "$sort", Value: bson.D{
+				{Key: "occurrences", Value: -1},
+				{Key: "_id", Value: -1},
+			}}},
 		bson.D{{Key: "$limit", Value: 10}},
 	}
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
-		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %v thru %v. Err: %v", resourceName, from, to, err))
+		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %s thru %s. Err: %v",
+			resourceName,
+			from.Format(intervalFormat),
+			to.Format(intervalFormat),
+			err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
-			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %v thru %v. Err: %v", resourceName, from, to, err))
+			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %s thru %s. Err: %v",
+				resourceName,
+				from.Format(intervalFormat),
+				to.Format(intervalFormat),
+				err))
 			return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
