@@ -81,18 +81,19 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 
 func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
-	r := model.ResourceName(strings.ToUpper(pathVars["resource"]))
+	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(r)))
+	logger, ctx := cUtil.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
+
 	today := time.Now()
 	firstInterval, secondInterval := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
 
-	go getMetrics(ctx, r, firstInterval, today, &metricsForCurrentPeriod, c1)
-	go getMetrics(ctx, r, secondInterval, firstInterval, &metricsForLastPeriod, c2)
+	go getMetrics(ctx, resourceName, firstInterval, today, &metricsForCurrentPeriod, c1)
+	go getMetrics(ctx, resourceName, secondInterval, firstInterval, &metricsForLastPeriod, c2)
 
 	// verify go routines exited with no errors
 	for i := 0; i < 2; i++ {
@@ -110,25 +111,25 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		}
 	}
 
-	if c3, afterResourcesAreFetchedCB := initResourceInfoFlow(ctx, r, metricsForCurrentPeriod); c3 == nil || afterResourcesAreFetchedCB == nil {
+	if c3, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod); c3 == nil || addResourceInfoToTrendingMetric == nil {
 		(&cModel.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
 		return
 	} else {
 		tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
-		trending := model.Trending{ResourceName: r, Metrics: tm}
+		trending := model.Trending{ResourceName: resourceName, Metrics: tm}
 
 		if err1 := <-c3; err1 != nil {
 			err1.HandleServerResponse(res)
 			return
 		}
 
-		afterResourcesAreFetchedCB(tm)
+		addResourceInfoToTrendingMetric(tm)
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(trending)
 	}
 }
 
-func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *cModel.APIError, func([]model.TrendingMetric)) {
+func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *cModel.APIError, func([]model.TrendingMetric)) {
 	c := make(chan *cModel.APIError)
 
 	switch r {
@@ -146,14 +147,16 @@ func initResourceInfoFlow(ctx context.Context, r model.ResourceName, metricsForC
 	return nil, nil
 }
 
-func updateTrendingMetric[T cModel.Card | cModel.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+func updateTrendingMetric[T cModel.Card | cModel.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
+	dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}
 }
 
 func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx context.Context,
-	metrics []model.TrafficResourceUtilizationMetric, bathData *BD, fetchResourceFromDB func(context.Context, []string) (BD, *cModel.APIError), c chan<- *cModel.APIError) {
+	metrics []model.TrafficResourceUtilizationMetric, bathData *BD,
+	fetchResourceFromDB func(context.Context, []string) (BD, *cModel.APIError), c chan<- *cModel.APIError) {
 	rv := make([]string, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -169,22 +172,20 @@ func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx c
 	c <- nil
 }
 
-func determineTrendChange(
-	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
-	metricsForLastPeriod []model.TrafficResourceUtilizationMetric,
-) []model.TrendingMetric {
+func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
+	metricsForLastPeriod []model.TrafficResourceUtilizationMetric) []model.TrendingMetric {
 	totalElements := len(metricsForCurrentPeriod)
-	previousPeriodRanking := make(map[string]int, totalElements)
+	previousPeriodPosition := make(map[string]int, totalElements)
 	tm := make([]model.TrendingMetric, totalElements)
 
 	for ind, value := range metricsForLastPeriod {
-		previousPeriodRanking[value.ResourceValue] = ind
+		previousPeriodPosition[value.ResourceValue] = ind
 	}
 
 	for currentPeriodPosition, value := range metricsForCurrentPeriod {
 		tm[currentPeriodPosition] = model.TrendingMetric{Occurrences: value.Occurrences}
 
-		if previousPeriodPosition, isPresent := previousPeriodRanking[value.ResourceValue]; isPresent {
+		if previousPeriodPosition, isPresent := previousPeriodPosition[value.ResourceValue]; isPresent {
 			tm[currentPeriodPosition].Change = previousPeriodPosition - currentPeriodPosition
 		} else {
 			tm[currentPeriodPosition].Change = totalElements - currentPeriodPosition
@@ -194,10 +195,9 @@ func determineTrendChange(
 	return tm
 }
 
-func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time, td *[]model.TrafficResourceUtilizationMetric, c chan<- *cModel.APIError) {
+func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time,
+	td *[]model.TrafficResourceUtilizationMetric, c chan<- *cModel.APIError) {
 	var err *cModel.APIError
-	if *td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to); err != nil {
-		cUtil.LoggerFromContext(ctx).Error(fmt.Sprintf("There was an issue fetching traffic data for starting date %v and ending date %v", from, to))
-	}
+	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to)
 	c <- err
 }

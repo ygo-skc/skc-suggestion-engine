@@ -106,12 +106,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
-		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
+		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %v thru %v. Err: %v", resourceName, from, to, err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
-			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s. Err: %v", resourceName, err))
+			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %v thru %v. Err: %v", resourceName, from, to, err))
 			return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
