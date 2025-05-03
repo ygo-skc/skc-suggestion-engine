@@ -11,7 +11,7 @@ require (
 	github.com/ip2location/ip2location-go/v9 v9.7.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
-	github.com/ygo-skc/skc-go/common v0.0.0-20250430205915-52450aeeddc6
+	github.com/ygo-skc/skc-go/common v0.0.0-20250503015925-70c9884cabe0
 	go.mongodb.org/mongo-driver/v2 v2.2.0
 )
 
