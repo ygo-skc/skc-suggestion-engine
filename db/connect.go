@@ -43,10 +43,11 @@ func EstablishSKCSuggestionEngineDBConn() {
 		ApplyURI(uri).
 		SetAuth(credential).
 		SetMaxPoolSize(maxPoolSize).
-		SetMaxConnIdleTime(10 * time.Minute).
+		SetMaxConnIdleTime(20 * time.Minute).
 		SetTimeout(2 * time.Second).
 		SetReadConcern(readconcern.Majority()).   // prefer strongly consistent reeds
 		SetWriteConcern(writeconcern.Majority()). // writes to most replicas before acknowledging the write is complete
+		SetCompressors([]string{"zlib"}).
 		SetAppName("SKC Suggestion Engine")); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine DB", err)
 	} else {
