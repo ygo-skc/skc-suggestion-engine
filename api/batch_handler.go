@@ -81,7 +81,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
 	ccIDs map[string]int) model.BatchCardSuggestions[cModel.CardIDs] {
 	suggestionChan := make(chan model.CardSuggestions, 20)
-	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo cModel.Card) model.CardSuggestions {
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo cModel.YGOCard) model.CardSuggestions {
 		return getCardSuggestions(ctx, cardInfo, ccIDs)
 	})
 
@@ -124,10 +124,10 @@ func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(
 		switch {
 		case iv.Occurrences != jv.Occurrences:
 			return iv.Occurrences > jv.Occurrences
-		case iv.Card.Color != jv.Card.Color:
-			return ccIDs[iv.Card.Color] < ccIDs[jv.Card.Color]
+		case iv.Card.GetColor() != jv.Card.GetColor():
+			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
 		default:
-			return iv.Card.Name < jv.Card.Name
+			return iv.Card.GetColor() < jv.Card.GetColor()
 		}
 	}
 }
@@ -145,7 +145,7 @@ func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]s
 func parseSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference,
 	subjects cModel.CardDataMap, falsePositives *cModel.CardIDs) {
 	for _, suggestion := range referencesToParse {
-		suggestionID := suggestion.Card.ID
+		suggestionID := suggestion.Card.GetID()
 		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
 			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
 		} else if _, isFalsePositive := subjects[suggestionID]; isFalsePositive && !slices.Contains(*falsePositives, suggestionID) {
@@ -182,7 +182,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
 	supportChan := make(chan model.CardSupport, 20)
-	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, supportChan, func(cardInfo cModel.Card) model.CardSupport {
+	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, supportChan, func(cardInfo cModel.YGOCard) model.CardSupport {
 		cardSupport, _ := getCardSupport(ctx, cardInfo)
 		return cardSupport
 	})
@@ -211,9 +211,9 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 }
 
 type batchSuggestionTask[T model.CardSupport | model.CardSuggestions] struct {
-	card       cModel.Card
+	card       cModel.YGOCard
 	resultChan chan<- T
-	process    func(card cModel.Card) T
+	process    func(card cModel.YGOCard) T
 }
 
 func (t batchSuggestionTask[T]) Process() {
@@ -221,11 +221,11 @@ func (t batchSuggestionTask[T]) Process() {
 }
 
 func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
-	resultChan chan<- T, process func(card cModel.Card) T) {
+	resultChan chan<- T, process func(card cModel.YGOCard) T) {
 	tasks := []cUtil.Task{}
 	for _, cardInfo := range suggestionSubjectsCardData.CardInfo {
 		// card ID is invalid
-		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.ID) {
+		if slices.Contains(suggestionSubjectsCardData.UnknownResources, cardInfo.GetID()) {
 			continue
 		}
 

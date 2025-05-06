@@ -36,13 +36,13 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSupport(ctx context.Context, subject cModel.Card) (model.CardSupport, *cModel.APIError) {
+func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupport, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
-	var s []cModel.Card
+	var s []cModel.YGOCard
 	var err *cModel.APIError
 
-	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.Name, subject.ID); err == nil {
+	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
 		if len(s) == 0 {
 			logger.Warn("No support found")
 			return support, nil
@@ -57,22 +57,22 @@ func getCardSupport(ctx context.Context, subject cModel.Card) (model.CardSupport
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
 // If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
-func determineSupportCards(subject cModel.Card, references []cModel.Card) ([]model.CardReference, []model.CardReference) {
+func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) ([]model.CardReference, []model.CardReference) {
 	referencedBy := []model.CardReference{}
 	materialFor := []model.CardReference{}
 
 	for _, reference := range references {
-		materialString := reference.GetPotentialMaterialsAsString()
+		materialString := cModel.GetPotentialMaterialsAsString(reference)
 		materialStringTokens := quotedStringRegex.FindAllString(materialString, -1)
 
-		remainingEffect := strings.Replace(reference.Effect, materialString, "", -1) // effect without materials
+		remainingEffect := strings.Replace(reference.GetEffect(), materialString, "", -1) // effect without materials
 		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
 
-		if reference.IsExtraDeckMonster() && subject.IsCardNameInTokens(materialStringTokens) {
+		if cModel.IsExtraDeckMonster(reference) && cModel.IsCardNameInTokens(subject, materialStringTokens) {
 			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
 		}
 
-		if subject.IsCardNameInTokens(remainingEffectTokens) {
+		if cModel.IsCardNameInTokens(subject, remainingEffectTokens) {
 			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}

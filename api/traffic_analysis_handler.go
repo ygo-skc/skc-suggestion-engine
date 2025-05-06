@@ -147,8 +147,8 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 	return nil, nil
 }
 
-func updateTrendingMetric[T cModel.Card | cModel.Product](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
-	dataMap map[string]T) {
+func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric,
+	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}

@@ -10,8 +10,8 @@ import (
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )
 
-func validateMaterialReferences(card cModel.Card, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
-	materialString := card.GetPotentialMaterialsAsString()
+func validateMaterialReferences(card cModel.YGOCardREST, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
+	materialString := cModel.GetPotentialMaterialsAsString(card)
 	refs, archetypes := getReferences(skc_testing.TestContext, materialString)
 
 	assert.Len(expectedNamedMaterials, len(refs), "Len of NamedMaterials mismatch")
@@ -21,8 +21,8 @@ func validateMaterialReferences(card cModel.Card, expectedNamedMaterials []model
 	assert.Equal(expectedMaterialArchetypes, archetypes, "Expected contents of MaterialArchetypes slice is different than what is actually received")
 }
 
-func validateReferences(card cModel.Card, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
-	materialString := card.GetPotentialMaterialsAsString()
+func validateReferences(card cModel.YGOCardREST, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
+	materialString := cModel.GetPotentialMaterialsAsString(card)
 	effectWithoutMaterial := strings.ReplaceAll(card.Effect, materialString, "")
 	refs, archetypes := getReferences(skc_testing.TestContext, effectWithoutMaterial)
 

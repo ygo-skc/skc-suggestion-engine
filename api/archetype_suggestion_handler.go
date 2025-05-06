@@ -16,18 +16,18 @@ import (
 )
 
 type archetypeSuggestionHandlers struct {
-	fetchArchetypeSuggestionsHandler func(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError)
-	archetypeSuggestionCBHandler     func([]cModel.Card, *model.ArchetypalSuggestions)
+	fetchArchetypeSuggestionsHandler func(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError)
+	archetypeSuggestionCBHandler     func([]cModel.YGOCard, *model.ArchetypalSuggestions)
 }
 
 var (
-	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []cModel.Card, as *model.ArchetypalSuggestions) {
+	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
 		as.UsingName = dbData
 	}}
-	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.Card, as *model.ArchetypalSuggestions) {
+	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
 		as.UsingText = dbData
 	}}
-	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.Card, as *model.ArchetypalSuggestions) {
+	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
 		as.Exclusions = dbData
 	}}
 )
@@ -118,13 +118,13 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	// setting up a map of unique exclusions - should prevent multiple traversing of the same list - effectively making the method O(2n)
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
-		uniqueExclusions[uniqueExclusion.Name] = struct{}{}
-		cUtil.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.Name))
+		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
+		cUtil.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.GetName()))
 	}
 
-	newList := []cModel.Card{}
+	newList := []cModel.YGOCard{}
 	for _, suggestion := range archetypalSuggestions.UsingName {
-		if _, isKey := uniqueExclusions[suggestion.Name]; !isKey {
+		if _, isKey := uniqueExclusions[suggestion.GetName()]; !isKey {
 			newList = append(newList, suggestion)
 		}
 	}

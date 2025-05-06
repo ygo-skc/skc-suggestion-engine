@@ -6,7 +6,7 @@ import (
 )
 
 var (
-	CardMocks = map[string]cModel.Card{
+	CardMocks = map[string]cModel.YGOCardREST{
 		"Elemental HERO Sunrise": {
 			ID:    "22908820",
 			Color: "Fusion",

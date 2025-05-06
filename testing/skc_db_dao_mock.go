@@ -41,9 +41,9 @@ func (mock SKCDatabaseAccessObjectMock) GetCardColorIDs(ctx context.Context) (ma
 	return ids, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.Card, *cModel.APIError) {
+func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.YGOCardREST, *cModel.APIError) {
 	log.Fatalln(notMocked)
-	return cModel.Card{}, nil
+	return cModel.YGOCardREST{}, nil
 }
 
 func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cards []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
@@ -68,22 +68,22 @@ func (imp SKCDatabaseAccessObjectMock) GetCardsFoundInProduct(ctx context.Contex
 	return cModel.BatchCardData[cModel.CardIDs]{}, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]cModel.YGOCard, *cModel.APIError) {
 	log.Fatalln(notMocked)
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardName() not mocked")
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	log.Fatalln("GetInArchetypeSupportUsingCardText() not mocked")
 	return nil, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
 	return nil, nil
 }
