@@ -50,6 +50,8 @@ github.com/ygo-skc/skc-go/common v0.0.0-20250504215634-e9975a44a114 h1:9Xv03I8fl
 github.com/ygo-skc/skc-go/common v0.0.0-20250504215634-e9975a44a114/go.mod h1:5P3dDdkkRSCNL5rKHDfeY9LVUT4h0gELeICA9PLjJ1E=
 github.com/ygo-skc/skc-go/common v0.0.0-20250505185931-1cbca51a1a90 h1:r8JKJJQrx1IZR9wz341cHhwnsV+BNt1wopzVaBdqO8g=
 github.com/ygo-skc/skc-go/common v0.0.0-20250505185931-1cbca51a1a90/go.mod h1:5P3dDdkkRSCNL5rKHDfeY9LVUT4h0gELeICA9PLjJ1E=
+github.com/ygo-skc/skc-go/common v0.0.0-20250506185306-7fe5cc39808d h1:gS5cTvkz4IeohsrdOSUaDkXnibuaYhZO7hBF9/FPhk8=
+github.com/ygo-skc/skc-go/common v0.0.0-20250506185306-7fe5cc39808d/go.mod h1:5P3dDdkkRSCNL5rKHDfeY9LVUT4h0gELeICA9PLjJ1E=
 github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78 h1:ilQV1hzziu+LLM3zUTJ0trRztfwgjqKnBWNtSRkbmwM=
 github.com/youmark/pkcs8 v0.0.0-20240726163527-a2c0da244d78/go.mod h1:aL8wCCfTfSfmXjznFBSZNN13rSJjlIOI1fUNAtF7rmI=
 github.com/yuin/goldmark v1.4.13/go.mod h1:6yULJ656Px+3vBD8DxQVa3kxgyrAnzto9xy5taEt/CY=
