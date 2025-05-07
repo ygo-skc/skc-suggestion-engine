@@ -5,12 +5,12 @@ import (
 )
 
 type CardReference struct {
-	Occurrences int         `json:"occurrences"`
-	Card        cModel.Card `json:"card"`
+	Occurrences int            `json:"occurrences"`
+	Card        cModel.YGOCard `json:"card"`
 }
 
 type CardSuggestions struct {
-	Card                 cModel.Card     `json:"card"`
+	Card                 cModel.YGOCard  `json:"card"`
 	HasSelfReference     bool            `json:"hasSelfReference"`
 	NamedMaterials       []CardReference `json:"namedMaterials"`
 	NamedReferences      []CardReference `json:"namedReferences"`
@@ -28,7 +28,7 @@ type BatchCardSuggestions[IS cModel.IdentifierSlice] struct {
 }
 
 type CardSupport struct {
-	Card         cModel.Card     `json:"card"`
+	Card         cModel.YGOCard  `json:"card"`
 	ReferencedBy []CardReference `json:"referencedBy"`
 	MaterialFor  []CardReference `json:"materialFor"`
 }
@@ -46,10 +46,10 @@ type ProductSuggestions[IS cModel.IdentifierSlice] struct {
 }
 
 type ArchetypalSuggestions struct {
-	Total      int           `json:"total"`
-	UsingName  []cModel.Card `json:"usingName"`
-	UsingText  []cModel.Card `json:"usingText"`
-	Exclusions []cModel.Card `json:"exclusions"`
+	Total      int              `json:"total"`
+	UsingName  []cModel.YGOCard `json:"usingName"`
+	UsingText  []cModel.YGOCard `json:"usingText"`
+	Exclusions []cModel.YGOCard `json:"exclusions"`
 }
 
 // looks for a self reference, if a self reference is found it is removed from original slice
@@ -60,7 +60,7 @@ func RemoveSelfReference(self string, cr *[]CardReference) bool {
 	if cr != nil {
 		x := 0
 		for _, ref := range *cr {
-			if ref.Card.CardName != self {
+			if ref.Card.GetName() != self {
 				(*cr)[x] = ref
 				x++
 			} else {

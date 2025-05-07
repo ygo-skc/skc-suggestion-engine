@@ -83,16 +83,16 @@ type SKCDatabaseAccessObject interface {
 
 	GetCardColorIDs(context.Context) (map[string]int, *cModel.APIError)
 
-	GetDesiredCardInDBUsingID(context.Context, string) (cModel.Card, *cModel.APIError)
+	GetDesiredCardInDBUsingID(context.Context, string) (cModel.YGOCardREST, *cModel.APIError)
 	GetDesiredCardInDBUsingMultipleCardIDs(context.Context, []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 	GetDesiredCardsFromDBUsingMultipleCardNames(context.Context, []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError)
 	GetCardsFoundInProduct(context.Context, string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 
-	GetOccurrenceOfCardNameInAllCardEffect(context.Context, string, string) ([]cModel.Card, *cModel.APIError)
+	GetOccurrenceOfCardNameInAllCardEffect(context.Context, string, string) ([]cModel.YGOCard, *cModel.APIError)
 
-	GetInArchetypeSupportUsingCardName(context.Context, string) ([]cModel.Card, *cModel.APIError)
-	GetInArchetypeSupportUsingCardText(context.Context, string) ([]cModel.Card, *cModel.APIError)
-	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]cModel.Card, *cModel.APIError)
+	GetInArchetypeSupportUsingCardName(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
+	GetInArchetypeSupportUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
+	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 
 	GetDesiredProductInDBUsingID(context.Context, string) (*cModel.Product, *cModel.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (cModel.BatchProductData[cModel.ProductIDs], *cModel.APIError)
@@ -138,14 +138,14 @@ func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string
 }
 
 // Leverages GetDesiredCardInDBUsingMultipleCardIDs to get information on a specific card using its identifier
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.Card, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.YGOCardREST, *cModel.APIError) {
 	if results, err := imp.GetDesiredCardInDBUsingMultipleCardIDs(ctx, []string{cardID}); err != nil {
-		return cModel.Card{}, err
+		return cModel.YGOCardREST{}, err
 	} else {
 		if card, exists := results.CardInfo[cardID]; !exists {
-			return cModel.Card{}, &cModel.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
+			return cModel.YGOCardREST{}, &cModel.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
 		} else {
-			return card, nil
+			return card.(cModel.YGOCardREST), nil
 		}
 	}
 }
@@ -166,7 +166,7 @@ func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx conte
 			return cModel.BatchCardData[cModel.CardIDs]{}, err
 		} else {
 			for _, card := range cards {
-				cardData[card.CardID] = card
+				cardData[card.GetID()] = card
 			}
 		}
 	}
@@ -201,12 +201,11 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 	} else {
 		for rows.Next() {
 			var product cModel.Product
-			if err := rows.Scan(&product.ProductID, &product.ProductLocale,
-				&product.ProductName, &product.ProductReleaseDate, &product.ProductTotal, &product.ProductType, &product.ProductSubType); err != nil {
+			if err := rows.Scan(&product.ID, &product.Locale, &product.Name, &product.ReleaseDate, &product.Total, &product.Type, &product.SubType); err != nil {
 				return cModel.BatchProductData[cModel.ProductIDs]{}, handleRowParsingError(logger, err)
 			}
 
-			productData[product.ProductID] = product
+			productData[product.ID] = product
 		}
 	}
 
@@ -230,7 +229,7 @@ func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx 
 			return cModel.BatchCardData[cModel.CardNames]{}, err
 		} else {
 			for _, card := range cards {
-				cardData[card.CardName] = card
+				cardData[card.GetName()] = card
 			}
 		}
 	}
@@ -252,7 +251,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 			return cModel.BatchCardData[cModel.CardIDs]{}, err
 		} else {
 			for _, card := range cards {
-				cardData[card.CardID] = card
+				cardData[card.GetID()] = card
 			}
 		}
 	}
@@ -262,7 +261,7 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 
 // TODO: document
 // TODO: find way to make code more readable
-func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
 
@@ -273,7 +272,7 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 	}
 }
 
-func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards that reference archetype in their name")
 	searchTerm := `%` + archetypeName + `%`
@@ -285,7 +284,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.C
 	}
 }
 
-func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards treated as archetype")
 
@@ -296,7 +295,7 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.C
 	}
 }
 
-func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]cModel.Card, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards explicitly not treated as archetype")
 
@@ -329,14 +328,13 @@ func (imp SKCDAOImplementation) GetRandomCard(ctx context.Context, blacklistedCa
 	return randomCardId, nil
 }
 
-func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]cModel.Card, *cModel.APIError) {
+func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
-	cards := []cModel.Card{}
+	cards := []cModel.YGOCard{}
 
 	for rows.Next() {
-		var card cModel.Card
-		if err := rows.Scan(&card.CardID, &card.CardColor, &card.CardName, &card.CardAttribute, &card.CardEffect,
-			&card.MonsterType, &card.MonsterAttack, &card.MonsterDefense); err != nil {
+		var card cModel.YGOCardREST
+		if err := rows.Scan(&card.ID, &card.Color, &card.Name, &card.Attribute, &card.Effect, &card.MonsterType, &card.Attack, &card.Defense); err != nil {
 			return nil, handleRowParsingError(logger, err)
 		} else {
 			cards = append(cards, card)

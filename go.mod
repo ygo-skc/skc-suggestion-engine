@@ -1,6 +1,6 @@
 module github.com/ygo-skc/skc-suggestion-engine
 
-go 1.24
+go 1.24.2
 
 require (
 	github.com/go-playground/locales v0.14.1
@@ -11,8 +11,8 @@ require (
 	github.com/ip2location/ip2location-go/v9 v9.7.1
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.10.0
-	github.com/ygo-skc/skc-go/common v0.0.0-20250319112659-0ac9554693dd
-	go.mongodb.org/mongo-driver/v2 v2.2.0
+	github.com/ygo-skc/skc-go/common v1.0.0
+	go.mongodb.org/mongo-driver/v2 v2.2.1
 )
 
 require (
@@ -34,6 +34,9 @@ require (
 	golang.org/x/sync v0.12.0 // indirect
 	golang.org/x/sys v0.31.0 // indirect
 	golang.org/x/text v0.23.0 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250218202821-56aae31c358a // indirect
+	google.golang.org/grpc v1.72.0 // indirect
+	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
 )

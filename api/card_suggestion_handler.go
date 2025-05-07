@@ -39,22 +39,22 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
 		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs)
 
-		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.CardName,
+		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.Name,
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
 		json.NewEncoder(res).Encode(suggestions)
 	}
 }
 
-func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.Card,
+func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOCard,
 	ccIDs map[string]int) model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
-	materialString := cardToGetSuggestionsFor.GetPotentialMaterialsAsString()
+	materialString := cModel.GetPotentialMaterialsAsString(cardToGetSuggestionsFor)
 
 	wg := sync.WaitGroup{}
 
 	// get materials if card is from extra deck
-	if cardToGetSuggestionsFor.IsExtraDeckMonster() {
+	if cModel.IsExtraDeckMonster(cardToGetSuggestionsFor) {
 		wg.Add(2)
 		go getMaterialRefs(ctx, &suggestions, materialString, ccIDs, &wg)
 	} else {
@@ -78,22 +78,22 @@ func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialStri
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.Card, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.YGOCard, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
 	defer wg.Done()
-	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.CardEffect, materialString, ""))
-	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.CardName, &s.NamedReferences)
+	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.GetEffect(), materialString, ""))
+	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.GetName(), &s.NamedReferences)
 	sortCardReferences(&s.NamedReferences, ccIDs)
 }
 
 func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
 	// sorting alphabetically from a-z
 	sort.SliceStable(*cr, func(i, j int) bool {
-		return (*cr)[i].Card.CardName < (*cr)[j].Card.CardName
+		return (*cr)[i].Card.GetName() < (*cr)[j].Card.GetName()
 	})
 
 	// sorting by card color
 	sort.SliceStable(*cr, func(i, j int) bool {
-		return ccIDs[(*cr)[i].Card.CardColor] < ccIDs[(*cr)[j].Card.CardColor]
+		return ccIDs[(*cr)[i].Card.GetColor()] < ccIDs[(*cr)[j].Card.GetColor()]
 	})
 }
 
@@ -104,13 +104,13 @@ func getReferences(ctx context.Context, s string) ([]model.CardReference, []stri
 
 	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
 	for _, card := range namedReferences {
-		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.CardID]})
+		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.GetID()]})
 	}
 
 	return uniqueReferences, archetypalReferences
 }
 
-func isolateReferences(ctx context.Context, s string) (map[string]cModel.Card, map[string]int, []string) {
+func isolateReferences(ctx context.Context, s string) (cModel.CardDataMap, map[string]int, []string) {
 	tokens := quotedStringRegex.FindAllString(s, -1)
 
 	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(ctx, tokens)
@@ -126,8 +126,8 @@ func isolateReferences(ctx context.Context, s string) (map[string]cModel.Card, m
 }
 
 // cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]cModel.Card, map[string]int, map[string]struct{}) {
-	namedReferences := map[string]cModel.Card{}
+func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDataMap, map[string]int, map[string]struct{}) {
+	namedReferences := cModel.CardDataMap{}
 	referenceOccurrence := map[string]int{}
 	archetypalReferences := make(map[string]struct{})
 	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
@@ -159,9 +159,9 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (map[string]cMo
 				archetypalReferences[token] = struct{}{}
 			} else {
 				// add occurrence of referenced card to maps
-				namedReferences[card.CardID] = card
-				referenceOccurrence[card.CardID] = 1
-				tokenToCardId[token] = card.CardID
+				namedReferences[card.GetID()] = card
+				referenceOccurrence[card.GetID()] = 1
+				tokenToCardId[token] = card.GetID()
 			}
 		}
 	}

@@ -12,7 +12,7 @@ import (
 
 var (
 	// this object is mocking what would return from the DB prior to organizing the references by material or generic non material
-	cardReferenceSubjects = map[string][]cModel.Card{
+	cardReferenceSubjects = map[string][]cModel.YGOCard{
 		"Dark Magician":                   {skc_testing.CardMocks["Magicians' Souls"], skc_testing.CardMocks["Dark Paladin"], skc_testing.CardMocks["The Dark Magicians"]},
 		"Hamon, Lord of Striking Thunder": {skc_testing.CardMocks["Armityle the Chaos Phantasm"], skc_testing.CardMocks["Armityle the Chaos Phantasm - Phantom of Fury"]},
 		"Elemental HERO Neos":             {skc_testing.CardMocks["Neos Wiseman"], skc_testing.CardMocks["Elemental HERO Air Neos"]},
@@ -47,7 +47,7 @@ func TestDetermineSupportCards(t *testing.T) {
 
 	for cardName, references := range cardReferenceSubjects {
 		cardMock := skc_testing.CardMocks[cardName]
-		assert.Equal(cardName, cardMock.CardName, fmt.Sprintf("Mock not setup for %s", cardName))
+		assert.Equal(cardName, cardMock.Name, fmt.Sprintf("Mock not setup for %s", cardName))
 
 		actualReferencedBy, actualMaterialFor := determineSupportCards(cardMock, references)
 
