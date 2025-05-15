@@ -8,7 +8,7 @@ USER="ec2-user"
 DIR_ON_SERVER="api/skc-suggestion-engine"
 
 echo "Building API"
-env GOOS=linux GOARCH=arm64 go build .
+make
 
 echo "Using server $SERVER and directory $DIR_ON_SERVER to sync prod API"
 
