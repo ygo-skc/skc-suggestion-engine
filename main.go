@@ -8,6 +8,7 @@ import (
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/api"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	_ "google.golang.org/grpc/encoding/gzip"
 )
 
 const (

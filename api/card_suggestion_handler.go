@@ -13,7 +13,9 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -32,7 +34,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.NewRequestSetup(context.Background(), "card suggestions", slog.String("cardID", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardID); err != nil {
+	if cardToGetSuggestionsFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {

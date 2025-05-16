@@ -11,7 +11,9 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
@@ -38,7 +40,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := service.QueryCard(ctx, downstream.CardServiceClient, trafficData.ResourceUtilized.Value, cModel.YGOCardRESTFromPB); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -134,9 +136,16 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 
 	switch r {
 	case model.CardResource:
+		// TODO: can this be removed once product db functionality is moved to skc-go?
+		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
+			c, err := service.QueryCards(ctx, downstream.CardServiceClient, cardIDs, cModel.BatchCardDataFromPB)
+			return *c, err
+		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
-		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo) }
+		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, cb2, c)
+		return c, func(tm []model.TrendingMetric) {
+			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
+		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductData[cModel.ProductIDs]{}
 		go fetchResourceInfo[cModel.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)

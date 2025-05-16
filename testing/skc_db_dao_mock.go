@@ -41,16 +41,6 @@ func (mock SKCDatabaseAccessObjectMock) GetCardColorIDs(ctx context.Context) (ma
 	return ids, nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.YGOCardREST, *cModel.APIError) {
-	log.Fatalln(notMocked)
-	return cModel.YGOCardREST{}, nil
-}
-
-func (mock SKCDatabaseAccessObjectMock) GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cards []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-	log.Fatalln(notMocked)
-	return cModel.BatchCardData[cModel.CardIDs]{}, nil
-}
-
 func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardNames []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError) {
 	found, notFound := make(cModel.CardDataMap, 0), make(cModel.CardNames, 0)
 	for _, cardName := range cardNames {
@@ -87,7 +77,7 @@ func (imp SKCDatabaseAccessObjectMock) GetArchetypeExclusionsUsingCardText(ctx c
 	log.Fatalln("GetArchetypeExclusionsUsingCardText() not mocked")
 	return nil, nil
 }
-func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*cModel.Product, *cModel.APIError) {
+func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*cModel.YGOProduct, *cModel.APIError) {
 	log.Fatalln("GetDesiredProductInDBUsingID() not mocked")
 	return nil, nil
 }

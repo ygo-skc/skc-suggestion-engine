@@ -9,7 +9,9 @@ import (
 	"sort"
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
@@ -18,11 +20,11 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card info")
 	logger.Info("Getting batch card info")
 
-	batchCardInfo := cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
+	batchCardInfo := &cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
 	var err *cModel.APIError
 	if reqBody := batchRequestValidator(ctx, res, req, batchCardInfo, "card info"); reqBody == nil {
 		return
-	} else if batchCardInfo, err = skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
+	} else if batchCardInfo, err = service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
 		err.HandleServerResponse(res)
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
@@ -65,12 +67,12 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
+	} else if suggestionSubjectsCardData, err := service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
 		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
-		suggestions := getBatchSuggestions(ctx, suggestionSubjectsCardData, ccIDs)
+		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
@@ -171,12 +173,12 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs(ctx, reqBody.CardIDs); err != nil {
+	} else if suggestionSubjectsCardData, err := service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(getBatchSupport(ctx, suggestionSubjectsCardData))
+		json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData))
 	}
 }
 

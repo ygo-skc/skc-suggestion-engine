@@ -8,7 +8,9 @@ import (
 	"time"
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -30,12 +32,12 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, cardOfTheDay.CardID); err != nil {
+	if card, err := service.QueryCard(ctx, downstream.CardServiceClient, cardOfTheDay.CardID, cModel.YGOCardRESTFromPB); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
 	} else {
-		cardOfTheDay.Card = card
+		cardOfTheDay.Card = *card
 	}
 
 	res.WriteHeader(http.StatusOK)
