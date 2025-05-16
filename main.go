@@ -8,6 +8,7 @@ import (
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/api"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	_ "google.golang.org/grpc/encoding/gzip"
 )
 
@@ -23,6 +24,7 @@ func init() {
 }
 
 func main() {
+	downstream.CreateYGOServiceClients()
 	db.EstablishDBConn()
 	db.EstablishSKCSuggestionEngineDBConn()
 	go api.RunHttpServer()
