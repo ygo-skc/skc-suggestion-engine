@@ -21,7 +21,8 @@ import (
 )
 
 const (
-	CONTEXT = "/api/v1/suggestions"
+	apiContext = "/api/v1/suggestions"
+	apiName    = "skc-suggestion-engine"
 )
 
 var (
@@ -111,7 +112,7 @@ func RunHttpServer() {
 	router := mux.NewRouter()
 
 	// configure non-admin routes
-	unprotectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
+	unprotectedRoutes := router.PathPrefix(apiContext).Subrouter()
 	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
 	unprotectedRoutes.HandleFunc("/card-details", getBatchCardInfo).Methods(http.MethodPost).Name("Batch Card Data")
 	unprotectedRoutes.HandleFunc("/card-of-the-day", getCardOfTheDay).Methods(http.MethodGet).Name("Card of the Day")
@@ -127,7 +128,7 @@ func RunHttpServer() {
 	unprotectedRoutes.HandleFunc("/trending/{resource:(?i)card|product}", trending).Methods(http.MethodGet).Name("Trending")
 
 	// admin routes
-	protectedRoutes := router.PathPrefix(CONTEXT).Subrouter()
+	protectedRoutes := router.PathPrefix(apiContext).Subrouter()
 	protectedRoutes.Use(verifyAPIKeyMiddleware)
 	protectedRoutes.HandleFunc("/traffic-analysis", submitNewTrafficDataHandler).Methods(http.MethodPost).Name("Traffic Analysis")
 

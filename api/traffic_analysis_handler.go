@@ -11,14 +11,22 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
+const (
+	trafficDataSubmissionOp = "Traffic Data Submission"
+	trendingDataOp          = "Trending Data"
+)
+
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "traffic data submission")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trafficDataSubmissionOp),
+		trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -38,7 +46,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := skcDBInterface.GetDesiredCardInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := service.QueryCard(ctx, downstream.CardServiceClient, trafficData.ResourceUtilized.Value, cModel.YGOCardRESTFromPB); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -83,7 +91,8 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trendingDataOp),
+		trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
@@ -134,9 +143,16 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 
 	switch r {
 	case model.CardResource:
+		// TODO: can this be removed once product db functionality is moved to skc-go?
+		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
+			c, err := service.QueryCards(ctx, downstream.CardServiceClient, cardIDs, cModel.BatchCardDataFromPB)
+			return *c, err
+		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, skcDBInterface.GetDesiredCardInDBUsingMultipleCardIDs, c)
-		return c, func(tm []model.TrendingMetric) { updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo) }
+		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, cb2, c)
+		return c, func(tm []model.TrendingMetric) {
+			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
+		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductData[cModel.ProductIDs]{}
 		go fetchResourceInfo[cModel.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)

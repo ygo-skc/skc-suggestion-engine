@@ -26,8 +26,6 @@ const (
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardID           = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number = ?"
-	queryCardUsingCardIDs          = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_number IN (%s)"
 	queryCardUsingCardNames        = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
 	queryCardsUsingProductID       = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
 	queryRandomCardID              = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
@@ -83,8 +81,6 @@ type SKCDatabaseAccessObject interface {
 
 	GetCardColorIDs(context.Context) (map[string]int, *cModel.APIError)
 
-	GetDesiredCardInDBUsingID(context.Context, string) (cModel.YGOCardREST, *cModel.APIError)
-	GetDesiredCardInDBUsingMultipleCardIDs(context.Context, []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 	GetDesiredCardsFromDBUsingMultipleCardNames(context.Context, []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError)
 	GetCardsFoundInProduct(context.Context, string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 
@@ -94,7 +90,7 @@ type SKCDatabaseAccessObject interface {
 	GetInArchetypeSupportUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 
-	GetDesiredProductInDBUsingID(context.Context, string) (*cModel.Product, *cModel.APIError)
+	GetDesiredProductInDBUsingID(context.Context, string) (*cModel.YGOProduct, *cModel.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (cModel.BatchProductData[cModel.ProductIDs], *cModel.APIError)
 
 	GetRandomCard(context.Context, []string) (string, *cModel.APIError)
@@ -137,45 +133,8 @@ func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string
 	return cardColorIDs, nil
 }
 
-// Leverages GetDesiredCardInDBUsingMultipleCardIDs to get information on a specific card using its identifier
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingID(ctx context.Context, cardID string) (cModel.YGOCardREST, *cModel.APIError) {
-	if results, err := imp.GetDesiredCardInDBUsingMultipleCardIDs(ctx, []string{cardID}); err != nil {
-		return cModel.YGOCardREST{}, err
-	} else {
-		if card, exists := results.CardInfo[cardID]; !exists {
-			return cModel.YGOCardREST{}, &cModel.APIError{Message: fmt.Sprintf("No results found when querying by card ID %s", cardID), StatusCode: http.StatusNotFound}
-		} else {
-			return card.(cModel.YGOCardREST), nil
-		}
-	}
-}
-
-func (imp SKCDAOImplementation) GetDesiredCardInDBUsingMultipleCardIDs(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info("Retrieving card data from DB")
-
-	args, numCards := buildVariableQuerySubjects(cardIDs)
-	cardData := make(cModel.CardDataMap, numCards) // used to store results
-
-	query := fmt.Sprintf(queryCardUsingCardIDs, variablePlaceholders(numCards))
-
-	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		return cModel.BatchCardData[cModel.CardIDs]{}, handleQueryError(logger, err)
-	} else {
-		if cards, err := parseRowsForCard(ctx, rows); err != nil {
-			return cModel.BatchCardData[cModel.CardIDs]{}, err
-		} else {
-			for _, card := range cards {
-				cardData[card.GetID()] = card
-			}
-		}
-	}
-
-	return cModel.BatchCardData[cModel.CardIDs]{CardInfo: cardData, UnknownResources: cardData.FindMissingIDs(cardIDs)}, nil
-}
-
 // Leverages GetDesiredProductInDBUsingMultipleProductIDs to get information on a specific product using its identifier
-func (imp SKCDAOImplementation) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*cModel.Product, *cModel.APIError) {
+func (imp SKCDAOImplementation) GetDesiredProductInDBUsingID(ctx context.Context, productID string) (*cModel.YGOProduct, *cModel.APIError) {
 	if results, err := imp.GetDesiredProductInDBUsingMultipleProductIDs(ctx, []string{productID}); err != nil {
 		return nil, err
 	} else {
@@ -200,7 +159,7 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 		return cModel.BatchProductData[cModel.ProductIDs]{}, handleQueryError(logger, err)
 	} else {
 		for rows.Next() {
-			var product cModel.Product
+			var product cModel.YGOProductREST
 			if err := rows.Scan(&product.ID, &product.Locale, &product.Name, &product.ReleaseDate, &product.Total, &product.Type, &product.SubType); err != nil {
 				return cModel.BatchProductData[cModel.ProductIDs]{}, handleRowParsingError(logger, err)
 			}

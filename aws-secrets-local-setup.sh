@@ -17,8 +17,9 @@ rm certs/base64-certs-json
 createEnvFile() {
 	local SKC_API_DB_INFO=$1
 	local FILE_NAME=$2
+	local ENV_SECRETS_ID=$3
 
-	aws secretsmanager get-secret-value --secret-id "/prod/skc/suggestion-engine/env" --region us-east-2 |
+	aws secretsmanager get-secret-value --secret-id "${ENV_SECRETS_ID}" --region us-east-2 |
 		jq -r '.SecretString' | jq -r ". + $DB_HOST + $SKC_API_DB_INFO | to_entries|map(\"\(.key)=\\\"\(.value|tostring)\\\"\")|.[]" >"$FILE_NAME"
 }
 
@@ -29,14 +30,14 @@ DB_HOST=$(aws secretsmanager get-secret-value --secret-id "/prod/skc/suggestion-
 SKC_API_DB_INFO=$(aws secretsmanager get-secret-value --secret-id "/prod/skc/skc-api/db" --region us-east-2 |
 	jq -r '.SecretString' |
 	jq -c "{DB_USERNAME: .username, DB_PASSWORD: .password, DB_HOST: .host, DB_PORT: .port, DB_NAME: .dbname} | with_entries(.key |= \"SKC_\(.)\")")
-createEnvFile "$SKC_API_DB_INFO" ".env_prod"
+createEnvFile "$SKC_API_DB_INFO" ".env_prod" "/prod/skc/suggestion-engine/env"
 
 SKC_API_DB_INFO=$(aws secretsmanager get-secret-value --secret-id "/local/skc/skc-api/db" --region us-east-2 |
 	jq -r '.SecretString' |
 	jq -c "{DB_USERNAME: .username, DB_PASSWORD: .password, DB_HOST: .host, DB_PORT: .port, DB_NAME: .dbname} | with_entries(.key |= \"SKC_\(.)\")")
-createEnvFile "$SKC_API_DB_INFO" ".env"
+createEnvFile "$SKC_API_DB_INFO" ".env" "/dev/skc/suggestion-engine/env"
 
 SKC_API_DB_INFO=$(aws secretsmanager get-secret-value --secret-id "/docker/local/skc/skc-api/db" --region us-east-2 |
 	jq -r '.SecretString' |
 	jq -c "{DB_USERNAME: .username, DB_PASSWORD: .password, DB_HOST: .host, DB_PORT: .port, DB_NAME: .dbname} | with_entries(.key |= \"SKC_\(.)\")")
-createEnvFile "$SKC_API_DB_INFO" ".env_docker_local"
+createEnvFile "$SKC_API_DB_INFO" ".env_docker_local" "/prod/skc/suggestion-engine/env"
