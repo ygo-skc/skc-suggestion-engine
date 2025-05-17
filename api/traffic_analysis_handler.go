@@ -18,9 +18,15 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
+const (
+	trafficDataSubmissionOp = "Traffic Data Submission"
+	trendingDataOp          = "Trending Data"
+)
+
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "traffic data submission")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trafficDataSubmissionOp),
+		trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -85,7 +91,8 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "trending", slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trendingDataOp),
+		trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)

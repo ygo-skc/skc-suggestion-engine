@@ -17,11 +17,16 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+const (
+	cardSupportOp = "Card Support"
+)
+
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := util.NewRequestSetup(context.Background(), "card support", slog.String("cardID", cardID))
+	logger, ctx := util.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
+		cardSupportOp, slog.String("cardID", cardID))
 	logger.Info("Getting support cards")
 
 	if cardToGetSupportFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {

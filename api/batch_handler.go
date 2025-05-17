@@ -16,8 +16,14 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
+const (
+	batchCardInfoOp        = "Batch Card Info"
+	batchCardSuggestionsOp = "Batch Card Suggestions"
+	batchCardSupportOp     = "Batch Card Support"
+)
+
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card info")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardInfoOp), batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
 	batchCardInfo := &cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
@@ -62,7 +68,8 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card suggestions")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSuggestionsOp),
+		batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
@@ -168,7 +175,7 @@ func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []mod
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "batch card support")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSupportOp), batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {

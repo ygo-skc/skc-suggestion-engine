@@ -14,8 +14,12 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+const (
+	cardOfTheDayOp = "Card of The Day"
+)
+
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "card of the day")
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardOfTheDayOp), cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
 	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))

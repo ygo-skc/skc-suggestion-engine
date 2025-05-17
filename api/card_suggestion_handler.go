@@ -25,13 +25,18 @@ var (
 		ReferencedArchetypes: []string{}, UnknownResources: []string{}, FalsePositives: []string{}}
 )
 
+const (
+	cardSuggestionsOp = "Card Suggestions"
+)
+
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "card suggestions", slog.String("cardID", cardID))
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSuggestionsOp),
+		cardSuggestionsOp, slog.String("cardID", cardID))
 	logger.Info("Card suggestions requested")
 
 	if cardToGetSuggestionsFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
