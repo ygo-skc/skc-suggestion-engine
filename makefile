@@ -1,4 +1,4 @@
-.PHONY: all build test coverage help
+.PHONY: test coverage help
 
 # default
 all: test build
