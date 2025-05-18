@@ -13,11 +13,16 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
+const (
+	productCardSuggestionOp = "Product Card Suggestions"
+)
+
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	productID := pathVars["productID"]
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "product card suggestions", slog.String("productID", productID))
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, productCardSuggestionOp),
+		productCardSuggestionOp, slog.String("productID", productID))
 	logger.Info("Getting product card suggestions")
 
 	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])

@@ -25,7 +25,8 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := util.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
+	logger, ctx := util.NewRequestSetup(
+		cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
 		cardSupportOp, slog.String("cardID", cardID))
 	logger.Info("Getting support cards")
 
