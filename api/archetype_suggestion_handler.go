@@ -42,7 +42,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	logger, ctx := cUtil.NewRequestSetup(
 		cUtil.ContextWithMetadata(context.Background(), apiName, archetypeSupportOp),
-		archetypeSupportOp, slog.String("archetypeName", archetypeName),
+		archetypeSupportOp, slog.String("archetype-name", archetypeName),
 	)
 	logger.Info("Getting cards within archetype")
 

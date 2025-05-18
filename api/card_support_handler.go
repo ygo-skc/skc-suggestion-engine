@@ -27,7 +27,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	logger, ctx := util.NewRequestSetup(
 		cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
-		cardSupportOp, slog.String("cardID", cardID))
+		cardSupportOp, slog.String("card-id", cardID))
 	logger.Info("Getting support cards")
 
 	if cardToGetSupportFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {

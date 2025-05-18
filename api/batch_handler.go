@@ -68,7 +68,8 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSuggestionsOp),
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(
+		context.Background(), apiName, batchCardSuggestionsOp),
 		batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 

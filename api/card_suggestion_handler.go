@@ -36,7 +36,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := pathVars["cardID"]
 
 	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSuggestionsOp),
-		cardSuggestionsOp, slog.String("cardID", cardID))
+		cardSuggestionsOp, slog.String("card-id", cardID))
 	logger.Info("Card suggestions requested")
 
 	if cardToGetSuggestionsFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
