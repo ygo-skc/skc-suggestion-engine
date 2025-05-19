@@ -39,7 +39,7 @@ func TestGetSuggestions(t *testing.T) {
 	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
-	ccIDs, _ := skcDBInterface.GetCardColorIDs(skc_testing.TestContext)
+	ccIDs := skc_testing.CardColors
 	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
 		suggestions := getCardSuggestions(skc_testing.TestContext, mock, ccIDs)

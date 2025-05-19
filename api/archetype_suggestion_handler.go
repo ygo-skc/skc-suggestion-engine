@@ -32,11 +32,18 @@ var (
 	}}
 )
 
+const (
+	archetypeSupportOp = "Archetype Support"
+)
+
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	archetypeName := pathVars["archetypeName"]
 
-	logger, ctx := cUtil.NewRequestSetup(context.Background(), "archetype support", slog.String("archetypeName", archetypeName))
+	logger, ctx := cUtil.NewRequestSetup(
+		cUtil.ContextWithMetadata(context.Background(), apiName, archetypeSupportOp),
+		archetypeSupportOp, slog.String("archetype_name", archetypeName),
+	)
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {

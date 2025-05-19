@@ -68,7 +68,8 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSuggestionsOp),
+	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(
+		context.Background(), apiName, batchCardSuggestionsOp),
 		batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
@@ -78,17 +79,16 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
-		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs)
+		ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
+		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.Values)
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
 	}
-
 }
 
 func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
-	ccIDs map[string]int) model.BatchCardSuggestions[cModel.CardIDs] {
+	ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
 	suggestionChan := make(chan model.CardSuggestions, 20)
 	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo cModel.YGOCard) model.CardSuggestions {
 		return getCardSuggestions(ctx, cardInfo, ccIDs)
@@ -127,7 +127,7 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.
 	return suggestions
 }
 
-func sortBatchReferences(refs []model.CardReference, ccIDs map[string]int) func(i, j int) bool {
+func sortBatchReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
 	return func(i, j int) bool {
 		iv, jv := refs[i], refs[j]
 		switch {
@@ -201,7 +201,7 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 		UnknownResources: suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
-	ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
+	ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
 
 	for s := range supportChan {
 		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
@@ -213,8 +213,8 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 	support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 	support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
-	sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy, ccIDs))
-	sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor, ccIDs))
+	sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy, ccIDs.Values))
+	sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor, ccIDs.Values))
 
 	return support
 }

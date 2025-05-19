@@ -18,29 +18,6 @@ func (mock SKCDatabaseAccessObjectMock) GetSKCDBVersion(ctx context.Context) (st
 	return "", nil
 }
 
-func (mock SKCDatabaseAccessObjectMock) GetCardColorIDs(ctx context.Context) (map[string]int, *cModel.APIError) {
-	ids := map[string]int{
-		"Normal":           1,
-		"Effect":           2,
-		"Fusion":           3,
-		"Ritual":           4,
-		"Synchro":          5,
-		"Xyz":              6,
-		"Pendulum-Normal":  7,
-		"Pendulum-Effect":  8,
-		"Pendulum-Ritual":  9,
-		"Pendulum-Fusion":  10,
-		"Pendulum-Xyz":     11,
-		"Pendulum-Synchro": 12,
-		"Link":             13,
-		"Spell":            14,
-		"Trap":             15,
-		"Token":            16,
-	}
-
-	return ids, nil
-}
-
 func (mock SKCDatabaseAccessObjectMock) GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardNames []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError) {
 	found, notFound := make(cModel.CardDataMap, 0), make(cModel.CardNames, 0)
 	for _, cardName := range cardNames {
@@ -85,11 +62,6 @@ func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingID(ctx context.
 func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProductIDs(ctx context.Context, cards []string) (cModel.BatchProductData[cModel.ProductIDs], *cModel.APIError) {
 	log.Fatalln("GetDesiredProductInDBUsingMultipleProductIDs() not mocked")
 	return cModel.BatchProductData[cModel.ProductIDs]{}, nil
-}
-
-func (imp SKCDatabaseAccessObjectMock) GetRandomCard(ctx context.Context, blacklistedCards []string) (string, *cModel.APIError) {
-	log.Fatalln("GetRandomCard() not mocked")
-	return "", nil
 }
 
 type ErrorMock struct {
