@@ -43,8 +43,8 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
-		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs)
+		ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
+		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.Values)
 
 		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.Name,
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
@@ -54,7 +54,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOCard,
-	ccIDs map[string]int) model.CardSuggestions {
+	ccIDs map[string]uint32) model.CardSuggestions {
 	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
 	materialString := cModel.GetPotentialMaterialsAsString(cardToGetSuggestionsFor)
 
@@ -77,7 +77,7 @@ func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOC
 	return suggestions
 }
 
-func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialString string, ccIDs map[string]uint32, wg *sync.WaitGroup) {
 	defer wg.Done()
 	s.NamedMaterials, s.MaterialArchetypes = getReferences(ctx, materialString)
 	sortCardReferences(&s.NamedMaterials, ccIDs)
@@ -85,14 +85,14 @@ func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialStri
 
 // get named references - excludes materials
 // will also check and remove self references
-func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.YGOCard, materialString string, ccIDs map[string]int, wg *sync.WaitGroup) {
+func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.YGOCard, materialString string, ccIDs map[string]uint32, wg *sync.WaitGroup) {
 	defer wg.Done()
 	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.GetEffect(), materialString, ""))
 	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.GetName(), &s.NamedReferences)
 	sortCardReferences(&s.NamedReferences, ccIDs)
 }
 
-func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]int) {
+func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]uint32) {
 	// sorting alphabetically from a-z
 	sort.SliceStable(*cr, func(i, j int) bool {
 		return (*cr)[i].Card.GetName() < (*cr)[j].Card.GetName()

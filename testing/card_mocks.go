@@ -6,6 +6,25 @@ import (
 )
 
 var (
+	CardColors = map[string]uint32{
+		"Normal":           1,
+		"Effect":           2,
+		"Fusion":           3,
+		"Ritual":           4,
+		"Synchro":          5,
+		"Xyz":              6,
+		"Pendulum-Normal":  7,
+		"Pendulum-Effect":  8,
+		"Pendulum-Ritual":  9,
+		"Pendulum-Fusion":  10,
+		"Pendulum-Xyz":     11,
+		"Pendulum-Synchro": 12,
+		"Link":             13,
+		"Spell":            14,
+		"Trap":             15,
+		"Token":            16,
+	}
+
 	CardMocks = map[string]cModel.YGOCardREST{
 		"Elemental HERO Sunrise": {
 			ID:    "22908820",

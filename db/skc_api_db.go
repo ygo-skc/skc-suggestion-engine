@@ -23,8 +23,7 @@ const (
 	genericError = "Error occurred while querying DB"
 
 	// queries
-	queryDBVersion    = "SELECT VERSION()"
-	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
+	queryDBVersion = "SELECT VERSION()"
 
 	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
 	queryCardsUsingProductID = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
@@ -77,8 +76,6 @@ func handleRowParsingError(logger *slog.Logger, err error) *cModel.APIError {
 type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion(context.Context) (string, error)
 
-	GetCardColorIDs(context.Context) (map[string]int, *cModel.APIError)
-
 	GetDesiredCardsFromDBUsingMultipleCardNames(context.Context, []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError)
 	GetCardsFoundInProduct(context.Context, string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 
@@ -104,29 +101,6 @@ func (imp SKCDAOImplementation) GetSKCDBVersion(ctx context.Context) (string, er
 	}
 
 	return version, nil
-}
-
-// Get IDs for all card colors currently in database.
-func (imp SKCDAOImplementation) GetCardColorIDs(ctx context.Context) (map[string]int, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info("Retrieving card color IDs from DB")
-	cardColorIDs := map[string]int{}
-
-	if rows, err := skcDBConn.Query(queryCardColorIDs); err != nil {
-		return nil, handleQueryError(logger, err)
-	} else {
-		for rows.Next() {
-			var colorId int
-			var cardColor string
-
-			if err := rows.Scan(&colorId, &cardColor); err != nil {
-				return cardColorIDs, handleRowParsingError(logger, err)
-			}
-
-			cardColorIDs[cardColor] = colorId
-		}
-	}
-	return cardColorIDs, nil
 }
 
 // Leverages GetDesiredProductInDBUsingMultipleProductIDs to get information on a specific product using its identifier

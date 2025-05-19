@@ -9,7 +9,9 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -32,7 +34,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardsInProductChan <- cardsInProduct
 	}()
 
-	ccIDs, _ := skcDBInterface.GetCardColorIDs(ctx) // retrieve card color IDs
+	ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
 
 	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
 	var support model.BatchCardSupport[cModel.CardIDs]
@@ -40,7 +42,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	wg.Add(2)
 	cardsInProduct := <-cardsInProductChan
-	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, cardsInProduct, ccIDs) }()
+	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, cardsInProduct, ccIDs.Values) }()
 	go func() { defer wg.Done(); support = getBatchSupport(ctx, cardsInProduct) }()
 	wg.Wait()
 
