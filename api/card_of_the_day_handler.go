@@ -61,10 +61,10 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 
 	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
 
-	if randomCardId, err := skcDBInterface.GetRandomCard(ctx, previousCOTDData); err != nil {
+	if randomCard, err := service.RandomCard(ctx, downstream.CardServiceClient, previousCOTDData, cModel.YGOCardRESTFromPB); err != nil {
 		return e
 	} else {
-		cotd.CardID = randomCardId
+		cotd.CardID = randomCard.ID
 	}
 
 	if err := skcSuggestionEngineDBInterface.InsertCardOfTheDay(ctx, *cotd); err != nil {

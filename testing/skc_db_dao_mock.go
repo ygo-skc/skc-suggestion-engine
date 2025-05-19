@@ -87,11 +87,6 @@ func (imp SKCDatabaseAccessObjectMock) GetDesiredProductInDBUsingMultipleProduct
 	return cModel.BatchProductData[cModel.ProductIDs]{}, nil
 }
 
-func (imp SKCDatabaseAccessObjectMock) GetRandomCard(ctx context.Context, blacklistedCards []string) (string, *cModel.APIError) {
-	log.Fatalln("GetRandomCard() not mocked")
-	return "", nil
-}
-
 type ErrorMock struct {
 }
 

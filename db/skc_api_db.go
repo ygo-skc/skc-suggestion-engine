@@ -26,10 +26,8 @@ const (
 	queryDBVersion    = "SELECT VERSION()"
 	queryCardColorIDs = "SELECT color_id, card_color from card_colors ORDER BY color_id"
 
-	queryCardUsingCardNames        = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
-	queryCardsUsingProductID       = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
-	queryRandomCardID              = "SELECT card_number FROM card_info WHERE card_color != 'Token' ORDER BY RAND() LIMIT 1"
-	queryRandomCardIDWithBlackList = "SELECT card_number FROM card_info WHERE card_number NOT IN (%s) AND card_color != 'Token' ORDER BY RAND() LIMIT 1"
+	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
+	queryCardsUsingProductID = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
 
 	queryCardsInArchetypeUsingName  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name"
 	queryCardsTreatedAsArchetype    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
@@ -92,8 +90,6 @@ type SKCDatabaseAccessObject interface {
 
 	GetDesiredProductInDBUsingID(context.Context, string) (*cModel.YGOProduct, *cModel.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (cModel.BatchProductData[cModel.ProductIDs], *cModel.APIError)
-
-	GetRandomCard(context.Context, []string) (string, *cModel.APIError)
 }
 
 // impl
@@ -263,28 +259,6 @@ func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.
 	} else {
 		return parseRowsForCard(ctx, rows)
 	}
-}
-
-func (imp SKCDAOImplementation) GetRandomCard(ctx context.Context, blacklistedCards []string) (string, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	var randomCardId string
-
-	var query string
-	var args []interface{}
-
-	// pick correct query based on contents of blacklistedCards
-	numBlackListed := len(blacklistedCards)
-	if numBlackListed == 0 {
-		query = queryRandomCardID
-	} else {
-		args, _ = buildVariableQuerySubjects(blacklistedCards)
-		query = fmt.Sprintf(queryRandomCardIDWithBlackList, variablePlaceholders(numBlackListed))
-	}
-
-	if err := skcDBConn.QueryRow(query, args...).Scan(&randomCardId); err != nil {
-		return "", handleQueryError(logger, err)
-	}
-	return randomCardId, nil
 }
 
 func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]cModel.YGOCard, *cModel.APIError) {
