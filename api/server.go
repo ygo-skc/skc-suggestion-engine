@@ -26,11 +26,13 @@ const (
 )
 
 var (
-	ipDB                           *ip2location.DB
+	ipDB *ip2location.DB
+
 	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDAOImplementation{}
 	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
-	serverAPIKey                   string
-	chicagoLocation                *time.Location
+
+	serverAPIKey    string
+	chicagoLocation *time.Location
 )
 
 func init() {

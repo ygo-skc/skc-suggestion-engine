@@ -10,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	"github.com/ygo-skc/skc-go/common/util"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -30,7 +29,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
+	if cardToGetSupportFor, err := downstream.YGOService.QueryCardREST(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {

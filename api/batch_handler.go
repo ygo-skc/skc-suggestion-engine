@@ -9,7 +9,6 @@ import (
 	"sort"
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -30,7 +29,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	var err *cModel.APIError
 	if reqBody := batchRequestValidator(ctx, res, req, batchCardInfo, "card info"); reqBody == nil {
 		return
-	} else if batchCardInfo, err = service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
+	} else if batchCardInfo, err = downstream.YGOService.QueryCardsREST(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
@@ -75,11 +74,11 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
+	} else if suggestionSubjectsCardData, err := downstream.YGOService.QueryCardsREST(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
+		ccIDs, _ := downstream.YGOService.CardColors(ctx) // retrieve card color IDs
 		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.Values)
 
 		res.WriteHeader(http.StatusOK)
@@ -180,7 +179,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := service.QueryCards(ctx, downstream.CardServiceClient, reqBody.CardIDs, cModel.BatchCardDataFromPB); err != nil {
+	} else if suggestionSubjectsCardData, err := downstream.YGOService.QueryCardsREST(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -201,7 +200,7 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 		UnknownResources: suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
-	ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
+	ccIDs, _ := downstream.YGOService.CardColors(ctx) // retrieve card color IDs
 
 	for s := range supportChan {
 		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,

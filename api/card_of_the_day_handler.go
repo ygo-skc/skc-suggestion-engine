@@ -8,7 +8,6 @@ import (
 	"time"
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -36,7 +35,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := service.QueryCard(ctx, downstream.CardServiceClient, cardOfTheDay.CardID, cModel.YGOCardRESTFromPB); err != nil {
+	if card, err := downstream.YGOService.QueryCardREST(ctx, cardOfTheDay.CardID); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
@@ -61,7 +60,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 
 	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
 
-	if randomCard, err := service.RandomCard(ctx, downstream.CardServiceClient, previousCOTDData, cModel.YGOCardRESTFromPB); err != nil {
+	if randomCard, err := downstream.YGOService.RandomCardREST(ctx, previousCOTDData); err != nil {
 		return e
 	} else {
 		cotd.CardID = randomCard.ID

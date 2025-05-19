@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -39,11 +38,11 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
+	if cardToGetSuggestionsFor, err := downstream.YGOService.QueryCardREST(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
+		ccIDs, _ := downstream.YGOService.CardColors(ctx) // retrieve card color IDs
 		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.Values)
 
 		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.Name,
