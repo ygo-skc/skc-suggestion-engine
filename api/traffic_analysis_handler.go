@@ -45,7 +45,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := downstream.YGOService.QueryCardREST(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := downstream.YGOService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -144,7 +144,7 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 	case model.CardResource:
 		// TODO: can this be removed once product db functionality is moved to skc-go?
 		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-			c, err := downstream.YGOService.QueryCardsREST(ctx, cardIDs)
+			c, err := downstream.YGOService.GetCardsByID(ctx, cardIDs)
 			return *c, err
 		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}

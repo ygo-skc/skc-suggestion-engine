@@ -29,11 +29,11 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := downstream.YGOService.QueryCardREST(ctx, cardID); err != nil {
+	if cardToGetSupportFor, err := downstream.YGOService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		if support, err := getCardSupport(ctx, cardToGetSupportFor); err != nil {
+		if support, err := getCardSupport(ctx, *cardToGetSupportFor); err != nil {
 			err.HandleServerResponse(res)
 			return
 		} else {

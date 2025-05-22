@@ -35,7 +35,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := downstream.YGOService.QueryCardREST(ctx, cardOfTheDay.CardID); err != nil {
+	if card, err := downstream.YGOService.GetCardByID(ctx, cardOfTheDay.CardID); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
@@ -60,7 +60,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 
 	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
 
-	if randomCard, err := downstream.YGOService.RandomCardREST(ctx, previousCOTDData); err != nil {
+	if randomCard, err := downstream.YGOService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e
 	} else {
 		cotd.CardID = randomCard.ID

@@ -38,14 +38,15 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := downstream.YGOService.QueryCardREST(ctx, cardID); err != nil {
+	if cardToGetSuggestionsFor, err := downstream.YGOService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := downstream.YGOService.CardColors(ctx) // retrieve card color IDs
-		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.Values)
+		ccIDs, _ := downstream.YGOService.GetCardColorsProto(ctx) // retrieve card color IDs
+		suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
 
-		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.Name,
+		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
+			(*cardToGetSuggestionsFor).GetName(),
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
 		json.NewEncoder(res).Encode(suggestions)
