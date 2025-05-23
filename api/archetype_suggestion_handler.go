@@ -11,30 +11,19 @@ import (
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
-)
-
-type archetypeSuggestionHandlers struct {
-	fetchArchetypeSuggestionsHandler func(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError)
-	archetypeSuggestionCBHandler     func([]cModel.YGOCard, *model.ArchetypalSuggestions)
-}
-
-var (
-	cardNameArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardName, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
-		as.UsingName = dbData
-	}}
-	cardTextArchetypeSuggestionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetInArchetypeSupportUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
-		as.UsingText = dbData
-	}}
-	archetypeExclusionHandlers = archetypeSuggestionHandlers{fetchArchetypeSuggestionsHandler: skcDBInterface.GetArchetypeExclusionsUsingCardText, archetypeSuggestionCBHandler: func(dbData []cModel.YGOCard, as *model.ArchetypalSuggestions) {
-		as.Exclusions = dbData
-	}}
 )
 
 const (
 	archetypeSupportOp = "Archetype Support"
 )
+
+type archetypeResults struct {
+	cards []cModel.YGOCard
+	err   *cModel.APIError
+}
 
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
@@ -62,38 +51,44 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	archetypalSuggestions := model.ArchetypalSuggestions{}
-
 	// setup channels
-	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan *cModel.APIError), make(chan *cModel.APIError), make(chan *cModel.APIError)
+	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan archetypeResults),
+		make(chan archetypeResults), make(chan archetypeResults)
 
-	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, supportUsingCardNameChannel, cardNameArchetypeSuggestionHandlers)
-	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, supportUsingTextChannel, cardTextArchetypeSuggestionHandlers)
-	go getArchetypeSuggestion(ctx, archetypeName, &archetypalSuggestions, exclusionsChannel, archetypeExclusionHandlers)
+	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel, downstream.YGOService.GetArchetypalCardsUsingCardName)
+	go getArchetypeSuggestion(ctx, archetypeName, supportUsingTextChannel, skcDBInterface.GetInArchetypeSupportUsingCardText)
+	go getArchetypeSuggestion(ctx, archetypeName, exclusionsChannel, skcDBInterface.GetArchetypeExclusionsUsingCardText)
 
+	archetypalSuggestions := model.ArchetypalSuggestions{}
 	for i := 0; i < 3; i++ {
 		select {
-		case err := <-supportUsingCardNameChannel:
-			if err != nil {
-				err.HandleServerResponse(res)
+		case ar := <-supportUsingCardNameChannel:
+			if ar.err != nil {
+				ar.err.HandleServerResponse(res)
 				return
-			} else if len(archetypalSuggestions.UsingName) < 2 {
+			} else if len(ar.cards) < 2 {
 				notAnArchetypeErr := cModel.APIError{
 					Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
 					StatusCode: http.StatusNotFound}
 				res.WriteHeader(notAnArchetypeErr.StatusCode)
 				json.NewEncoder(res).Encode(notAnArchetypeErr)
 				return
+			} else {
+				archetypalSuggestions.UsingName = ar.cards
 			}
-		case err := <-supportUsingTextChannel:
-			if err != nil {
-				err.HandleServerResponse(res)
+		case ar := <-supportUsingTextChannel:
+			if ar.err != nil {
+				ar.err.HandleServerResponse(res)
 				return
+			} else {
+				archetypalSuggestions.UsingText = ar.cards
 			}
-		case err := <-exclusionsChannel:
-			if err != nil {
-				err.HandleServerResponse(res)
+		case ar := <-exclusionsChannel:
+			if ar.err != nil {
+				ar.err.HandleServerResponse(res)
 				return
+			} else {
+				archetypalSuggestions.Exclusions = ar.cards
 			}
 		}
 	}
@@ -107,12 +102,14 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	json.NewEncoder(res).Encode(archetypalSuggestions)
 }
 
-func getArchetypeSuggestion(ctx context.Context, archetypeName string, as *model.ArchetypalSuggestions, c chan<- *cModel.APIError, handlers archetypeSuggestionHandlers) {
-	if dbData, err := handlers.fetchArchetypeSuggestionsHandler(ctx, archetypeName); err != nil {
-		c <- err
+func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,
+	fetchSuggestions func(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)) {
+	if dbData, err := fetchSuggestions(ctx, archetypeName); err != nil {
+		c <- archetypeResults{cards: nil, err: err}
+	} else if dbData != nil {
+		c <- archetypeResults{cards: dbData, err: nil}
 	} else {
-		handlers.archetypeSuggestionCBHandler(dbData, as)
-		c <- nil
+		c <- archetypeResults{cards: make([]cModel.YGOCard, 0), err: nil}
 	}
 }
 

@@ -25,10 +25,8 @@ const (
 	// queries
 	queryDBVersion = "SELECT VERSION()"
 
-	queryCardUsingCardNames  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name IN (%s)"
 	queryCardsUsingProductID = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
 
-	queryCardsInArchetypeUsingName  = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE card_name LIKE BINARY ? ORDER BY card_name"
 	queryCardsTreatedAsArchetype    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
 	queryCardsNotTreatedAsArchetype = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
 
@@ -76,12 +74,10 @@ func handleRowParsingError(logger *slog.Logger, err error) *cModel.APIError {
 type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion(context.Context) (string, error)
 
-	GetDesiredCardsFromDBUsingMultipleCardNames(context.Context, []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError)
 	GetCardsFoundInProduct(context.Context, string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
 
 	GetOccurrenceOfCardNameInAllCardEffect(context.Context, string, string) ([]cModel.YGOCard, *cModel.APIError)
 
-	GetInArchetypeSupportUsingCardName(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 	GetInArchetypeSupportUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 
@@ -142,31 +138,6 @@ func (imp SKCDAOImplementation) GetDesiredProductInDBUsingMultipleProductIDs(ctx
 }
 
 // Uses card names to find instance of card
-func (imp SKCDAOImplementation) GetDesiredCardsFromDBUsingMultipleCardNames(ctx context.Context, cardNames []string) (cModel.BatchCardData[cModel.CardNames], *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info(fmt.Sprintf("Retrieving card data from DB for cards w/ name %v", cardNames))
-
-	args, numCards := buildVariableQuerySubjects(cardNames)
-	cardData := make(cModel.CardDataMap, numCards) // used to store results
-
-	query := fmt.Sprintf(queryCardUsingCardNames, variablePlaceholders(numCards))
-
-	if rows, err := skcDBConn.Query(query, args...); err != nil {
-		return cModel.BatchCardData[cModel.CardNames]{}, handleQueryError(logger, err)
-	} else {
-		if cards, err := parseRowsForCard(ctx, rows); err != nil {
-			return cModel.BatchCardData[cModel.CardNames]{}, err
-		} else {
-			for _, card := range cards {
-				cardData[card.GetName()] = card
-			}
-		}
-	}
-
-	return cModel.BatchCardData[cModel.CardNames]{CardInfo: cardData, UnknownResources: cardData.FindMissingNames(cardNames)}, nil
-}
-
-// Uses card names to find instance of card
 func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, productId string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("Retrieving cards found in product")
@@ -201,18 +172,6 @@ func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx conte
 	}
 }
 
-func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardName(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info("Retrieving card data from DB for all cards that reference archetype in their name")
-	searchTerm := `%` + archetypeName + `%`
-
-	if rows, err := skcDBConn.Query(queryCardsInArchetypeUsingName, searchTerm); err != nil {
-		return nil, handleQueryError(logger, err)
-	} else {
-		return parseRowsForCard(ctx, rows)
-	}
-}
-
 func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.LoggerFromContext(ctx)
 	logger.Info("Retrieving card data from DB for all cards treated as archetype")
@@ -220,7 +179,8 @@ func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.C
 	if rows, err := skcDBConn.Query(queryCardsTreatedAsArchetype, fmt.Sprintf(`+"This card is always treated as" +"%s card"`, archetypeName)); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
-		return parseRowsForCard(ctx, rows)
+		c, err := parseRowsForCard(ctx, rows)
+		return c, err
 	}
 }
 
@@ -231,7 +191,8 @@ func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.
 	if rows, err := skcDBConn.Query(queryCardsNotTreatedAsArchetype, fmt.Sprintf(`+"This card is not treated as" +"%s card"`, archetypeName)); err != nil {
 		return nil, handleQueryError(logger, err)
 	} else {
-		return parseRowsForCard(ctx, rows)
+		c, err := parseRowsForCard(ctx, rows)
+		return c, err
 	}
 }
 

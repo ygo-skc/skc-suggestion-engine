@@ -145,7 +145,7 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDat
 			cModel.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(ctx, tokens)
+		batchCardData, _ := downstream.YGOService.GetCardsByName(ctx, tokens)
 
 		for _, token := range tokens {
 			// if we already searched the token before we don't need to waste time re-searching it in DB
