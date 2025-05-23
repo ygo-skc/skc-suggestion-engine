@@ -13,7 +13,6 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -39,14 +38,15 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := service.QueryCard(ctx, downstream.CardServiceClient, cardID, cModel.YGOCardRESTFromPB); err != nil {
+	if cardToGetSuggestionsFor, err := downstream.YGOService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := service.CardColors(ctx, downstream.CardServiceClient) // retrieve card color IDs
-		suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.Values)
+		ccIDs, _ := downstream.YGOService.GetCardColorsProto(ctx) // retrieve card color IDs
+		suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
 
-		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references", cardToGetSuggestionsFor.Name,
+		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
+			(*cardToGetSuggestionsFor).GetName(),
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
 		json.NewEncoder(res).Encode(suggestions)
@@ -145,7 +145,7 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDat
 			cModel.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := skcDBInterface.GetDesiredCardsFromDBUsingMultipleCardNames(ctx, tokens)
+		batchCardData, _ := downstream.YGOService.GetCardsByName(ctx, tokens)
 
 		for _, token := range tokens {
 			// if we already searched the token before we don't need to waste time re-searching it in DB

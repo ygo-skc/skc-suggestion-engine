@@ -11,7 +11,6 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -46,7 +45,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := service.QueryCard(ctx, downstream.CardServiceClient, trafficData.ResourceUtilized.Value, cModel.YGOCardRESTFromPB); err != nil {
+		if _, err := downstream.YGOService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -145,7 +144,7 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 	case model.CardResource:
 		// TODO: can this be removed once product db functionality is moved to skc-go?
 		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-			c, err := service.QueryCards(ctx, downstream.CardServiceClient, cardIDs, cModel.BatchCardDataFromPB)
+			c, err := downstream.YGOService.GetCardsByID(ctx, cardIDs)
 			return *c, err
 		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}

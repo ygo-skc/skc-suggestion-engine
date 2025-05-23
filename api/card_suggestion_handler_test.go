@@ -6,6 +6,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )
@@ -36,7 +37,7 @@ func validateReferences(card cModel.YGOCardREST, expectedNamedReferences []model
 func TestGetSuggestions(t *testing.T) {
 	// setup
 	assert := assert.New(t)
-	skcDBInterface = skc_testing.SKCDatabaseAccessObjectMock{}
+	downstream.YGOService = skc_testing.YGOServiceMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
 	ccIDs := skc_testing.CardColors
