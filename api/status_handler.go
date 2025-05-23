@@ -40,7 +40,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 		skcSuggestionDBVersion = dbVersion
 	}
 
-	status := cModel.APIHealth{Version: "1.7.1", Downstream: downstreamHealth}
+	status := cModel.APIHealth{Version: "1.7.2", Downstream: downstreamHealth}
 
 	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion))
 	res.WriteHeader(http.StatusOK)
