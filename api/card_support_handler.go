@@ -29,7 +29,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := downstream.YGOClient.GetCardByID(ctx, cardID); err != nil {
+	if cardToGetSupportFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -49,7 +49,7 @@ func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupp
 	var s []cModel.YGOCard
 	var err *cModel.APIError
 
-	if s, err = downstream.YGOClient.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
+	if s, err = downstream.YGO.CardService.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
 		if len(s) == 0 {
 			logger.Warn("No support found")
 			return support, nil

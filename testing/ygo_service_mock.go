@@ -11,9 +11,9 @@ const (
 	ni = "Not implemented"
 )
 
-type YGOServiceMock struct{}
+type YGOCardClientMock struct{}
 
-func (svc YGOServiceMock) GetCardColorsProto(ctx context.Context) (*ygo.CardColors, *model.APIError) {
+func (svc YGOCardClientMock) GetCardColorsProto(ctx context.Context) (*ygo.CardColors, *model.APIError) {
 	ids := map[string]uint32{
 		"Normal":           1,
 		"Effect":           2,
@@ -36,27 +36,27 @@ func (svc YGOServiceMock) GetCardColorsProto(ctx context.Context) (*ygo.CardColo
 	return &ygo.CardColors{Values: ids}, nil
 }
 
-func (svc YGOServiceMock) GetCardByIDProto(ctx context.Context, cardID string) (*ygo.Card, *model.APIError) {
+func (svc YGOCardClientMock) GetCardByIDProto(ctx context.Context, cardID string) (*ygo.Card, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetCardByID(ctx context.Context, cardID string) (*model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetCardByID(ctx context.Context, cardID string) (*model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetCardsByIDProto(ctx context.Context, cardIDs model.CardIDs) (*ygo.Cards, *model.APIError) {
+func (svc YGOCardClientMock) GetCardsByIDProto(ctx context.Context, cardIDs model.CardIDs) (*ygo.Cards, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetCardsByID(ctx context.Context, cardIDs model.CardIDs) (*model.BatchCardData[model.CardIDs], *model.APIError) {
+func (svc YGOCardClientMock) GetCardsByID(ctx context.Context, cardIDs model.CardIDs) (*model.BatchCardData[model.CardIDs], *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetCardsByNameProto(ctx context.Context, cardNames model.CardNames) (*ygo.Cards, *model.APIError) {
+func (svc YGOCardClientMock) GetCardsByNameProto(ctx context.Context, cardNames model.CardNames) (*ygo.Cards, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetCardsByName(ctx context.Context, cardNames model.CardNames) (*model.BatchCardData[model.CardNames], *model.APIError) {
+func (svc YGOCardClientMock) GetCardsByName(ctx context.Context, cardNames model.CardNames) (*model.BatchCardData[model.CardNames], *model.APIError) {
 	found, notFound := make(model.CardDataMap, 0), make(model.CardNames, 0)
 	for _, cardName := range cardNames {
 		if card, isPresent := CardMocks[cardName]; isPresent {
@@ -69,42 +69,42 @@ func (svc YGOServiceMock) GetCardsByName(ctx context.Context, cardNames model.Ca
 	return &model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
 
-func (svc YGOServiceMock) SearchForCardRefUsingEffectProto(ctx context.Context, cardName string, cardID string) (*ygo.CardList, *model.APIError) {
+func (svc YGOCardClientMock) SearchForCardRefUsingEffectProto(ctx context.Context, cardName string, cardID string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) SearchForCardRefUsingEffect(ctx context.Context, cardName string, cardID string) ([]model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) SearchForCardRefUsingEffect(ctx context.Context, cardName string, cardID string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetArchetypalCardsUsingCardNameProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
+func (svc YGOCardClientMock) GetArchetypalCardsUsingCardNameProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetArchetypalCardsUsingCardName(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetArchetypalCardsUsingCardName(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetExplicitArchetypalInclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
+func (svc YGOCardClientMock) GetExplicitArchetypalInclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetExplicitArchetypalInclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetExplicitArchetypalInclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetExplicitArchetypalExclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
+func (svc YGOCardClientMock) GetExplicitArchetypalExclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetExplicitArchetypalExclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetExplicitArchetypalExclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetRandomCardProto(ctx context.Context, blackListedIDs []string) (*ygo.Card, *model.APIError) {
+func (svc YGOCardClientMock) GetRandomCardProto(ctx context.Context, blackListedIDs []string) (*ygo.Card, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOServiceMock) GetRandomCard(ctx context.Context, blackListedIDs []string) (*model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetRandomCard(ctx context.Context, blackListedIDs []string) (*model.YGOCard, *model.APIError) {
 	panic(ni)
 }

@@ -8,13 +8,13 @@ import (
 )
 
 var (
-	YGOClient client.YGOClientImp
+	YGO client.YGOClientImpV1
 )
 
 func ConnectToYGOService() {
-	if c, err := client.CreateCardServiceClient("ygo-service.skc.cards", cUtil.EnvMap["YGO_SERVICE_HOST"]); err != nil {
+	if c, err := client.NewYGOServiceClients("ygo-service.skc.cards", cUtil.EnvMap["YGO_SERVICE_HOST"]); err != nil {
 		log.Fatalf("Failed to connect to ygo-service: %v", err)
 	} else {
-		YGOClient = client.NewYGOClientImpV1(*c)
+		YGO = *c
 	}
 }
