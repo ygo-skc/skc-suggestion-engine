@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"strings"
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
@@ -14,8 +13,7 @@ import (
 )
 
 var (
-	skcDBConn  *sql.DB
-	spaceRegex = regexp.MustCompile(`[ ]+`)
+	skcDBConn *sql.DB
 )
 
 const (
@@ -26,17 +24,7 @@ const (
 	queryDBVersion = "SELECT VERSION()"
 
 	queryCardsUsingProductID = "SELECT DISTINCT(card_number), card_color,card_name,card_attribute,card_effect,monster_type,monster_attack,monster_defense FROM product_contents WHERE product_id= ? ORDER BY card_name"
-
-	queryCardsTreatedAsArchetype    = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
-	queryCardsNotTreatedAsArchetype = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) ORDER BY card_name"
-
-	findRelatedCardsUsingCardEffect = "SELECT card_number, card_color, card_name, card_attribute, card_effect, monster_type, monster_attack, monster_defense FROM card_info WHERE MATCH(card_effect) AGAINST(? IN BOOLEAN MODE) AND card_number != ? ORDER BY color_id, card_name"
 )
-
-func convertToFullText(subject string) string {
-	fullTextSubject := spaceRegex.ReplaceAllString(strings.ReplaceAll(subject, "-", " "), " +")
-	return fmt.Sprintf(`"+%s"`, fullTextSubject) // match phrase, not all words in text will match only consecutive matches of words in phrase
-}
 
 func buildVariableQuerySubjects(subjects []string) ([]interface{}, int) {
 	numSubjects := len(subjects)
@@ -75,11 +63,6 @@ type SKCDatabaseAccessObject interface {
 	GetSKCDBVersion(context.Context) (string, error)
 
 	GetCardsFoundInProduct(context.Context, string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError)
-
-	GetOccurrenceOfCardNameInAllCardEffect(context.Context, string, string) ([]cModel.YGOCard, *cModel.APIError)
-
-	GetInArchetypeSupportUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
-	GetArchetypeExclusionsUsingCardText(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)
 
 	GetDesiredProductInDBUsingID(context.Context, string) (*cModel.YGOProduct, *cModel.APIError)
 	GetDesiredProductInDBUsingMultipleProductIDs(context.Context, []string) (cModel.BatchProductData[cModel.ProductIDs], *cModel.APIError)
@@ -157,43 +140,6 @@ func (imp SKCDAOImplementation) GetCardsFoundInProduct(ctx context.Context, prod
 	}
 
 	return cModel.BatchCardData[cModel.CardIDs]{CardInfo: cardData}, nil
-}
-
-// TODO: document
-// TODO: find way to make code more readable
-func (imp SKCDAOImplementation) GetOccurrenceOfCardNameInAllCardEffect(ctx context.Context, cardName string, cardId string) ([]cModel.YGOCard, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info(fmt.Sprintf("Retrieving card data from DB for all cards that reference card %s in their text", cardName))
-
-	if rows, err := skcDBConn.Query(findRelatedCardsUsingCardEffect, convertToFullText(cardName), cardId); err != nil {
-		return nil, handleQueryError(logger, err)
-	} else {
-		return parseRowsForCard(ctx, rows)
-	}
-}
-
-func (imp SKCDAOImplementation) GetInArchetypeSupportUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info("Retrieving card data from DB for all cards treated as archetype")
-
-	if rows, err := skcDBConn.Query(queryCardsTreatedAsArchetype, fmt.Sprintf(`+"This card is always treated as" +"%s card"`, archetypeName)); err != nil {
-		return nil, handleQueryError(logger, err)
-	} else {
-		c, err := parseRowsForCard(ctx, rows)
-		return c, err
-	}
-}
-
-func (imp SKCDAOImplementation) GetArchetypeExclusionsUsingCardText(ctx context.Context, archetypeName string) ([]cModel.YGOCard, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
-	logger.Info("Retrieving card data from DB for all cards explicitly not treated as archetype")
-
-	if rows, err := skcDBConn.Query(queryCardsNotTreatedAsArchetype, fmt.Sprintf(`+"This card is not treated as" +"%s card"`, archetypeName)); err != nil {
-		return nil, handleQueryError(logger, err)
-	} else {
-		c, err := parseRowsForCard(ctx, rows)
-		return c, err
-	}
 }
 
 func parseRowsForCard(ctx context.Context, rows *sql.Rows) ([]cModel.YGOCard, *cModel.APIError) {

@@ -69,11 +69,35 @@ func (svc YGOServiceMock) GetCardsByName(ctx context.Context, cardNames model.Ca
 	return &model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
 
+func (svc YGOServiceMock) SearchForCardRefUsingEffectProto(ctx context.Context, cardName string, cardID string) (*ygo.CardList, *model.APIError) {
+	panic(ni)
+}
+
+func (svc YGOServiceMock) SearchForCardRefUsingEffect(ctx context.Context, cardName string, cardID string) ([]model.YGOCard, *model.APIError) {
+	panic(ni)
+}
+
 func (svc YGOServiceMock) GetArchetypalCardsUsingCardNameProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
 func (svc YGOServiceMock) GetArchetypalCardsUsingCardName(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
+	panic(ni)
+}
+
+func (svc YGOServiceMock) GetExplicitArchetypalInclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
+	panic(ni)
+}
+
+func (svc YGOServiceMock) GetExplicitArchetypalInclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
+	panic(ni)
+}
+
+func (svc YGOServiceMock) GetExplicitArchetypalExclusionsProto(ctx context.Context, archetype string) (*ygo.CardList, *model.APIError) {
+	panic(ni)
+}
+
+func (svc YGOServiceMock) GetExplicitArchetypalExclusions(ctx context.Context, archetype string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 

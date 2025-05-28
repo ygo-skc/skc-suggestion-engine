@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	maxPoolSize = 30
+	minPoolSize = 5
+	maxPoolSize = 50
 )
 
 // Connect to SKC database.
@@ -42,6 +43,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 	if client, err := mongo.Connect(options.Client().
 		ApplyURI(uri).
 		SetAuth(credential).
+		SetMinPoolSize(minPoolSize).
 		SetMaxPoolSize(maxPoolSize).
 		SetMaxConnIdleTime(20 * time.Minute).
 		SetTimeout(2 * time.Second).

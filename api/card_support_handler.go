@@ -49,7 +49,7 @@ func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupp
 	var s []cModel.YGOCard
 	var err *cModel.APIError
 
-	if s, err = skcDBInterface.GetOccurrenceOfCardNameInAllCardEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
+	if s, err = downstream.YGOService.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
 		if len(s) == 0 {
 			logger.Warn("No support found")
 			return support, nil
