@@ -37,7 +37,7 @@ func validateReferences(card cModel.YGOCardREST, expectedNamedReferences []model
 func TestGetSuggestions(t *testing.T) {
 	// setup
 	assert := assert.New(t)
-	downstream.YGOService = skc_testing.YGOServiceMock{}
+	downstream.YGOClient = skc_testing.YGOServiceMock{}
 	skcSuggestionEngineDBInterface = skc_testing.SKCSuggestionEngineDAOImplementation{}
 
 	ccIDs := skc_testing.CardColors
