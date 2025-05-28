@@ -38,11 +38,11 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := downstream.YGOService.GetCardByID(ctx, cardID); err != nil {
+	if cardToGetSuggestionsFor, err := downstream.YGOClient.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := downstream.YGOService.GetCardColorsProto(ctx) // retrieve card color IDs
+		ccIDs, _ := downstream.YGOClient.GetCardColorsProto(ctx) // retrieve card color IDs
 		suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
 
 		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
@@ -145,7 +145,7 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDat
 			cModel.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := downstream.YGOService.GetCardsByName(ctx, tokens)
+		batchCardData, _ := downstream.YGOClient.GetCardsByName(ctx, tokens)
 
 		for _, token := range tokens {
 			// if we already searched the token before we don't need to waste time re-searching it in DB

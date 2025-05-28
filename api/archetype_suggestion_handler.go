@@ -56,11 +56,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		make(chan archetypeResults), make(chan archetypeResults)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
-		downstream.YGOService.GetArchetypalCardsUsingCardName)
+		downstream.YGOClient.GetArchetypalCardsUsingCardName)
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingTextChannel,
-		downstream.YGOService.GetExplicitArchetypalInclusions)
+		downstream.YGOClient.GetExplicitArchetypalInclusions)
 	go getArchetypeSuggestion(ctx, archetypeName, exclusionsChannel,
-		downstream.YGOService.GetExplicitArchetypalExclusions)
+		downstream.YGOClient.GetExplicitArchetypalExclusions)
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
 	for i := 0; i < 3; i++ {

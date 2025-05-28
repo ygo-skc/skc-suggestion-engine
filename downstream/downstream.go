@@ -4,18 +4,17 @@ import (
 	"log"
 
 	"github.com/ygo-skc/skc-go/common/client"
-	"github.com/ygo-skc/skc-go/common/service"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 )
 
 var (
-	YGOService service.YGOService
+	YGOClient client.YGOClientImp
 )
 
-func CreateYGOServiceClients() {
-	if client, err := client.CreateCardServiceClient("ygo-service.skc.cards", cUtil.EnvMap["YGO_SERVICE_HOST"]); err != nil {
+func ConnectToYGOService() {
+	if c, err := client.CreateCardServiceClient("ygo-service.skc.cards", cUtil.EnvMap["YGO_SERVICE_HOST"]); err != nil {
 		log.Fatalf("Failed to connect to ygo-service: %v", err)
 	} else {
-		YGOService = service.NewYGOServiceV1(*client)
+		YGOClient = client.NewYGOClientImpV1(*c)
 	}
 }
