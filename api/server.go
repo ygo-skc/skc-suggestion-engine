@@ -28,8 +28,7 @@ const (
 var (
 	ipDB *ip2location.DB
 
-	skcDBInterface                 db.SKCDatabaseAccessObject = db.SKCDAOImplementation{}
-	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO  = db.SKCSuggestionEngineDAOImplementation{}
+	skcSuggestionEngineDBInterface db.SKCSuggestionEngineDAO = db.SKCSuggestionEngineDAOImplementation{}
 
 	serverAPIKey    string
 	chicagoLocation *time.Location

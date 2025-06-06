@@ -8,6 +8,7 @@ import (
 
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 )
 
 const (
@@ -21,15 +22,15 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	downstreamHealth := []cModel.DownstreamItem{}
 
-	var skcDBVersion string
+	var ygoServiceVersion string
 	var skcSuggestionDBVersion string
 
 	// get status on SKC DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	if dbVersion, err := skcDBInterface.GetSKCDBVersion(ctx); err != nil {
-		downstreamHealth = append(downstreamHealth, cModel.DownstreamItem{ServiceName: "SKC API DB", Status: cModel.Down})
+	if ygoServiceStatus, err := downstream.YGO.HealthService.GetAPIStatus(ctx); err != nil {
+		downstreamHealth = append(downstreamHealth, cModel.DownstreamItem{ServiceName: "YGO Service", Status: cModel.Down})
 	} else {
-		downstreamHealth = append(downstreamHealth, cModel.DownstreamItem{ServiceName: "SKC API DB", Status: cModel.Up})
-		skcDBVersion = dbVersion
+		downstreamHealth = append(downstreamHealth, cModel.DownstreamItem{ServiceName: "YGO Service", Status: cModel.Up, Version: ygoServiceStatus.Version})
+		ygoServiceVersion = ygoServiceStatus.Version
 	}
 
 	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
@@ -40,9 +41,9 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 		skcSuggestionDBVersion = dbVersion
 	}
 
-	status := cModel.APIHealth{Version: "1.7.3", Downstream: downstreamHealth}
+	status := cModel.APIHealth{Version: "1.8.0", Downstream: downstreamHealth}
 
-	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", skcDBVersion, skcSuggestionDBVersion))
+	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", ygoServiceVersion, skcSuggestionDBVersion))
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(status)
 }

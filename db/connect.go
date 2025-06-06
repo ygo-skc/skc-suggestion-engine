@@ -1,7 +1,6 @@
 package db
 
 import (
-	"database/sql"
 	"fmt"
 	"log"
 	"time"
@@ -17,20 +16,6 @@ const (
 	minPoolSize = 5
 	maxPoolSize = 50
 )
-
-// Connect to SKC database.
-func EstablishDBConn() {
-	uri := "%s:%s@tcp(%s)/%s"
-	dataSourceName := fmt.Sprintf(uri, cUtil.EnvMap["SKC_DB_USERNAME"], cUtil.EnvMap["SKC_DB_PASSWORD"], cUtil.EnvMap["SKC_DB_HOST"], cUtil.EnvMap["SKC_DB_NAME"])
-
-	var err error
-	if skcDBConn, err = sql.Open("mysql", dataSourceName); err != nil {
-		log.Fatalln("Error occurred while trying to establish DB connection: ", err)
-	}
-
-	skcDBConn.SetMaxOpenConns(maxPoolSize)
-	skcDBConn.SetConnMaxIdleTime(10 * time.Minute)
-}
 
 func EstablishSKCSuggestionEngineDBConn() {
 	certificateKeyFilePath := "./certs/skc-suggestion-engine-db.pem"

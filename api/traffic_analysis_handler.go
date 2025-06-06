@@ -12,6 +12,7 @@ import (
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-go/common/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
@@ -52,7 +53,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 	case model.ProductResource:
-		if _, err := skcDBInterface.GetDesiredProductInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := downstream.YGO.ProductService.GetProductSummaryByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Product resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -142,37 +143,31 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 
 	switch r {
 	case model.CardResource:
-		// TODO: can this be removed once product db functionality is moved to skc-go?
-		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-			c, err := downstream.YGO.CardService.GetCardsByID(ctx, cardIDs)
-			return *c, err
-		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, cb2, c)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, c)
 		return c, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
-		pdm := &cModel.BatchProductData[cModel.ProductIDs]{}
-		go fetchResourceInfo[cModel.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
+		pdm := &ygo.Products{}
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByIDProto, c)
 		return c, func(tm []model.TrendingMetric) {
-			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
+			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.Products)
 		}
 	}
 	return nil, nil
 }
 
-func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric,
-	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}
 }
 
-func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx context.Context,
-	metrics []model.TrafficResourceUtilizationMetric, bathData *BD,
-	fetchResourceFromDB func(context.Context, []string) (BD, *cModel.APIError), c chan<- *cModel.APIError) {
-	rv := make([]string, len(metrics))
+func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchCardData[IS] | ygo.Products](ctx context.Context,
+	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
+	fetchResourceFromDB func(context.Context, IS) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
+	rv := make(IS, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
@@ -181,7 +176,7 @@ func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx c
 		cUtil.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
-		*bathData = bri
+		*batchData = bri
 	}
 
 	c <- nil

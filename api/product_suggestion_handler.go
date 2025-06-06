@@ -28,9 +28,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])
 	go func() {
-		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(ctx, productID)
-		cardsInProduct.UnknownResources = make(cModel.CardIDs, 0) // by default, no unknown ids
-		cardsInProductChan <- cardsInProduct
+		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
+		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents)
 	}()
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
