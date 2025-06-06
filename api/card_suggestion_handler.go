@@ -34,8 +34,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSuggestionsOp),
-		cardSuggestionsOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
 	if cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
@@ -69,7 +68,7 @@ func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOC
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
-		cUtil.LoggerFromContext(ctx).Debug("Not and extra deck monster")
+		cUtil.RetrieveLogger(ctx).Debug("Not and extra deck monster")
 	}
 	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 

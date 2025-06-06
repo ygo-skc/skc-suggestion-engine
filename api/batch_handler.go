@@ -22,7 +22,7 @@ const (
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardInfoOp), batchCardInfoOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
 	batchCardInfo := &cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
@@ -42,7 +42,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 
 func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *http.Request, nothingToProcessBody interface{},
 	op string) *cModel.BatchCardIDs {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
 		logger.Error(fmt.Sprintf("Error occurred while reading batch %s request body: Error %v", op, err))
@@ -67,9 +67,7 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(
-		context.Background(), apiName, batchCardSuggestionsOp),
-		batchCardSuggestionsOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
@@ -174,7 +172,7 @@ func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []mod
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSupportOp), batchCardSupportOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
 	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {

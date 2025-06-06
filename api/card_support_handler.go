@@ -24,9 +24,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := util.NewRequestSetup(
-		cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
-		cardSupportOp, slog.String("card_id", cardID))
+	logger, ctx := util.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
 	if cardToGetSupportFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
@@ -44,7 +42,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupport, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
 	var s []cModel.YGOCard
 	var err *cModel.APIError

@@ -22,8 +22,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	productID := pathVars["productID"]
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, productCardSuggestionOp),
-		productCardSuggestionOp, slog.String("product_id", productID))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
+		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
 	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])

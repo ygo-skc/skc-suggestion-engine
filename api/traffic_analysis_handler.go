@@ -25,8 +25,7 @@ const (
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trafficDataSubmissionOp),
-		trafficDataSubmissionOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -91,8 +90,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trendingDataOp),
-		trendingDataOp, slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
@@ -173,7 +171,7 @@ func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchCardData[IS] | 
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		cUtil.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
+		cUtil.RetrieveLogger(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
 		*batchData = bri
