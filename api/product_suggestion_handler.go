@@ -29,7 +29,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])
 	go func() {
 		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents)
+		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
 	}()
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs

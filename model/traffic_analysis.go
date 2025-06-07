@@ -3,6 +3,7 @@ package model
 import (
 	"time"
 
+	cModel "github.com/ygo-skc/skc-go/common/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
@@ -59,7 +60,7 @@ type Trending struct {
 }
 
 type TrendingMetric struct {
-	Resource    interface{} `json:"resource"`
-	Occurrences int         `json:"occurrences"`
-	Change      int         `json:"change"`
+	Resource    cModel.YGOResource `json:"resource"`
+	Occurrences int                `json:"occurrences"`
+	Change      int                `json:"change"`
 }

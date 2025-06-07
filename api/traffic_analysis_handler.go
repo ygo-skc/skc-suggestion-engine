@@ -12,7 +12,6 @@ import (
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
-	"github.com/ygo-skc/skc-go/common/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
@@ -147,10 +146,10 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
-		pdm := &ygo.Products{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByIDProto, c)
+		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, c)
 		return c, func(tm []model.TrendingMetric) {
-			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.Products)
+			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
 	}
 	return nil, nil
@@ -162,7 +161,7 @@ func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metri
 	}
 }
 
-func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchCardData[IS] | ygo.Products](ctx context.Context,
+func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchCardData[IS] | cModel.BatchProductSummaryData[IS]](ctx context.Context,
 	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
 	fetchResourceFromDB func(context.Context, IS) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
 	rv := make(IS, len(metrics))
