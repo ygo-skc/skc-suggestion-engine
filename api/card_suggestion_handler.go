@@ -19,9 +19,7 @@ import (
 )
 
 var (
-	quotedStringRegex  = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
-	noBatchSuggestions = model.BatchCardSuggestions[cModel.CardIDs]{NamedMaterials: []model.CardReference{}, NamedReferences: []model.CardReference{}, MaterialArchetypes: []string{},
-		ReferencedArchetypes: []string{}, UnknownResources: []string{}, FalsePositives: []string{}}
+	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
 )
 
 const (

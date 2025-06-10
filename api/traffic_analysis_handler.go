@@ -161,10 +161,10 @@ func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metri
 	}
 }
 
-func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchCardData[IS] | cModel.BatchProductSummaryData[IS]](ctx context.Context,
+func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | cModel.BatchProductSummaryData[RK]](ctx context.Context,
 	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
-	fetchResourceFromDB func(context.Context, IS) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
-	rv := make(IS, len(metrics))
+	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
+	rv := make(RK, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
