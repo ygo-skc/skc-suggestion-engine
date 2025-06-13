@@ -19,9 +19,7 @@ import (
 )
 
 var (
-	quotedStringRegex  = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
-	noBatchSuggestions = model.BatchCardSuggestions[cModel.CardIDs]{NamedMaterials: []model.CardReference{}, NamedReferences: []model.CardReference{}, MaterialArchetypes: []string{},
-		ReferencedArchetypes: []string{}, UnknownResources: []string{}, FalsePositives: []string{}}
+	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
 )
 
 const (
@@ -34,15 +32,14 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardSuggestionsOp),
-		cardSuggestionsOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := downstream.YGOClient.GetCardByID(ctx, cardID); err != nil {
+	if cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := downstream.YGOClient.GetCardColorsProto(ctx) // retrieve card color IDs
+		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 		suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
 
 		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
@@ -69,7 +66,7 @@ func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOC
 		suggestions.NamedMaterials = []model.CardReference{}
 		suggestions.MaterialArchetypes = []string{}
 
-		cUtil.LoggerFromContext(ctx).Debug("Not and extra deck monster")
+		cUtil.RetrieveLogger(ctx).Debug("Not and extra deck monster")
 	}
 	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
 
@@ -145,7 +142,7 @@ func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDat
 			cModel.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := downstream.YGOClient.GetCardsByName(ctx, tokens)
+		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
 
 		for _, token := range tokens {
 			// if we already searched the token before we don't need to waste time re-searching it in DB

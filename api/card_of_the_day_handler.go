@@ -18,7 +18,7 @@ const (
 )
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, cardOfTheDayOp), cardOfTheDayOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
 	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))
@@ -35,7 +35,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := downstream.YGOClient.GetCardByID(ctx, cardOfTheDay.CardID); err != nil {
+	if card, err := downstream.YGO.CardService.GetCardByID(ctx, cardOfTheDay.CardID); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
@@ -48,7 +48,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 }
 
 func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *cModel.APIError {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	logger.Info("There was no COTD picked for today - getting random card")
 	e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching new card of the day."}
 
@@ -60,7 +60,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 
 	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
 
-	if randomCard, err := downstream.YGOClient.GetRandomCardProto(ctx, previousCOTDData); err != nil {
+	if randomCard, err := downstream.YGO.CardService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e
 	} else {
 		cotd.CardID = randomCard.ID

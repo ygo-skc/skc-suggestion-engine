@@ -22,18 +22,17 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	productID := pathVars["productID"]
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, productCardSuggestionOp),
-		productCardSuggestionOp, slog.String("product_id", productID))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
+		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
 	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])
 	go func() {
-		cardsInProduct, _ := skcDBInterface.GetCardsFoundInProduct(ctx, productID)
-		cardsInProduct.UnknownResources = make(cModel.CardIDs, 0) // by default, no unknown ids
-		cardsInProductChan <- cardsInProduct
+		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
+		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
 	}()
 
-	ccIDs, _ := downstream.YGOClient.GetCardColorsProto(ctx) // retrieve card color IDs
+	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 
 	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
 	var support model.BatchCardSupport[cModel.CardIDs]

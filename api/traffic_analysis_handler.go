@@ -24,8 +24,7 @@ const (
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trafficDataSubmissionOp),
-		trafficDataSubmissionOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -45,14 +44,14 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := downstream.YGOClient.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := downstream.YGO.CardService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
 			return
 		}
 	case model.ProductResource:
-		if _, err := skcDBInterface.GetDesiredProductInDBUsingID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := downstream.YGO.ProductService.GetProductSummaryByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error(fmt.Sprintf("Product resource %s not valid", trafficData.ResourceUtilized.Value))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
@@ -90,8 +89,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
 
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, trendingDataOp),
-		trendingDataOp, slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
@@ -142,19 +140,14 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 
 	switch r {
 	case model.CardResource:
-		// TODO: can this be removed once product db functionality is moved to skc-go?
-		cb2 := func(ctx context.Context, cardIDs []string) (cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
-			c, err := downstream.YGOClient.GetCardsByID(ctx, cardIDs)
-			return *c, err
-		}
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo[cModel.CardIDs](ctx, metricsForCurrentPeriod, cdm, cb2, c)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, c)
 		return c, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
-		pdm := &cModel.BatchProductData[cModel.ProductIDs]{}
-		go fetchResourceInfo[cModel.ProductIDs](ctx, metricsForCurrentPeriod, pdm, skcDBInterface.GetDesiredProductInDBUsingMultipleProductIDs, c)
+		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, c)
 		return c, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
@@ -162,26 +155,25 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsFo
 	return nil, nil
 }
 
-func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric,
-	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
+func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {
 	for ind := range tm {
 		tm[ind].Resource = dataMap[metricsForCurrentPeriod[ind].ResourceValue]
 	}
 }
 
-func fetchResourceInfo[IS cModel.IdentifierSlice, BD cModel.BatchData[IS]](ctx context.Context,
-	metrics []model.TrafficResourceUtilizationMetric, bathData *BD,
-	fetchResourceFromDB func(context.Context, []string) (BD, *cModel.APIError), c chan<- *cModel.APIError) {
-	rv := make([]string, len(metrics))
+func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | cModel.BatchProductSummaryData[RK]](ctx context.Context,
+	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
+	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
+	rv := make(RK, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
 	}
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		cUtil.LoggerFromContext(ctx).Info("Could not fetch data for trending resources")
+		cUtil.RetrieveLogger(ctx).Info("Could not fetch data for trending resources")
 		c <- err
 	} else {
-		*bathData = bri
+		*batchData = bri
 	}
 
 	c <- nil

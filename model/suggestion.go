@@ -18,13 +18,13 @@ type CardSuggestions struct {
 	ReferencedArchetypes []string        `json:"referencedArchetypes"`
 }
 
-type BatchCardSuggestions[IS cModel.IdentifierSlice] struct {
+type BatchCardSuggestions[RK cModel.YGOResourceKey] struct {
 	NamedMaterials       []CardReference `json:"namedMaterials"`
 	NamedReferences      []CardReference `json:"namedReferences"`
 	MaterialArchetypes   []string        `json:"materialArchetypes"`
 	ReferencedArchetypes []string        `json:"referencedArchetypes"`
-	UnknownResources     IS              `json:"unknownResources"`
-	FalsePositives       IS              `json:"falsePositives"`
+	UnknownResources     RK              `json:"unknownResources"`
+	FalsePositives       RK              `json:"falsePositives"`
 }
 
 type CardSupport struct {
@@ -33,16 +33,16 @@ type CardSupport struct {
 	MaterialFor  []CardReference `json:"materialFor"`
 }
 
-type BatchCardSupport[IS cModel.IdentifierSlice] struct {
+type BatchCardSupport[RK cModel.YGOResourceKey] struct {
 	ReferencedBy     []CardReference `json:"referencedBy"`
 	MaterialFor      []CardReference `json:"materialFor"`
-	UnknownResources IS              `json:"unknownResources"`
-	FalsePositives   IS              `json:"falsePositives"`
+	UnknownResources RK              `json:"unknownResources"`
+	FalsePositives   RK              `json:"falsePositives"`
 }
 
-type ProductSuggestions[IS cModel.IdentifierSlice] struct {
-	Suggestions BatchCardSuggestions[IS] `json:"suggestions"`
-	Support     BatchCardSupport[IS]     `json:"support"`
+type ProductSuggestions[RK cModel.YGOResourceKey] struct {
+	Suggestions BatchCardSuggestions[RK] `json:"suggestions"`
+	Support     BatchCardSupport[RK]     `json:"support"`
 }
 
 type ArchetypalSuggestions struct {

@@ -51,7 +51,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersio
 	defer cancel()
 
 	if err := skcSuggestionDB.RunCommand(ctx, command).Decode(&commandResult); err != nil {
-		cUtil.LoggerFromContext(ctx).Error(fmt.Sprintf("Error getting SKC Suggestion DB version %v", err))
+		cUtil.RetrieveLogger(ctx).Error(fmt.Sprintf("Error getting SKC Suggestion DB version %v", err))
 		return "", err
 	} else {
 		return fmt.Sprintf("%v", commandResult["version"]), nil
@@ -60,7 +60,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersio
 
 // Will update the database with a new traffic record.
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *cModel.APIError {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	logger.Info(fmt.Sprintf("Inserting traffic data for resource %+v and system %+v.", ta.ResourceUtilized, ta.Source))
 
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -77,7 +77,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx co
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	ctx context.Context, resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
@@ -134,7 +134,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
@@ -152,7 +152,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx contex
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
@@ -176,7 +176,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx cont
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(ctx context.Context, version int) ([]string, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
@@ -206,7 +206,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDa
 }
 
 func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *cModel.APIError {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 

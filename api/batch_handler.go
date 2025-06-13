@@ -22,14 +22,12 @@ const (
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardInfoOp), batchCardInfoOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
-	batchCardInfo := &cModel.BatchCardData[cModel.CardIDs]{CardInfo: cModel.CardDataMap{}, UnknownResources: cModel.CardIDs{}}
-	var err *cModel.APIError
-	if reqBody := batchRequestValidator(ctx, res, req, batchCardInfo, "card info"); reqBody == nil {
+	if reqBody := batchRequestValidator[cModel.CardIDs, cModel.BatchCardData[cModel.CardIDs]](ctx, res, req); reqBody == nil {
 		return
-	} else if batchCardInfo, err = downstream.YGOClient.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
@@ -40,12 +38,12 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *http.Request, nothingToProcessBody interface{},
-	op string) *cModel.BatchCardIDs {
-	logger := cUtil.LoggerFromContext(ctx)
+func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] | model.BatchCardSuggestions[RK] | model.BatchCardSupport[RK]](
+	ctx context.Context, res http.ResponseWriter, req *http.Request) *cModel.BatchCardIDs {
+	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		logger.Error(fmt.Sprintf("Error occurred while reading batch %s request body: Error %v", op, err))
+		logger.Error(fmt.Sprintf("Error occurred while reading batch request body: Error %v", err))
 		cModel.HandleServerResponse(cModel.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return nil
 	}
@@ -59,7 +57,34 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 	if len(reqBody.CardIDs) == 0 {
 		logger.Warn("Nothing to process - missing cardID data")
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(nothingToProcessBody)
+
+		var empty T
+		switch any(empty).(type) {
+		case cModel.BatchCardData[RK]:
+			json.NewEncoder(res).Encode(
+				cModel.BatchCardData[RK]{CardInfo: make(cModel.CardDataMap, 0), UnknownResources: make(RK, 0)},
+			)
+		case model.BatchCardSuggestions[RK]:
+			json.NewEncoder(res).Encode(
+				model.BatchCardSuggestions[RK]{
+					NamedMaterials:       make([]model.CardReference, 0),
+					NamedReferences:      make([]model.CardReference, 0),
+					MaterialArchetypes:   make([]string, 0),
+					ReferencedArchetypes: make([]string, 0),
+					UnknownResources:     make(RK, 0),
+					FalsePositives:       make(RK, 0),
+				},
+			)
+		case model.BatchCardSupport[RK]:
+			json.NewEncoder(res).Encode(
+				model.BatchCardSupport[RK]{
+					ReferencedBy:     make([]model.CardReference, 0),
+					MaterialFor:      make([]model.CardReference, 0),
+					UnknownResources: make(RK, 0),
+					FalsePositives:   make(RK, 0),
+				},
+			)
+		}
 		return nil
 	}
 
@@ -67,18 +92,16 @@ func batchRequestValidator(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(
-		context.Background(), apiName, batchCardSuggestionsOp),
-		batchCardSuggestionsOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
-	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "suggestion"); reqBody == nil {
+	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSuggestions[cModel.CardIDs]](ctx, res, req); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := downstream.YGOClient.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := downstream.YGOClient.GetCardColorsProto(ctx) // retrieve card color IDs
+		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.Values)
 
 		res.WriteHeader(http.StatusOK)
@@ -174,12 +197,12 @@ func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []mod
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.NewRequestSetup(cUtil.ContextWithMetadata(context.Background(), apiName, batchCardSupportOp), batchCardSupportOp)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
-	if reqBody := batchRequestValidator(ctx, res, req, noBatchSuggestions, "support"); reqBody == nil {
+	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSupport[cModel.CardIDs]](ctx, res, req); reqBody == nil {
 		return
-	} else if suggestionSubjectsCardData, err := downstream.YGOClient.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -200,7 +223,7 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 		UnknownResources: suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
-	ccIDs, _ := downstream.YGOClient.GetCardColorsProto(ctx) // retrieve card color IDs
+	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 
 	for s := range supportChan {
 		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,

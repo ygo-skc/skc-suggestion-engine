@@ -25,7 +25,6 @@ func init() {
 
 func main() {
 	downstream.ConnectToYGOService()
-	db.EstablishDBConn()
 	db.EstablishSKCSuggestionEngineDBConn()
 	go api.RunHttpServer()
 	select {}

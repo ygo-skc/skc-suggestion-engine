@@ -10,7 +10,6 @@ import (
 
 	"github.com/gorilla/mux"
 	cModel "github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/util"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -24,12 +23,10 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	cardID := pathVars["cardID"]
 
-	logger, ctx := util.NewRequestSetup(
-		cUtil.ContextWithMetadata(context.Background(), apiName, cardSupportOp),
-		cardSupportOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := downstream.YGOClient.GetCardByID(ctx, cardID); err != nil {
+	if cardToGetSupportFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -44,12 +41,12 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupport, *cModel.APIError) {
-	logger := cUtil.LoggerFromContext(ctx)
+	logger := cUtil.RetrieveLogger(ctx)
 	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
 	var s []cModel.YGOCard
 	var err *cModel.APIError
 
-	if s, err = downstream.YGOClient.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
+	if s, err = downstream.YGO.CardService.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
 		if len(s) == 0 {
 			logger.Warn("No support found")
 			return support, nil

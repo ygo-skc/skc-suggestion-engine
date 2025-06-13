@@ -29,10 +29,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	pathVars := mux.Vars(req)
 	archetypeName := pathVars["archetypeName"]
 
-	logger, ctx := cUtil.NewRequestSetup(
-		cUtil.ContextWithMetadata(context.Background(), apiName, archetypeSupportOp),
-		archetypeSupportOp, slog.String("archetype_name", archetypeName),
-	)
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportOp, slog.String("archetype_name", archetypeName))
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
@@ -56,11 +53,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		make(chan archetypeResults), make(chan archetypeResults)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
-		downstream.YGOClient.GetArchetypalCardsUsingCardName)
+		downstream.YGO.CardService.GetArchetypalCardsUsingCardName)
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingTextChannel,
-		downstream.YGOClient.GetExplicitArchetypalInclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalInclusions)
 	go getArchetypeSuggestion(ctx, archetypeName, exclusionsChannel,
-		downstream.YGOClient.GetExplicitArchetypalExclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalExclusions)
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
 	for i := 0; i < 3; i++ {
@@ -126,7 +123,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
-		cUtil.LoggerFromContext(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.GetName()))
+		cUtil.RetrieveLogger(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.GetName()))
 	}
 
 	newList := []cModel.YGOCard{}
