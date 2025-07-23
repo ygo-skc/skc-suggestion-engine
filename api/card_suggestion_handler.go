@@ -11,7 +11,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -29,8 +29,7 @@ const (
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	pathVars := mux.Vars(req)
-	cardID := pathVars["cardID"]
+	cardID := chi.URLParam(req, "cardID")
 
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")

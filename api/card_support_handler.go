@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -20,8 +20,7 @@ const (
 )
 
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
-	pathVars := mux.Vars(req)
-	cardID := pathVars["cardID"]
+	cardID := chi.URLParam(req, "cardID")
 
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
