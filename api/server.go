@@ -4,6 +4,7 @@ package api
 import (
 	"compress/gzip"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -163,10 +164,11 @@ func RunHttpServer() {
 // It combines the TLS certificate and CA bundle, and utilizes the private key.
 // Finally, it applies CORS middleware.
 func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
-	slog.Debug("Starting server in port 9000 (secured)")
-
 	cUtil.CombineCerts("certs")
-	if err := http.ListenAndServeTLS(":9000", "certs/concatenated.crt", "certs/private.key", corsOpts.Handler(router)); err != nil {
+	port := 9000
+	slog.Info(fmt.Sprintf("API starting on port %d", port))
+
+	if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", port), "certs/concatenated.crt", "certs/private.key", corsOpts.Handler(router)); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
 }
