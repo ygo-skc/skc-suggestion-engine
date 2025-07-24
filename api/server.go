@@ -115,27 +115,31 @@ func RunHttpServer() {
 	// common middleware
 	router.Use(commonResponseMiddleware)
 
-	// configure non-admin routes
 	router.Route(apiContext, func(r chi.Router) {
-		// unprotected routes
-		r.Get("/status", getAPIStatusHandler)
-		r.Post("/card-details", getBatchCardInfo)
-		r.Get("/card-of-the-day", getCardOfTheDay)
+		// configure non-admin routes
+		r.Group(func(r chi.Router) {
+			r.Get("/status", getAPIStatusHandler)
+			r.Post("/card-details", getBatchCardInfo)
+			r.Get("/card-of-the-day", getCardOfTheDay)
 
-		// suggestions
-		r.Get(`/card/{cardID:\d{8}}`, getCardSuggestionsHandler)
-		r.Post("/card", getBatchSuggestionsHandler)
+			// suggestions
+			r.Get(`/card/{cardID:\d{8}}`, getCardSuggestionsHandler)
+			r.Post("/card", getBatchSuggestionsHandler)
 
-		// support
-		r.Get(`/card/support/{cardID:\d{8}}`, getCardSupportHandler)
-		r.Post("/card/support", getBatchSupportHandler)
+			// support
+			r.Get(`/card/support/{cardID:\d{8}}`, getCardSupportHandler)
+			r.Post("/card/support", getBatchSupportHandler)
 
-		r.Get(`/product/{productID:[0-9A-Z]{3,4}}`, getProductSuggestionsHandler)
-		r.Get("/archetype/{archetypeName}", getArchetypeSupportHandler)
-		r.Get(`/trending/{resource:(?i)card|product}`, trending)
+			r.Get(`/product/{productID:[0-9A-Z]{3,4}}`, getProductSuggestionsHandler)
+			r.Get("/archetype/{archetypeName}", getArchetypeSupportHandler)
+			r.Get(`/trending/{resource:(?i)card|product}`, trending)
+		})
 
 		// admin routes
-		r.With(verifyAPIKeyMiddleware).Post("/traffic-analysis", submitNewTrafficDataHandler)
+		r.Group(func(r chi.Router) {
+			r.Use(verifyAPIKeyMiddleware)
+			r.Post("/traffic-analysis", submitNewTrafficDataHandler)
+		})
 	})
 
 	// Cors
@@ -144,7 +148,6 @@ func RunHttpServer() {
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
-			http.MethodPut,
 			http.MethodOptions,
 		},
 
