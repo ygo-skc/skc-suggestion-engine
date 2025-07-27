@@ -2,14 +2,13 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
-	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -86,8 +85,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func trending(res http.ResponseWriter, req *http.Request) {
-	pathVars := mux.Vars(req)
-	resourceName := model.ResourceName(strings.ToUpper(pathVars["resource"]))
+	resourceName := model.ResourceName(chi.URLParam(req, "resource"))
 
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")

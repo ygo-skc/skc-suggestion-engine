@@ -4,7 +4,6 @@ import (
 	"os"
 	"strings"
 
-	_ "github.com/go-sql-driver/mysql"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/api"
 	"github.com/ygo-skc/skc-suggestion-engine/db"

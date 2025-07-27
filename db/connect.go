@@ -3,6 +3,7 @@ package db
 import (
 	"fmt"
 	"log"
+	"log/slog"
 	"time"
 
 	cUtil "github.com/ygo-skc/skc-go/common/util"
@@ -45,4 +46,6 @@ func EstablishSKCSuggestionEngineDBConn() {
 	blackListCollection = skcSuggestionDB.Collection("blackList")
 	trafficAnalysisCollection = skcSuggestionDB.Collection("trafficAnalysis")
 	cardOfTheDayCollection = skcSuggestionDB.Collection("cardOfTheDay")
+
+	slog.Info("Connected to suggestion engine DB")
 }

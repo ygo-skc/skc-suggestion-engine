@@ -2,12 +2,12 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"sync"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -19,8 +19,7 @@ const (
 )
 
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	pathVars := mux.Vars(req)
-	productID := pathVars["productID"]
+	productID := chi.URLParam(req, "productID")
 
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
 		slog.String("product_id", productID))

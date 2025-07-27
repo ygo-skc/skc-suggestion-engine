@@ -2,13 +2,13 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	"github.com/gorilla/mux"
+	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -26,8 +26,7 @@ type archetypeResults struct {
 }
 
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
-	pathVars := mux.Vars(req)
-	archetypeName := pathVars["archetypeName"]
+	archetypeName := chi.URLParam(req, "archetypeName")
 
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportOp, slog.String("archetype_name", archetypeName))
 	logger.Info("Getting cards within archetype")

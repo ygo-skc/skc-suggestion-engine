@@ -3,7 +3,7 @@ package api
 
 import (
 	"compress/gzip"
-	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"log/slog"
@@ -12,7 +12,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/go-chi/chi/v5"
+	json "github.com/goccy/go-json"
 	"github.com/ip2location/ip2location-go/v9"
 	"github.com/rs/cors"
 	cModel "github.com/ygo-skc/skc-go/common/model"
@@ -98,8 +99,8 @@ func commonResponseMiddleware(next http.Handler) http.Handler {
 		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
 			res.Header().Set("Content-Encoding", "gzip")
 			zip := gzip.NewWriter(res)
-			defer zip.Close()
 			next.ServeHTTP(gzipResponseWriter{Writer: zip, ResponseWriter: res}, req)
+			zip.Close()
 		} else {
 			next.ServeHTTP(res, req)
 		}
@@ -110,31 +111,37 @@ func commonResponseMiddleware(next http.Handler) http.Handler {
 // This method should be called before the environment is set up as the API Key will be set according to the value found in environment
 func RunHttpServer() {
 	serverAPIKey = cUtil.EnvMap["API_KEY"] // configure API Key
-	router := mux.NewRouter()
-
-	// configure non-admin routes
-	unprotectedRoutes := router.PathPrefix(apiContext).Subrouter()
-	unprotectedRoutes.HandleFunc("/status", getAPIStatusHandler)
-	unprotectedRoutes.HandleFunc("/card-details", getBatchCardInfo).Methods(http.MethodPost).Name("Batch Card Data")
-	unprotectedRoutes.HandleFunc("/card-of-the-day", getCardOfTheDay).Methods(http.MethodGet).Name("Card of the Day")
-
-	unprotectedRoutes.HandleFunc("/card/{cardID:[0-9]{8}}", getCardSuggestionsHandler).Methods(http.MethodGet).Name("Card Suggestions")
-	unprotectedRoutes.HandleFunc("/card", getBatchSuggestionsHandler).Methods(http.MethodPost).Name("Batch Card Suggestions")
-	unprotectedRoutes.HandleFunc("/card/support/{cardID:[0-9]{8}}", getCardSupportHandler).Methods(http.MethodGet).Name("Card Support")
-	unprotectedRoutes.HandleFunc("/card/support", getBatchSupportHandler).Methods(http.MethodPost).Name("Batch Card Support")
-
-	unprotectedRoutes.HandleFunc("/product/{productID:[0-9A-Z]{3,4}}", getProductSuggestionsHandler).Methods(http.MethodGet).Name("Product Suggestion")
-
-	unprotectedRoutes.HandleFunc("/archetype/{archetypeName}", getArchetypeSupportHandler).Methods(http.MethodGet).Name("Archetype Suggestions")
-	unprotectedRoutes.HandleFunc("/trending/{resource:(?i)card|product}", trending).Methods(http.MethodGet).Name("Trending")
-
-	// admin routes
-	protectedRoutes := router.PathPrefix(apiContext).Subrouter()
-	protectedRoutes.Use(verifyAPIKeyMiddleware)
-	protectedRoutes.HandleFunc("/traffic-analysis", submitNewTrafficDataHandler).Methods(http.MethodPost).Name("Traffic Analysis")
+	router := chi.NewRouter()
 
 	// common middleware
 	router.Use(commonResponseMiddleware)
+
+	router.Route(apiContext, func(r chi.Router) {
+		// configure non-admin routes
+		r.Group(func(r chi.Router) {
+			r.Get("/status", getAPIStatusHandler)
+			r.Post("/card-details", getBatchCardInfo)
+			r.Get("/card-of-the-day", getCardOfTheDay)
+
+			// suggestions
+			r.Get(`/card/{cardID:\d{8}}`, getCardSuggestionsHandler)
+			r.Post("/card", getBatchSuggestionsHandler)
+
+			// support
+			r.Get(`/card/support/{cardID:\d{8}}`, getCardSupportHandler)
+			r.Post("/card/support", getBatchSupportHandler)
+
+			r.Get(`/product/{productID:[0-9A-Z]{3,4}}`, getProductSuggestionsHandler)
+			r.Get("/archetype/{archetypeName}", getArchetypeSupportHandler)
+			r.Get(`/trending/{resource:(?i)card|product}`, trending)
+		})
+
+		// admin routes
+		r.Group(func(r chi.Router) {
+			r.Use(verifyAPIKeyMiddleware)
+			r.Post("/traffic-analysis", submitNewTrafficDataHandler)
+		})
+	})
 
 	// Cors
 	corsOpts := cors.New(cors.Options{
@@ -142,7 +149,6 @@ func RunHttpServer() {
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
-			http.MethodPut,
 			http.MethodOptions,
 		},
 
@@ -157,11 +163,12 @@ func RunHttpServer() {
 // Configures and starts an HTTPS server with TLS encryption.
 // It combines the TLS certificate and CA bundle, and utilizes the private key.
 // Finally, it applies CORS middleware.
-func serveTLS(router *mux.Router, corsOpts *cors.Cors) {
-	slog.Debug("Starting server in port 9000 (secured)")
-
+func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 	cUtil.CombineCerts("certs")
-	if err := http.ListenAndServeTLS(":9000", "certs/concatenated.crt", "certs/private.key", corsOpts.Handler(router)); err != nil {
+	port := 9000
+	slog.Info(fmt.Sprintf("API starting on port %d", port))
+
+	if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", port), "certs/concatenated.crt", "certs/private.key", corsOpts.Handler(router)); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
 }

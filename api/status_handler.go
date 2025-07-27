@@ -2,10 +2,10 @@ package api
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 
+	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
@@ -41,7 +41,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 		skcSuggestionDBVersion = dbVersion
 	}
 
-	status := cModel.APIHealth{Version: "1.8.1", Downstream: downstreamHealth}
+	status := cModel.APIHealth{Version: "2.0.0", Downstream: downstreamHealth}
 
 	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", ygoServiceVersion, skcSuggestionDBVersion))
 	res.WriteHeader(http.StatusOK)
