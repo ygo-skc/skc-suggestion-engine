@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -90,29 +92,25 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
-	c1, c2 := make(chan *cModel.APIError), make(chan *cModel.APIError)
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
-
 	today := time.Now()
 	firstInterval, secondInterval := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
 
-	go getMetrics(ctx, resourceName, firstInterval, today, &metricsForCurrentPeriod, c1)
-	go getMetrics(ctx, resourceName, secondInterval, firstInterval, &metricsForLastPeriod, c2)
+	var wg sync.WaitGroup
+	wg.Add(2)
+	var e1, e2 atomic.Pointer[cModel.APIError]
+	go getMetrics(ctx, resourceName, firstInterval, today, &metricsForCurrentPeriod, &e1, &wg)
+	go getMetrics(ctx, resourceName, secondInterval, firstInterval, &metricsForLastPeriod, &e2, &wg)
 
 	// verify go routines exited with no errors
-	for i := 0; i < 2; i++ {
-		select {
-		case err := <-c1:
-			if err != nil {
-				err.HandleServerResponse(res)
-				return
-			}
-		case err := <-c2:
-			if err != nil {
-				err.HandleServerResponse(res)
-				return
-			}
-		}
+	wg.Wait()
+	if err := e1.Load(); err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+	if err := e2.Load(); err != nil {
+		err.HandleServerResponse(res)
+		return
 	}
 
 	if c3, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod); c3 == nil || addResourceInfoToTrendingMetric == nil {
@@ -201,8 +199,9 @@ func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtiliza
 }
 
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time,
-	td *[]model.TrafficResourceUtilizationMetric, c chan<- *cModel.APIError) {
+	td *[]model.TrafficResourceUtilizationMetric, e *atomic.Pointer[cModel.APIError], wg *sync.WaitGroup) {
+	defer wg.Done()
 	var err *cModel.APIError
 	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to)
-	c <- err
+	e.Store(err)
 }

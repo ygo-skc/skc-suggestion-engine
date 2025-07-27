@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
+	"sync/atomic"
 
 	"github.com/go-chi/chi/v5"
 	json "github.com/goccy/go-json"
@@ -25,22 +26,26 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
-	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])
-	go func() {
+	var cardsInProductPtr atomic.Pointer[cModel.BatchCardData[cModel.CardIDs]]
+	var wg sync.WaitGroup
+	wg.Add(1)
+	go func(products *atomic.Pointer[cModel.BatchCardData[cModel.CardIDs]], wg *sync.WaitGroup) {
+		defer wg.Done()
 		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
-	}()
+		products.Store(cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey))
+	}(&cardsInProductPtr, &wg)
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 
 	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
 	var support model.BatchCardSupport[cModel.CardIDs]
-	var wg sync.WaitGroup
+
+	wg.Wait()
+	cardsInProduct := cardsInProductPtr.Load()
 
 	wg.Add(2)
-	cardsInProduct := <-cardsInProductChan
-	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, cardsInProduct, ccIDs.Values) }()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, cardsInProduct) }()
+	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cardsInProduct, ccIDs.Values) }()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cardsInProduct) }()
 	wg.Wait()
 
 	res.WriteHeader(http.StatusOK)
