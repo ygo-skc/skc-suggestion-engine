@@ -113,15 +113,17 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	if c3, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod); c3 == nil || addResourceInfoToTrendingMetric == nil {
+	wg.Add(1)
+	if e, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod, &wg); e == nil || addResourceInfoToTrendingMetric == nil {
 		(&cModel.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
 		return
 	} else {
 		tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
 		trending := model.Trending{ResourceName: resourceName, Metrics: tm}
 
-		if err1 := <-c3; err1 != nil {
-			err1.HandleServerResponse(res)
+		wg.Wait()
+		if err := e.Load(); err != nil {
+			err.HandleServerResponse(res)
 			return
 		}
 
@@ -131,20 +133,21 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric) (chan *cModel.APIError, func([]model.TrendingMetric)) {
-	c := make(chan *cModel.APIError)
+func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName,
+	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, wg *sync.WaitGroup) (*atomic.Pointer[cModel.APIError], func([]model.TrendingMetric)) {
+	var e atomic.Pointer[cModel.APIError]
 
 	switch r {
 	case model.CardResource:
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, c)
-		return c, func(tm []model.TrendingMetric) {
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, &e, wg)
+		return &e, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, c)
-		return c, func(tm []model.TrendingMetric) {
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, &e, wg)
+		return &e, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
 	}
@@ -159,7 +162,9 @@ func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metri
 
 func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | cModel.BatchProductSummaryData[RK]](ctx context.Context,
 	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
-	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), c chan<- *cModel.APIError) {
+	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), e *atomic.Pointer[cModel.APIError], wg *sync.WaitGroup) {
+	defer wg.Done()
+
 	rv := make(RK, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -167,12 +172,12 @@ func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | c
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
 		cUtil.RetrieveLogger(ctx).Info("Could not fetch data for trending resources")
-		c <- err
+		e.Store(err)
 	} else {
 		*batchData = bri
 	}
 
-	c <- nil
+	e.Store(nil)
 }
 
 func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
