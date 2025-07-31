@@ -6,7 +6,6 @@ import (
 	"log/slog"
 	"net/http"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -94,35 +93,31 @@ func trending(res http.ResponseWriter, req *http.Request) {
 
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
 	today := time.Now()
-	firstInterval, secondInterval := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
+	dateCutoff1, dateCutoff2 := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
 
 	var wg sync.WaitGroup
-	wg.Add(2)
-	var e1, e2 atomic.Pointer[cModel.APIError]
-	go getMetrics(ctx, resourceName, firstInterval, today, &metricsForCurrentPeriod, &e1, &wg)
-	go getMetrics(ctx, resourceName, secondInterval, firstInterval, &metricsForLastPeriod, &e2, &wg)
+	awg1, awg2 := model.NewAtomicWaitGroup[cModel.APIError](&wg), model.NewAtomicWaitGroup[cModel.APIError](&wg)
+	go getMetrics(ctx, resourceName, dateCutoff1, today, &metricsForCurrentPeriod, awg1)
+	go getMetrics(ctx, resourceName, dateCutoff2, dateCutoff1, &metricsForLastPeriod, awg2)
 
 	// verify go routines exited with no errors
-	wg.Wait()
-	if err := e1.Load(); err != nil {
+	if err := awg1.Load(); err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
-	if err := e2.Load(); err != nil {
+	if err := awg2.Load(); err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
 
-	wg.Add(1)
-	if e, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod, &wg); e == nil || addResourceInfoToTrendingMetric == nil {
+	if awg, addResourceInfoToTrendingMetric := fetchResourceInfoAsync(ctx, resourceName, metricsForCurrentPeriod, &wg); awg == nil || addResourceInfoToTrendingMetric == nil {
 		(&cModel.APIError{StatusCode: 500, Message: "Using incorrect resource name."}).HandleServerResponse(res)
 		return
 	} else {
 		tm := determineTrendChange(metricsForCurrentPeriod, metricsForLastPeriod)
 		trending := model.Trending{ResourceName: resourceName, Metrics: tm}
 
-		wg.Wait()
-		if err := e.Load(); err != nil {
+		if err := awg.Load(); err != nil {
 			err.HandleServerResponse(res)
 			return
 		}
@@ -134,20 +129,19 @@ func trending(res http.ResponseWriter, req *http.Request) {
 }
 
 func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName,
-	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, wg *sync.WaitGroup) (*atomic.Pointer[cModel.APIError], func([]model.TrendingMetric)) {
-	var e atomic.Pointer[cModel.APIError]
-
+	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, wg *sync.WaitGroup) (*model.AtomicWaitGroup[cModel.APIError], func([]model.TrendingMetric)) {
+	awg := model.NewAtomicWaitGroup[cModel.APIError](wg)
 	switch r {
 	case model.CardResource:
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, &e, wg)
-		return &e, func(tm []model.TrendingMetric) {
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, awg)
+		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, &e, wg)
-		return &e, func(tm []model.TrendingMetric) {
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, awg)
+		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
 	}
@@ -162,9 +156,7 @@ func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metri
 
 func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | cModel.BatchProductSummaryData[RK]](ctx context.Context,
 	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
-	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), e *atomic.Pointer[cModel.APIError], wg *sync.WaitGroup) {
-	defer wg.Done()
-
+	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), awg *model.AtomicWaitGroup[cModel.APIError]) {
 	rv := make(RK, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -172,12 +164,12 @@ func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | c
 
 	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
 		cUtil.RetrieveLogger(ctx).Info("Could not fetch data for trending resources")
-		e.Store(err)
+		awg.Store(err)
 	} else {
 		*batchData = bri
 	}
 
-	e.Store(nil)
+	awg.Store(nil)
 }
 
 func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric,
@@ -204,9 +196,8 @@ func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtiliza
 }
 
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time,
-	td *[]model.TrafficResourceUtilizationMetric, e *atomic.Pointer[cModel.APIError], wg *sync.WaitGroup) {
-	defer wg.Done()
+	td *[]model.TrafficResourceUtilizationMetric, awg *model.AtomicWaitGroup[cModel.APIError]) {
 	var err *cModel.APIError
 	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to)
-	e.Store(err)
+	awg.Store(err)
 }
