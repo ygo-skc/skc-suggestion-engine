@@ -57,10 +57,10 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[string]uint32) model.CardSuggestions {
 	suggestions := model.CardSuggestions{
 		Card:                 subject,
-		NamedMaterials:       make([]model.CardReference, 0),
-		NamedReferences:      make([]model.CardReference, 0),
-		MaterialArchetypes:   make([]string, 0),
-		ReferencedArchetypes: make([]string, 0),
+		NamedMaterials:       make([]model.CardReference, 0, 5),
+		NamedReferences:      make([]model.CardReference, 0, 5),
+		MaterialArchetypes:   make([]string, 0, 5),
+		ReferencedArchetypes: make([]string, 0, 5),
 	}
 
 	sd := generateSuggestionData(ctx, quotedStringRegex.FindAllString(subject.GetEffect(), -1))
