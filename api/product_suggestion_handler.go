@@ -44,6 +44,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cardsInProduct) }()
 	wg.Wait()
 
+	logger.Info("Successfully retrieved product card suggestions")
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support})
 }
