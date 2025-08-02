@@ -128,10 +128,8 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.
 		MaterialArchetypes:   make([]string, 0),
 		ReferencedArchetypes: make([]string, 0)}
 	for s := range suggestionChan {
-		parseSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID,
-			suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
-		parseSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs,
-			suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
+		parseSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
+		parseSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
 		groupArchetypes(s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
 		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
 	}
