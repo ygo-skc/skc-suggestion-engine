@@ -230,7 +230,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
-	supportChan := make(chan model.CardSupport, 20)
+	supportChan := make(chan model.CardSupport)
 	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, supportChan, func(cardInfo cModel.YGOCard) model.CardSupport {
 		cardSupport, _ := getCardSupport(ctx, cardInfo)
 		return cardSupport
@@ -281,7 +281,7 @@ func fetchBatchSuggestions[T model.CardSupport | model.CardSuggestions](ctx cont
 		tasks = append(tasks, batchSuggestionTask[T]{card: cardInfo, resultChan: resultChan, process: process})
 	}
 
-	pool := *cUtil.NewWorkerPool(tasks, cUtil.WithContext(ctx), cUtil.WithWorkers(10))
+	pool := *cUtil.NewWorkerPool(tasks, cUtil.WithContext(ctx), cUtil.WithWorkers(15))
 	pool.Run()
 	close(resultChan)
 }
