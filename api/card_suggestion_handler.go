@@ -72,16 +72,18 @@ func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[s
 	return suggestions
 }
 
+// parses suggestion data by transforming it into a CardSuggestion object
 func parseSuggestionData(materialText string, effectText string, usd unparsedSuggestionData) model.CardSuggestions {
+	numArchetypes, numReferences := len(usd.archetypeSet), len(usd.namedReferencesByToken)
 	suggestions := model.CardSuggestions{
-		NamedMaterials:       make([]model.CardReference, 0, 5),
-		NamedReferences:      make([]model.CardReference, 0, 5),
-		MaterialArchetypes:   make([]string, 0, 5),
-		ReferencedArchetypes: make([]string, 0, 5),
+		NamedMaterials:       make([]model.CardReference, 0, numReferences),
+		NamedReferences:      make([]model.CardReference, 0, numReferences),
+		MaterialArchetypes:   make([]string, 0, numArchetypes),
+		ReferencedArchetypes: make([]string, 0, numArchetypes),
 	}
 
-	nonArchetypeMaterialTokens := parseTokensAsArchetype(materialText, usd.archetypeSet, &suggestions.MaterialArchetypes)
-	nonArchetypeReferenceTokens := parseTokensAsArchetype(effectText, usd.archetypeSet, &suggestions.ReferencedArchetypes)
+	nonArchetypeMaterialTokens := partitionTokensInCardText(materialText, usd.archetypeSet, &suggestions.MaterialArchetypes)
+	nonArchetypeReferenceTokens := partitionTokensInCardText(effectText, usd.archetypeSet, &suggestions.ReferencedArchetypes)
 
 	parseTokenAsCard(nonArchetypeMaterialTokens, usd.namedReferencesByToken, &suggestions.NamedMaterials)
 	parseTokenAsCard(nonArchetypeReferenceTokens, usd.namedReferencesByToken, &suggestions.NamedReferences)
@@ -89,12 +91,13 @@ func parseSuggestionData(materialText string, effectText string, usd unparsedSug
 	return suggestions
 }
 
-func parseTokensAsArchetype(text string, archetypeSet map[string]struct{}, archetypeList *[]string) map[string]int {
+// Uses card text and archetypes to create a list of unique archetypes and a map of non archetype tokens and their occurrence
+func partitionTokensInCardText(cardText string, archetypeSet map[string]struct{}, archetypesInCardText *[]string) map[string]int {
 	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
-	for _, token := range quotedStringRegex.FindAllString(text, -1) {
+	for _, token := range quotedStringRegex.FindAllString(cardText, -1) {
 		cModel.CleanupToken(&token)
-		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypeList, token) {
-			*archetypeList = append(*archetypeList, token)
+		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypesInCardText, token) {
+			*archetypesInCardText = append(*archetypesInCardText, token)
 		} else if !exists {
 			nonArchetypeTokens[token]++
 		}
@@ -102,6 +105,7 @@ func parseTokensAsArchetype(text string, archetypeSet map[string]struct{}, arche
 	return nonArchetypeTokens
 }
 
+// creates the suggestion references and their occurrence
 func parseTokenAsCard(tokenOccurrences map[string]int, namedReferencesByToken cModel.CardDataMap, references *[]model.CardReference) {
 	for token, occurrence := range tokenOccurrences {
 		*references = append(*references, model.CardReference{Occurrences: occurrence, Card: namedReferencesByToken[token]})

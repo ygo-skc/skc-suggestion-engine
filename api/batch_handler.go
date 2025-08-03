@@ -111,20 +111,19 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs],
-	ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
+func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs], ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
 	suggestionByCardName := generateBatchSuggestionData(ctx, subjects)
 
-	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}), make(map[string]struct{})
+	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference, 5), make(map[string]*model.CardReference, 5)
+	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}, 5), make(map[string]struct{}, 5)
 
 	suggestions := model.BatchCardSuggestions[cModel.CardIDs]{
 		UnknownResources:      subjects.UnknownResources,
 		IntersectingResources: make(cModel.CardIDs, 0, 5),
 		NamedMaterials:        make([]model.CardReference, 0, 5),
 		NamedReferences:       make([]model.CardReference, 0, 5),
-		MaterialArchetypes:    make([]string, 0),
-		ReferencedArchetypes:  make([]string, 0)}
+		MaterialArchetypes:    make([]string, 0, 5),
+		ReferencedArchetypes:  make([]string, 0, 5)}
 
 	for cardName, s := range suggestionByCardName {
 		model.RemoveSelfReference(cardName, &s.NamedReferences)
@@ -148,7 +147,8 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 }
 
 func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs]) map[string]model.CardSuggestions {
-	materialTextByCardName, effectTextByCardName := make(map[string]string), make(map[string]string)
+	numSubjects := len(subjects.CardInfo)
+	materialTextByCardName, effectTextByCardName := make(map[string]string, numSubjects), make(map[string]string, numSubjects)
 	fullText4AllCards := ""
 	for _, card := range subjects.CardInfo {
 		materialText := cModel.GetPotentialMaterialsAsString(card)
@@ -159,7 +159,7 @@ func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardD
 
 	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards, -1))
 
-	suggestionByCardName := make(map[string]model.CardSuggestions)
+	suggestionByCardName := make(map[string]model.CardSuggestions, numSubjects)
 	for cardName := range materialTextByCardName {
 		suggestionByCardName[cardName] = parseSuggestionData(materialTextByCardName[cardName], effectTextByCardName[cardName], usd)
 	}
