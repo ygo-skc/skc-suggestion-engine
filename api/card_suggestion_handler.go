@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -79,37 +80,32 @@ func parseSuggestionData(materialText string, effectText string, usd unparsedSug
 		ReferencedArchetypes: make([]string, 0, 5),
 	}
 
-	var edTokens = make(map[string]int)
-	for _, token := range quotedStringRegex.FindAllString(materialText, -1) {
-		cModel.CleanupToken(&token)
-		edTokens[token]++
-	}
+	nonArchetypeMaterialTokens := parseTokensAsArchetype(materialText, usd.archetypeSet, &suggestions.MaterialArchetypes)
+	nonArchetypeReferenceTokens := parseTokensAsArchetype(effectText, usd.archetypeSet, &suggestions.ReferencedArchetypes)
 
-	var nonEDTokens = make(map[string]int)
-	for _, token := range quotedStringRegex.FindAllString(effectText, -1) {
-		cModel.CleanupToken(&token)
-		nonEDTokens[token]++
-	}
-
-	for archetype := range usd.archetypeSet {
-		if _, exists := edTokens[archetype]; exists {
-			suggestions.MaterialArchetypes = append(suggestions.MaterialArchetypes, archetype)
-		}
-		if _, exists := nonEDTokens[archetype]; exists {
-			suggestions.ReferencedArchetypes = append(suggestions.ReferencedArchetypes, archetype)
-		}
-	}
-
-	for _, cardRef := range usd.namedReferencesByToken {
-		if occurrence, exists := edTokens[cardRef.GetName()]; exists {
-			suggestions.NamedMaterials = append(suggestions.NamedMaterials, model.CardReference{Card: cardRef, Occurrences: occurrence})
-		}
-		if occurrence, exists := nonEDTokens[cardRef.GetName()]; exists {
-			suggestions.NamedReferences = append(suggestions.NamedReferences, model.CardReference{Card: cardRef, Occurrences: occurrence})
-		}
-	}
+	parseTokenAsCard(nonArchetypeMaterialTokens, usd.namedReferencesByToken, &suggestions.NamedMaterials)
+	parseTokenAsCard(nonArchetypeReferenceTokens, usd.namedReferencesByToken, &suggestions.NamedReferences)
 
 	return suggestions
+}
+
+func parseTokensAsArchetype(text string, archetypeSet map[string]struct{}, archetypeList *[]string) map[string]int {
+	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
+	for _, token := range quotedStringRegex.FindAllString(text, -1) {
+		cModel.CleanupToken(&token)
+		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypeList, token) {
+			*archetypeList = append(*archetypeList, token)
+		} else if !exists {
+			nonArchetypeTokens[token]++
+		}
+	}
+	return nonArchetypeTokens
+}
+
+func parseTokenAsCard(tokenOccurrences map[string]int, namedReferencesByToken cModel.CardDataMap, references *[]model.CardReference) {
+	for token, occurrence := range tokenOccurrences {
+		*references = append(*references, model.CardReference{Occurrences: occurrence, Card: namedReferencesByToken[token]})
+	}
 }
 
 // cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
