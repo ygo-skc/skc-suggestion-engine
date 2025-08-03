@@ -68,7 +68,7 @@ func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) 
 		materialString := cModel.GetPotentialMaterialsAsString(reference)
 		materialStringTokens := quotedStringRegex.FindAllString(materialString, -1)
 
-		remainingEffect := strings.Replace(reference.GetEffect(), materialString, "", -1) // effect without materials
+		remainingEffect := strings.ReplaceAll(reference.GetEffect(), materialString, "") // effect without materials
 		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
 
 		if cModel.IsExtraDeckMonster(reference) && cModel.IsCardNameInTokens(subject, materialStringTokens) {
