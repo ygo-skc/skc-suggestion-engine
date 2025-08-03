@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"strings"
 
 	"fmt"
 	"net/http"
@@ -68,21 +69,21 @@ func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] 
 		case model.BatchCardSuggestions[RK]:
 			json.NewEncoder(res).Encode(
 				model.BatchCardSuggestions[RK]{
-					NamedMaterials:       make([]model.CardReference, 0),
-					NamedReferences:      make([]model.CardReference, 0),
-					MaterialArchetypes:   make([]string, 0),
-					ReferencedArchetypes: make([]string, 0),
-					UnknownResources:     make(RK, 0),
-					FalsePositives:       make(RK, 0),
+					NamedMaterials:        make([]model.CardReference, 0),
+					NamedReferences:       make([]model.CardReference, 0),
+					MaterialArchetypes:    make([]string, 0),
+					ReferencedArchetypes:  make([]string, 0),
+					UnknownResources:      make(RK, 0),
+					IntersectingResources: make(RK, 0),
 				},
 			)
 		case model.BatchCardSupport[RK]:
 			json.NewEncoder(res).Encode(
 				model.BatchCardSupport[RK]{
-					ReferencedBy:     make([]model.CardReference, 0),
-					MaterialFor:      make([]model.CardReference, 0),
-					UnknownResources: make(RK, 0),
-					FalsePositives:   make(RK, 0),
+					ReferencedBy:          make([]model.CardReference, 0),
+					MaterialFor:           make([]model.CardReference, 0),
+					UnknownResources:      make(RK, 0),
+					IntersectingResources: make(RK, 0),
 				},
 			)
 		}
@@ -110,26 +111,25 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs],
+func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs],
 	ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
-	suggestionChan := make(chan model.CardSuggestions, 20)
-	go fetchBatchSuggestions(ctx, suggestionSubjectsCardData, suggestionChan, func(cardInfo cModel.YGOCard) model.CardSuggestions {
-		return getCardSuggestions(ctx, cardInfo, ccIDs)
-	})
+	suggestionByCardName := generateBatchSuggestionData(ctx, subjects)
 
 	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}), make(map[string]struct{})
 
 	suggestions := model.BatchCardSuggestions[cModel.CardIDs]{
-		UnknownResources:     suggestionSubjectsCardData.UnknownResources,
-		FalsePositives:       make(cModel.CardIDs, 0, 5),
-		NamedMaterials:       make([]model.CardReference, 0, 5),
-		NamedReferences:      make([]model.CardReference, 0, 5),
-		MaterialArchetypes:   make([]string, 0),
-		ReferencedArchetypes: make([]string, 0)}
-	for s := range suggestionChan {
-		parseSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
-		parseSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, suggestionSubjectsCardData.CardInfo, &suggestions.FalsePositives)
+		UnknownResources:      subjects.UnknownResources,
+		IntersectingResources: make(cModel.CardIDs, 0, 5),
+		NamedMaterials:        make([]model.CardReference, 0, 5),
+		NamedReferences:       make([]model.CardReference, 0, 5),
+		MaterialArchetypes:    make([]string, 0),
+		ReferencedArchetypes:  make([]string, 0)}
+
+	for cardName, s := range suggestionByCardName {
+		model.RemoveSelfReference(cardName, &s.NamedReferences)
+		parseSuggestionReferences(s.NamedMaterials, uniqueNamedMaterialsByCardID, subjects.CardInfo, &suggestions.IntersectingResources)
+		parseSuggestionReferences(s.NamedReferences, uniqueNamedReferencesByCardIDs, subjects.CardInfo, &suggestions.IntersectingResources)
 		groupArchetypes(s.MaterialArchetypes, uniqueMaterialArchetypes, &suggestions.MaterialArchetypes)
 		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
 	}
@@ -137,15 +137,34 @@ func getBatchSuggestions(ctx context.Context, suggestionSubjectsCardData cModel.
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	// sort output
 	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
 	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
 	sort.Strings(suggestions.MaterialArchetypes)
 	sort.Strings(suggestions.ReferencedArchetypes)
-	sort.Strings(suggestions.FalsePositives)
+	sort.Strings(suggestions.IntersectingResources)
 	sort.Strings(suggestions.UnknownResources)
 
 	return suggestions
+}
+
+func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs]) map[string]model.CardSuggestions {
+	materialTextByCardName, effectTextByCardName := make(map[string]string), make(map[string]string)
+	fullText4AllCards := ""
+	for _, card := range subjects.CardInfo {
+		materialText := cModel.GetPotentialMaterialsAsString(card)
+		materialTextByCardName[card.GetName()] = materialText
+		effectTextByCardName[card.GetName()] = strings.ReplaceAll(card.GetEffect(), materialText, "")
+		fullText4AllCards += fmt.Sprintf("%s\n", card.GetEffect())
+	}
+
+	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards, -1))
+
+	suggestionByCardName := make(map[string]model.CardSuggestions)
+	for cardName := range materialTextByCardName {
+		suggestionByCardName[cardName] = parseSuggestionData(materialTextByCardName[cardName], effectTextByCardName[cardName], usd)
+	}
+
+	return suggestionByCardName
 }
 
 func sortBatchReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
@@ -157,7 +176,7 @@ func sortBatchReferences(refs []model.CardReference, ccIDs map[string]uint32) fu
 		case iv.Card.GetColor() != jv.Card.GetColor():
 			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
 		default:
-			return iv.Card.GetColor() < jv.Card.GetColor()
+			return iv.Card.GetName() < jv.Card.GetName()
 		}
 	}
 }
@@ -173,14 +192,14 @@ func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]s
 
 // uses references for a card and builds upon uniqueReferencesByCardID and uniqueReferences
 func parseSuggestionReferences(referencesToParse []model.CardReference, uniqueReferencesByCardID map[string]*model.CardReference,
-	subjects cModel.CardDataMap, falsePositives *cModel.CardIDs) {
+	subjects cModel.CardDataMap, intersectingResources *cModel.CardIDs) {
 	for _, suggestion := range referencesToParse {
 		suggestionID := suggestion.Card.GetID()
 		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
 			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
-		} else if _, isFalsePositive := subjects[suggestionID]; isFalsePositive && !slices.Contains(*falsePositives, suggestionID) {
-			*falsePositives = append(*falsePositives, suggestionID)
-		} else if !refPreviouslyAdded && !isFalsePositive {
+		} else if _, isIntersecting := subjects[suggestionID]; isIntersecting && !slices.Contains(*intersectingResources, suggestionID) {
+			*intersectingResources = append(*intersectingResources, suggestionID)
+		} else if !refPreviouslyAdded && !isIntersecting {
 			uniqueReferencesByCardID[suggestionID] = &model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences}
 		}
 	}
@@ -218,17 +237,17 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 	})
 
 	support := model.BatchCardSupport[cModel.CardIDs]{
-		FalsePositives:   make(cModel.CardIDs, 0, 5),
-		UnknownResources: suggestionSubjectsCardData.UnknownResources}
+		IntersectingResources: make(cModel.CardIDs, 0, 5),
+		UnknownResources:      suggestionSubjectsCardData.UnknownResources}
 	uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 
 	for s := range supportChan {
 		parseSuggestionReferences(s.ReferencedBy, uniqueReferenceByCardID,
-			suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
+			suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
 		parseSuggestionReferences(s.MaterialFor, uniqueMaterialByCardIDs,
-			suggestionSubjectsCardData.CardInfo, &support.FalsePositives)
+			suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
 	}
 
 	support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
