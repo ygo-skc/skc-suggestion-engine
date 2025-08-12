@@ -16,8 +16,6 @@ require (
 	google.golang.org/grpc v1.74.2
 )
 
-replace github.com/ygo-skc/skc-go/common => ../skc-go/common
-
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/gabriel-vasile/mimetype v1.4.9 // indirect
