@@ -26,8 +26,8 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Getting product card suggestions")
 
 	var wg sync.WaitGroup
-	awg := model.NewAtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]](&wg)
-	go func(awg *model.AtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]]) {
+	awg := cUtil.NewAtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]](&wg)
+	go func(awg *cUtil.AtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]]) {
 		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
 		awg.Store(cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey))
 	}(awg)

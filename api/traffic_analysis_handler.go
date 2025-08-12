@@ -96,7 +96,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 	dateCutoff1, dateCutoff2 := today.AddDate(0, 0, -10), today.AddDate(0, 0, -20)
 
 	var wg sync.WaitGroup
-	awg1, awg2 := model.NewAtomicWaitGroup[cModel.APIError](&wg), model.NewAtomicWaitGroup[cModel.APIError](&wg)
+	awg1, awg2 := cUtil.NewAtomicWaitGroup[cModel.APIError](&wg), cUtil.NewAtomicWaitGroup[cModel.APIError](&wg)
 	go getMetrics(ctx, resourceName, dateCutoff1, today, &metricsForCurrentPeriod, awg1)
 	go getMetrics(ctx, resourceName, dateCutoff2, dateCutoff1, &metricsForLastPeriod, awg2)
 
@@ -129,8 +129,8 @@ func trending(res http.ResponseWriter, req *http.Request) {
 }
 
 func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName,
-	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, wg *sync.WaitGroup) (*model.AtomicWaitGroup[cModel.APIError], func([]model.TrendingMetric)) {
-	awg := model.NewAtomicWaitGroup[cModel.APIError](wg)
+	metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, wg *sync.WaitGroup) (*cUtil.AtomicWaitGroup[cModel.APIError], func([]model.TrendingMetric)) {
+	awg := cUtil.NewAtomicWaitGroup[cModel.APIError](wg)
 	switch r {
 	case model.CardResource:
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
@@ -156,7 +156,7 @@ func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metri
 
 func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | cModel.BatchProductSummaryData[RK]](ctx context.Context,
 	metrics []model.TrafficResourceUtilizationMetric, batchData **BD,
-	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), awg *model.AtomicWaitGroup[cModel.APIError]) {
+	fetchResourceFromDB func(context.Context, RK) (*BD, *cModel.APIError), awg *cUtil.AtomicWaitGroup[cModel.APIError]) {
 	rv := make(RK, len(metrics))
 	for ind, value := range metrics {
 		rv[ind] = value.ResourceValue
@@ -196,7 +196,7 @@ func determineTrendChange(metricsForCurrentPeriod []model.TrafficResourceUtiliza
 }
 
 func getMetrics(ctx context.Context, r model.ResourceName, from time.Time, to time.Time,
-	td *[]model.TrafficResourceUtilizationMetric, awg *model.AtomicWaitGroup[cModel.APIError]) {
+	td *[]model.TrafficResourceUtilizationMetric, awg *cUtil.AtomicWaitGroup[cModel.APIError]) {
 	var err *cModel.APIError
 	*td, err = skcSuggestionEngineDBInterface.GetTrafficData(ctx, r, from, to)
 	awg.Store(err)
