@@ -69,11 +69,11 @@ func (svc YGOCardClientMock) GetCardsByName(ctx context.Context, cardNames model
 	return &model.BatchCardData[model.CardNames]{CardInfo: found, UnknownResources: notFound}, nil
 }
 
-func (svc YGOCardClientMock) SearchForCardRefUsingEffectProto(ctx context.Context, cardName string, cardID string) (*ygo.CardList, *model.APIError) {
+func (svc YGOCardClientMock) GetCardsReferencingNameInEffectProto(ctx context.Context, cards []string) (*ygo.CardList, *model.APIError) {
 	panic(ni)
 }
 
-func (svc YGOCardClientMock) SearchForCardRefUsingEffect(ctx context.Context, cardName string, cardID string) ([]model.YGOCard, *model.APIError) {
+func (svc YGOCardClientMock) GetCardsReferencingNameInEffect(ctx context.Context, cards []string) ([]model.YGOCard, *model.APIError) {
 	panic(ni)
 }
 
