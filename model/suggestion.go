@@ -24,7 +24,7 @@ type BatchCardSuggestions[RK cModel.YGOResourceKey] struct {
 	MaterialArchetypes    []string        `json:"materialArchetypes"`
 	ReferencedArchetypes  []string        `json:"referencedArchetypes"`
 	UnknownResources      RK              `json:"unknownResources"`
-	IntersectingResources RK              `json:"intersectingResources"`
+	IntersectingResources RK              `json:"falsePositives"`
 }
 
 type CardSupport struct {
@@ -37,7 +37,7 @@ type BatchCardSupport[RK cModel.YGOResourceKey] struct {
 	ReferencedBy          []CardReference `json:"referencedBy"`
 	MaterialFor           []CardReference `json:"materialFor"`
 	UnknownResources      RK              `json:"unknownResources"`
-	IntersectingResources RK              `json:"intersectingResources"`
+	IntersectingResources RK              `json:"falsePositives"`
 }
 
 type ProductSuggestions[RK cModel.YGOResourceKey] struct {
