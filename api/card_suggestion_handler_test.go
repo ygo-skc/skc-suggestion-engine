@@ -1,7 +1,6 @@
 package api
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -11,29 +10,6 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )
-
-func validateMaterialReferences(card cModel.YGOCardREST, expectedNamedMaterials []model.CardReference, expectedMaterialArchetypes []string, assert *assert.Assertions) {
-	materialString := cModel.GetPotentialMaterialsAsString(card)
-	refs, archetypes := getReferences(skc_testing.TestContext, materialString)
-
-	assert.Len(expectedNamedMaterials, len(refs), "Len of NamedMaterials mismatch")
-	assert.Len(expectedMaterialArchetypes, len(archetypes), "Len of MaterialArchetypes mismatch")
-
-	assert.Equal(expectedNamedMaterials, refs, "Expected contents of NamedMaterials slice is different than what is actually received")
-	assert.Equal(expectedMaterialArchetypes, archetypes, "Expected contents of MaterialArchetypes slice is different than what is actually received")
-}
-
-func validateReferences(card cModel.YGOCardREST, expectedNamedReferences []model.CardReference, expectedReferencedArchetypes []string, assert *assert.Assertions) {
-	materialString := cModel.GetPotentialMaterialsAsString(card)
-	effectWithoutMaterial := strings.ReplaceAll(card.Effect, materialString, "")
-	refs, archetypes := getReferences(skc_testing.TestContext, effectWithoutMaterial)
-
-	assert.Len(expectedNamedReferences, len(refs), "Len of NamedReferences mismatch")
-	assert.Len(expectedReferencedArchetypes, len(archetypes), "Len of ReferencedArchetypes mismatch")
-
-	assert.Equal(expectedNamedReferences, refs, "Expected contents of NamedReferences slice is different than what is actually received")
-	assert.Equal(expectedReferencedArchetypes, archetypes, "Expected contents of ReferencedArchetypes slice is different than what is actually received")
-}
 
 func TestGetSuggestions(t *testing.T) {
 	// setup

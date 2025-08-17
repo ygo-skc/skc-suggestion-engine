@@ -6,9 +6,9 @@ import (
 	"log/slog"
 	"net/http"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/go-chi/chi/v5"
 	json "github.com/goccy/go-json"
@@ -25,6 +25,12 @@ var (
 const (
 	cardSuggestionsOp = "Card Suggestions"
 )
+
+type unparsedSuggestionData struct {
+	namedReferencesByToken cModel.CardDataMap
+	archetypeSet           map[string]struct{}
+	cardIdByToken          map[string]string
+}
 
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
@@ -49,43 +55,100 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSuggestions(ctx context.Context, cardToGetSuggestionsFor cModel.YGOCard,
-	ccIDs map[string]uint32) model.CardSuggestions {
-	suggestions := model.CardSuggestions{Card: cardToGetSuggestionsFor}
-	materialString := cModel.GetPotentialMaterialsAsString(cardToGetSuggestionsFor)
+func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[string]uint32) model.CardSuggestions {
+	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(subject.GetEffect(), -1))
 
-	wg := sync.WaitGroup{}
+	materialText := cModel.GetPotentialMaterialsAsString(subject)
+	effectText := strings.ReplaceAll(subject.GetEffect(), materialText, "")
+	suggestions := parseSuggestionData(materialText, effectText, usd)
+	suggestions.Card = subject
 
-	// get materials if card is from extra deck
-	if cModel.IsExtraDeckMonster(cardToGetSuggestionsFor) {
-		wg.Add(2)
-		go getMaterialRefs(ctx, &suggestions, materialString, ccIDs, &wg)
-	} else {
-		wg.Add(1)
-		suggestions.NamedMaterials = []model.CardReference{}
-		suggestions.MaterialArchetypes = []string{}
+	sortCardReferences(&suggestions.NamedReferences, ccIDs)
+	sortCardReferences(&suggestions.NamedMaterials, ccIDs)
+	sort.Strings(suggestions.ReferencedArchetypes)
+	sort.Strings(suggestions.MaterialArchetypes)
+	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)
 
-		cUtil.RetrieveLogger(ctx).Debug("Not and extra deck monster")
-	}
-	go getNonMaterialRefs(ctx, &suggestions, cardToGetSuggestionsFor, materialString, ccIDs, &wg)
-
-	wg.Wait()
 	return suggestions
 }
 
-func getMaterialRefs(ctx context.Context, s *model.CardSuggestions, materialString string, ccIDs map[string]uint32, wg *sync.WaitGroup) {
-	defer wg.Done()
-	s.NamedMaterials, s.MaterialArchetypes = getReferences(ctx, materialString)
-	sortCardReferences(&s.NamedMaterials, ccIDs)
+// parses suggestion data by transforming it into a CardSuggestion object
+func parseSuggestionData(materialText string, effectText string, usd unparsedSuggestionData) model.CardSuggestions {
+	numArchetypes, numReferences := len(usd.archetypeSet), len(usd.namedReferencesByToken)
+	suggestions := model.CardSuggestions{
+		NamedMaterials:       make([]model.CardReference, 0, numReferences),
+		NamedReferences:      make([]model.CardReference, 0, numReferences),
+		MaterialArchetypes:   make([]string, 0, numArchetypes),
+		ReferencedArchetypes: make([]string, 0, numArchetypes),
+	}
+
+	nonArchetypeMaterialTokens := partitionTokensInCardText(materialText, usd.archetypeSet, &suggestions.MaterialArchetypes)
+	nonArchetypeReferenceTokens := partitionTokensInCardText(effectText, usd.archetypeSet, &suggestions.ReferencedArchetypes)
+
+	parseTokenAsCard(nonArchetypeMaterialTokens, usd.namedReferencesByToken, &suggestions.NamedMaterials)
+	parseTokenAsCard(nonArchetypeReferenceTokens, usd.namedReferencesByToken, &suggestions.NamedReferences)
+
+	return suggestions
 }
 
-// get named references - excludes materials
-// will also check and remove self references
-func getNonMaterialRefs(ctx context.Context, s *model.CardSuggestions, cardToGetSuggestionsFor cModel.YGOCard, materialString string, ccIDs map[string]uint32, wg *sync.WaitGroup) {
-	defer wg.Done()
-	s.NamedReferences, s.ReferencedArchetypes = getReferences(ctx, strings.ReplaceAll(cardToGetSuggestionsFor.GetEffect(), materialString, ""))
-	s.HasSelfReference = model.RemoveSelfReference(cardToGetSuggestionsFor.GetName(), &s.NamedReferences)
-	sortCardReferences(&s.NamedReferences, ccIDs)
+// Uses card text and archetypes to create a list of unique archetypes and a map of non archetype tokens and their occurrence
+func partitionTokensInCardText(cardText string, archetypeSet map[string]struct{}, archetypesInCardText *[]string) map[string]int {
+	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
+	for _, token := range quotedStringRegex.FindAllString(cardText, -1) {
+		cModel.CleanupToken(&token)
+		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypesInCardText, token) {
+			*archetypesInCardText = append(*archetypesInCardText, token)
+		} else if !exists {
+			nonArchetypeTokens[token]++
+		}
+	}
+	return nonArchetypeTokens
+}
+
+// creates the suggestion references and their occurrence
+func parseTokenAsCard(tokenOccurrences map[string]int, namedReferencesByToken cModel.CardDataMap, references *[]model.CardReference) {
+	for token, occurrence := range tokenOccurrences {
+		*references = append(*references, model.CardReference{Occurrences: occurrence, Card: namedReferencesByToken[token]})
+	}
+}
+
+// cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
+func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unparsedSuggestionData {
+	usd := unparsedSuggestionData{namedReferencesByToken: cModel.CardDataMap{}, archetypeSet: make(map[string]struct{})}
+
+	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
+	totalTokens := len(tokens)
+
+	if totalTokens != 0 {
+		for i := range totalTokens {
+			cModel.CleanupToken(&tokens[i])
+		}
+
+		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
+
+		for _, token := range tokens {
+			// if token is present in archetype slice, skip token
+			if _, isPresent := usd.archetypeSet[token]; isPresent {
+				continue
+			}
+
+			// already processed
+			if _, isPresent := tokenToCardId[token]; isPresent {
+				continue
+			}
+
+			if card, isPresent := batchCardData.CardInfo[token]; !isPresent {
+				// add occurrence of archetype to set
+				usd.archetypeSet[token] = struct{}{}
+			} else {
+				// add occurrence of referenced card to maps
+				usd.namedReferencesByToken[token] = card
+				tokenToCardId[token] = card.GetID()
+			}
+		}
+	}
+
+	return usd
 }
 
 func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]uint32) {
@@ -98,76 +161,4 @@ func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]uint32) {
 	sort.SliceStable(*cr, func(i, j int) bool {
 		return ccIDs[(*cr)[i].Card.GetColor()] < ccIDs[(*cr)[j].Card.GetColor()]
 	})
-}
-
-// Uses regex to find all direct references to cards (or potentially archetypes) and searches it in the DB.
-// If a direct name reference is found in the DB, then it is returned as a suggestion.
-func getReferences(ctx context.Context, s string) ([]model.CardReference, []string) {
-	namedReferences, referenceOccurrence, archetypalReferences := isolateReferences(ctx, s)
-
-	uniqueReferences := make([]model.CardReference, 0, len(namedReferences))
-	for _, card := range namedReferences {
-		uniqueReferences = append(uniqueReferences, model.CardReference{Card: card, Occurrences: referenceOccurrence[card.GetID()]})
-	}
-
-	return uniqueReferences, archetypalReferences
-}
-
-func isolateReferences(ctx context.Context, s string) (cModel.CardDataMap, map[string]int, []string) {
-	tokens := quotedStringRegex.FindAllString(s, -1)
-
-	namedReferences, referenceOccurrence, archetypalReferences := buildReferenceObjects(ctx, tokens)
-
-	// get unique archetypes
-	uniqueArchetypalReferences := make([]string, 0, len(archetypalReferences))
-	for ref := range archetypalReferences {
-		uniqueArchetypalReferences = append(uniqueArchetypalReferences, ref)
-	}
-	sort.Strings(uniqueArchetypalReferences) // needed as source of this array was a map and maps don't have predictable sorting - tests will fail randomly without sort
-
-	return namedReferences, referenceOccurrence, uniqueArchetypalReferences
-}
-
-// cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func buildReferenceObjects(ctx context.Context, tokens []string) (cModel.CardDataMap, map[string]int, map[string]struct{}) {
-	namedReferences := cModel.CardDataMap{}
-	referenceOccurrence := map[string]int{}
-	archetypalReferences := make(map[string]struct{})
-	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
-	totalTokens := len(tokens)
-
-	if totalTokens != 0 {
-		for i := 0; i < totalTokens; i++ {
-			cModel.CleanupToken(&tokens[i])
-		}
-
-		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
-
-		for _, token := range tokens {
-			// if we already searched the token before we don't need to waste time re-searching it in DB
-
-			// if token is present in archetype slice, skip token
-			if _, isPresent := archetypalReferences[token]; isPresent {
-				continue
-			}
-
-			// if token mapped to a cardId in previous loop, increase number of occurrences by 1 and skip any other processing this iteration as we already did the processing before
-			if _, isPresent := tokenToCardId[token]; isPresent {
-				referenceOccurrence[tokenToCardId[token]] += 1
-				continue
-			}
-
-			if card, isPresent := batchCardData.CardInfo[token]; !isPresent {
-				// add occurrence of archetype to set
-				archetypalReferences[token] = struct{}{}
-			} else {
-				// add occurrence of referenced card to maps
-				namedReferences[card.GetID()] = card
-				referenceOccurrence[card.GetID()] = 1
-				tokenToCardId[token] = card.GetID()
-			}
-		}
-	}
-
-	return namedReferences, referenceOccurrence, archetypalReferences
 }

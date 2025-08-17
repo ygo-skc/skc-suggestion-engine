@@ -262,7 +262,7 @@ Must be Fusion Summoned. When a Spell Card is activated (Quick Effect): You can 
 			ID:    "11502550",
 			Color: "Fusion",
 			Name:  "Elemental HERO Air Neos",
-			Effect: `"Elemental Hero Neos" + "Neo-Spacian Air Hummingbird"
+			Effect: `"Elemental HERO Neos" + "Neo-Spacian Air Hummingbird"
 This card can only be Special Summoned from your Extra Deck by returning the above cards you control to the Deck. (You do not use "Polymerization".) While your Life Points are lower than your opponent's, this card gains ATK equal to the difference. This card returns to the Extra Deck during the End Phase.`,
 			MonsterType: cUtil.InlineStringPointer("Warrior/Fusion/Effect"),
 			Attack:      cUtil.InlineUInt32Pointer(2500),

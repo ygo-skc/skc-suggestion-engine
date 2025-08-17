@@ -29,33 +29,22 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		if support, err := getCardSupport(ctx, *cardToGetSupportFor); err != nil {
+		cardName := (*cardToGetSupportFor).GetName()
+		support := model.CardSupport{Card: *cardToGetSupportFor, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
+
+		if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName}); err != nil {
 			err.HandleServerResponse(res)
 			return
-		} else {
-			res.WriteHeader(http.StatusOK)
-			json.NewEncoder(res).Encode(support)
-		}
-	}
-}
-
-func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupport, *cModel.APIError) {
-	logger := cUtil.RetrieveLogger(ctx)
-	support := model.CardSupport{Card: subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
-	var s []cModel.YGOCard
-	var err *cModel.APIError
-
-	if s, err = downstream.YGO.CardService.SearchForCardRefUsingEffect(ctx, subject.GetName(), subject.GetID()); err == nil {
-		if len(s) == 0 {
+		} else if err == nil && len(cardRefs) == 0 {
 			logger.Warn("No support found")
-			return support, nil
 		} else {
-			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, s)
+			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
 			logger.Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
 			logger.Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
 		}
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(support)
 	}
-	return support, err
 }
 
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
@@ -63,19 +52,23 @@ func getCardSupport(ctx context.Context, subject cModel.YGOCard) (model.CardSupp
 func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) ([]model.CardReference, []model.CardReference) {
 	referencedBy := []model.CardReference{}
 	materialFor := []model.CardReference{}
+	doubleQuotedCardName := fmt.Sprintf(`"%s"`, subject.GetName())
+	singleQuotedCardName := fmt.Sprintf(`'%s'`, subject.GetName())
 
 	for _, reference := range references {
-		materialString := cModel.GetPotentialMaterialsAsString(reference)
-		materialStringTokens := quotedStringRegex.FindAllString(materialString, -1)
-
-		remainingEffect := strings.Replace(reference.GetEffect(), materialString, "", -1) // effect without materials
-		remainingEffectTokens := quotedStringRegex.FindAllString(remainingEffect, -1)
-
-		if cModel.IsExtraDeckMonster(reference) && cModel.IsCardNameInTokens(subject, materialStringTokens) {
-			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
+		if reference.GetName() == subject.GetName() {
+			continue
 		}
 
-		if cModel.IsCardNameInTokens(subject, remainingEffectTokens) {
+		effect := reference.GetEffect()
+
+		if materialString := cModel.GetPotentialMaterialsAsString(reference); materialString != "" &&
+			(strings.Contains(materialString, doubleQuotedCardName) || strings.Contains(materialString, singleQuotedCardName)) {
+			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
+			effect = strings.ReplaceAll(effect, materialString, "") // effect without materials
+		}
+
+		if strings.Contains(effect, doubleQuotedCardName) || strings.Contains(effect, singleQuotedCardName) {
 			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}

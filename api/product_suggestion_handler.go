@@ -25,24 +25,26 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
-	cardsInProductChan := make(chan cModel.BatchCardData[cModel.CardIDs])
-	go func() {
+	var wg sync.WaitGroup
+	awg := cUtil.NewAtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]](&wg)
+	go func(awg *cUtil.AtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]]) {
 		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		cardsInProductChan <- *cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
-	}()
+		awg.Store(cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey))
+	}(awg)
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 
 	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
 	var support model.BatchCardSupport[cModel.CardIDs]
-	var wg sync.WaitGroup
+
+	cardsInProduct := awg.Load()
 
 	wg.Add(2)
-	cardsInProduct := <-cardsInProductChan
-	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, cardsInProduct, ccIDs.Values) }()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, cardsInProduct) }()
+	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cardsInProduct, ccIDs.Values) }()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cardsInProduct) }()
 	wg.Wait()
 
+	logger.Info("Successfully retrieved product card suggestions")
 	res.WriteHeader(http.StatusOK)
 	json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support})
 }
