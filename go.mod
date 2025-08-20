@@ -13,7 +13,7 @@ require (
 	github.com/stretchr/testify v1.10.0
 	github.com/ygo-skc/skc-go/common v1.5.0
 	go.mongodb.org/mongo-driver/v2 v2.3.0
-	google.golang.org/grpc v1.74.2
+	google.golang.org/grpc v1.75.0
 )
 
 require (
