@@ -63,8 +63,8 @@ func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[s
 	suggestions := parseSuggestionData(materialText, effectText, usd)
 	suggestions.Card = subject
 
-	sortCardReferences(&suggestions.NamedReferences, ccIDs)
-	sortCardReferences(&suggestions.NamedMaterials, ccIDs)
+	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
+	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
 	sort.Strings(suggestions.ReferencedArchetypes)
 	sort.Strings(suggestions.MaterialArchetypes)
 	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)
@@ -151,14 +151,16 @@ func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unpars
 	return usd
 }
 
-func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]uint32) {
-	// sorting alphabetically from a-z
-	sort.SliceStable(*cr, func(i, j int) bool {
-		return (*cr)[i].Card.GetName() < (*cr)[j].Card.GetName()
-	})
-
-	// sorting by card color
-	sort.SliceStable(*cr, func(i, j int) bool {
-		return ccIDs[(*cr)[i].Card.GetColor()] < ccIDs[(*cr)[j].Card.GetColor()]
-	})
+func sortCardReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
+	return func(i, j int) bool {
+		iv, jv := refs[i], refs[j]
+		switch {
+		case iv.Occurrences != jv.Occurrences:
+			return iv.Occurrences > jv.Occurrences
+		case iv.Card.GetColor() != jv.Card.GetColor():
+			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
+		default:
+			return iv.Card.GetName() < jv.Card.GetName()
+		}
+	}
 }

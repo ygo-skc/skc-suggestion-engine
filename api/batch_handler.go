@@ -138,8 +138,8 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
-	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
+	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
+	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
 	sort.Strings(suggestions.MaterialArchetypes)
 	sort.Strings(suggestions.ReferencedArchetypes)
 	sort.Strings(suggestions.IntersectingResources)
@@ -167,20 +167,6 @@ func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardD
 	}
 
 	return suggestionByCardName
-}
-
-func sortBatchReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
-	return func(i, j int) bool {
-		iv, jv := refs[i], refs[j]
-		switch {
-		case iv.Occurrences != jv.Occurrences:
-			return iv.Occurrences > jv.Occurrences
-		case iv.Card.GetColor() != jv.Card.GetColor():
-			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
-		default:
-			return iv.Card.GetName() < jv.Card.GetName()
-		}
-	}
 }
 
 func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]struct{}, uniqueArchetypes *[]string) {
@@ -271,8 +257,8 @@ func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.Batc
 		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
 		ccIDs := awg.Load()
-		sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy, ccIDs.Values))
-		sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor, ccIDs.Values))
+		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.Values))
+		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.Values))
 	}
 	return support
 }
