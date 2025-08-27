@@ -25,22 +25,24 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
+	if subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		cardName := (*cardToGetSupportFor).GetName()
-		support := model.CardSupport{Card: *cardToGetSupportFor, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
+		cardName := (*subject).GetName()
+		support := model.CardSupport{Card: *subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
 
 		if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName}); err != nil {
 			err.HandleServerResponse(res)
 			return
-		} else if err == nil && len(cardRefs) == 0 {
-			logger.Warn("No support found")
 		} else {
 			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
-			logger.Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
-			logger.Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
+			numNamedReferences, numMaterialReferences := len(support.ReferencedBy), len(support.MaterialFor)
+			if numNamedReferences == 0 && numMaterialReferences == 0 {
+				logger.Warn("Card has no support")
+			} else {
+				logger.Info(fmt.Sprintf("Referenced by %d non-ED cards. Referenced by %d ED cards", numNamedReferences, numMaterialReferences))
+			}
 		}
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(support)
