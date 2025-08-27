@@ -10,8 +10,8 @@ require (
 	github.com/goccy/go-json v0.10.5
 	github.com/ip2location/ip2location-go/v9 v9.7.1
 	github.com/rs/cors v1.11.1
-	github.com/stretchr/testify v1.11.0
-	github.com/ygo-skc/skc-go/common v1.5.0
+	github.com/stretchr/testify v1.11.1
+	github.com/ygo-skc/skc-go/common v1.5.1
 	go.mongodb.org/mongo-driver/v2 v2.3.0
 	google.golang.org/grpc v1.75.0
 )
@@ -35,7 +35,7 @@ require (
 	golang.org/x/sys v0.34.0 // indirect
 	golang.org/x/text v0.27.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250721164621-a45f3dfb1074 // indirect
-	google.golang.org/protobuf v1.36.7 // indirect
+	google.golang.org/protobuf v1.36.8 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
 )
