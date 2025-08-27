@@ -30,7 +30,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		cardName := (*subject).GetName()
-		support := model.CardSupport{Card: *subject, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
+		support := model.CardSupport{Card: *subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
 
 		if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName}); err != nil {
 			err.HandleServerResponse(res)
@@ -43,9 +43,10 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 			} else {
 				logger.Info(fmt.Sprintf("Referenced by %d non-ED cards. Referenced by %d ED cards", numNamedReferences, numMaterialReferences))
 			}
+			res.WriteHeader(http.StatusOK)
+			json.NewEncoder(res).Encode(support)
+			return
 		}
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(support)
 	}
 }
 
@@ -54,8 +55,6 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) ([]model.CardReference, []model.CardReference) {
 	referencedBy := []model.CardReference{}
 	materialFor := []model.CardReference{}
-	doubleQuotedCardName := fmt.Sprintf(`"%s"`, subject.GetName())
-	singleQuotedCardName := fmt.Sprintf(`'%s'`, subject.GetName())
 
 	for _, reference := range references {
 		if reference.GetName() == subject.GetName() {
@@ -64,16 +63,42 @@ func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) 
 
 		effect := reference.GetEffect()
 
-		if materialString := cModel.GetPotentialMaterialsAsString(reference); materialString != "" &&
-			(strings.Contains(materialString, doubleQuotedCardName) || strings.Contains(materialString, singleQuotedCardName)) {
+		if materialString := cModel.GetPotentialMaterialsAsString(reference); materialString != "" && cardRefContainsName(materialString, subject.GetName()) {
 			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
 			effect = strings.ReplaceAll(effect, materialString, "") // effect without materials
 		}
 
-		if strings.Contains(effect, doubleQuotedCardName) || strings.Contains(effect, singleQuotedCardName) {
+		if cardRefContainsName(effect, subject.GetName()) {
 			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}
 
 	return referencedBy, materialFor
+}
+
+func cardRefContainsName(cardText, cardName string) bool {
+	runes := []rune(cardText)
+	nameRunes := []rune(cardName)
+	textLen := len(runes)
+	nameLen := len(nameRunes)
+
+	for i := range textLen {
+		if runes[i] == '"' || runes[i] == '\'' {
+			start := i + 1
+			end := start + nameLen
+
+			if end >= textLen {
+				break
+			}
+
+			if runes[end] != runes[i] {
+				continue
+			}
+
+			if string(runes[start:end]) == cardName {
+				return true
+			}
+		}
+	}
+	return false
 }
