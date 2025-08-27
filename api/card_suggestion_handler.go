@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -95,7 +96,7 @@ func parseSuggestionData(materialText string, effectText string, usd unparsedSug
 func partitionTokensInCardText(cardText string, archetypeSet map[string]struct{}, archetypesInCardText *[]string) map[string]int {
 	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
 	for _, token := range quotedStringRegex.FindAllString(cardText, -1) {
-		cModel.CleanupToken(&token)
+		parser.CleanupToken(&token)
 		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypesInCardText, token) {
 			*archetypesInCardText = append(*archetypesInCardText, token)
 		} else if !exists {
@@ -121,7 +122,7 @@ func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unpars
 
 	if totalTokens != 0 {
 		for i := range totalTokens {
-			cModel.CleanupToken(&tokens[i])
+			parser.CleanupToken(&tokens[i])
 		}
 
 		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
