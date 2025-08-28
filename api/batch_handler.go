@@ -29,21 +29,29 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, cModel.BatchCardData[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			cModel.BatchCardData[cModel.CardIDs]{
+				CardInfo:         make(cModel.CardDataMap, 0),
+				UnknownResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
+		return
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
 			logger.Warn(fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources))
 		}
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(batchCardInfo)
+		return
 	}
 }
 
-func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] | model.BatchCardSuggestions[RK] | model.BatchCardSupport[RK]](
-	ctx context.Context, res http.ResponseWriter, req *http.Request) *cModel.BatchCardIDs {
+func parseBatchRequestBody(ctx context.Context, res http.ResponseWriter, req *http.Request) *cModel.BatchCardIDs {
 	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
@@ -59,36 +67,7 @@ func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] 
 	}
 
 	if len(reqBody.CardIDs) == 0 {
-		logger.Warn("Nothing to process - missing cardID data")
-		res.WriteHeader(http.StatusOK)
-
-		var empty T
-		switch any(empty).(type) {
-		case cModel.BatchCardData[RK]:
-			json.NewEncoder(res).Encode(
-				cModel.BatchCardData[RK]{CardInfo: make(cModel.CardDataMap, 0), UnknownResources: make(RK, 0)},
-			)
-		case model.BatchCardSuggestions[RK]:
-			json.NewEncoder(res).Encode(
-				model.BatchCardSuggestions[RK]{
-					NamedMaterials:        make([]model.CardReference, 0),
-					NamedReferences:       make([]model.CardReference, 0),
-					MaterialArchetypes:    make([]string, 0),
-					ReferencedArchetypes:  make([]string, 0),
-					UnknownResources:      make(RK, 0),
-					IntersectingResources: make(RK, 0),
-				},
-			)
-		case model.BatchCardSupport[RK]:
-			json.NewEncoder(res).Encode(
-				model.BatchCardSupport[RK]{
-					ReferencedBy:          make([]model.CardReference, 0),
-					MaterialFor:           make([]model.CardReference, 0),
-					UnknownResources:      make(RK, 0),
-					IntersectingResources: make(RK, 0),
-				},
-			)
-		}
+		logger.Warn("Batch card req body has no card ID's")
 		return nil
 	}
 
@@ -99,7 +78,18 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSuggestions[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			model.BatchCardSuggestions[cModel.CardIDs]{
+				NamedMaterials:        make([]model.CardReference, 0),
+				NamedReferences:       make([]model.CardReference, 0),
+				MaterialArchetypes:    make([]string, 0),
+				ReferencedArchetypes:  make([]string, 0),
+				UnknownResources:      make(cModel.CardIDs, 0),
+				IntersectingResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
@@ -110,6 +100,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
+		return
 	}
 }
 
@@ -210,7 +201,16 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSupport[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			model.BatchCardSupport[cModel.CardIDs]{
+				ReferencedBy:          make([]model.CardReference, 0),
+				MaterialFor:           make([]model.CardReference, 0),
+				UnknownResources:      make(cModel.CardIDs, 0),
+				IntersectingResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
@@ -218,6 +218,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData))
+		return
 	}
 }
 
