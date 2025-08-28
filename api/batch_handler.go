@@ -222,41 +222,45 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
+func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
+	var wg sync.WaitGroup
+	awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
+	go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
+		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+		awg.Store(ccIDs)                                               // TODO: handle error
+	}(awg)
+
 	support := model.BatchCardSupport[cModel.CardIDs]{
 		IntersectingResources: make(cModel.CardIDs, 0, 5),
-		UnknownResources:      suggestionSubjectsCardData.UnknownResources,
+		UnknownResources:      requestedCards.UnknownResources,
 	}
 
-	cardNames := make([]string, 0, len(suggestionSubjectsCardData.CardInfo))
-	for _, card := range suggestionSubjectsCardData.CardInfo {
-		cardNames = append(cardNames, card.GetName())
+	cardNames := make([]string, len(requestedCards.CardInfo))
+	ind := 0
+	for _, card := range requestedCards.CardInfo {
+		cardNames[ind] = card.GetName()
+		ind++
 	}
 
 	if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, cardNames); err != nil {
 		// TODO: error handling
 	} else {
-		var wg sync.WaitGroup
-		awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
-		go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
-			ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-			awg.Store(ccIDs)                                               // TODO: handle error
-		}(awg)
-
 		uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-		for _, card := range suggestionSubjectsCardData.CardInfo {
-			s1, s2 := determineSupportCards(card, cardRefs)
-			if len(s1) > 0 {
-				parseSuggestionReferences(s1, uniqueReferenceByCardID, suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
+		for _, card := range requestedCards.CardInfo {
+			referencedBy, materialFor := determineSupportCards(card, cardRefs)
+			if len(referencedBy) > 0 {
+				parseSuggestionReferences(referencedBy, uniqueReferenceByCardID, requestedCards.CardInfo, &support.IntersectingResources)
 			}
-			if len(s2) > 0 {
-				parseSuggestionReferences(s2, uniqueMaterialByCardIDs, suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
+			if len(materialFor) > 0 {
+				parseSuggestionReferences(materialFor, uniqueMaterialByCardIDs, requestedCards.CardInfo, &support.IntersectingResources)
 			}
 		}
 
 		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
+		sort.Strings(support.IntersectingResources)
+		sort.Strings(support.UnknownResources)
 		ccIDs := awg.Load()
 		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.Values))
 		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.Values))
