@@ -29,21 +29,29 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, cModel.BatchCardData[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			cModel.BatchCardData[cModel.CardIDs]{
+				CardInfo:         make(cModel.CardDataMap, 0),
+				UnknownResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
+		return
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
 			logger.Warn(fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources))
 		}
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(batchCardInfo)
+		return
 	}
 }
 
-func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] | model.BatchCardSuggestions[RK] | model.BatchCardSupport[RK]](
-	ctx context.Context, res http.ResponseWriter, req *http.Request) *cModel.BatchCardIDs {
+func parseBatchRequestBody(ctx context.Context, res http.ResponseWriter, req *http.Request) *cModel.BatchCardIDs {
 	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
@@ -59,36 +67,7 @@ func batchRequestValidator[RK cModel.YGOResourceKey, T cModel.BatchCardData[RK] 
 	}
 
 	if len(reqBody.CardIDs) == 0 {
-		logger.Warn("Nothing to process - missing cardID data")
-		res.WriteHeader(http.StatusOK)
-
-		var empty T
-		switch any(empty).(type) {
-		case cModel.BatchCardData[RK]:
-			json.NewEncoder(res).Encode(
-				cModel.BatchCardData[RK]{CardInfo: make(cModel.CardDataMap, 0), UnknownResources: make(RK, 0)},
-			)
-		case model.BatchCardSuggestions[RK]:
-			json.NewEncoder(res).Encode(
-				model.BatchCardSuggestions[RK]{
-					NamedMaterials:        make([]model.CardReference, 0),
-					NamedReferences:       make([]model.CardReference, 0),
-					MaterialArchetypes:    make([]string, 0),
-					ReferencedArchetypes:  make([]string, 0),
-					UnknownResources:      make(RK, 0),
-					IntersectingResources: make(RK, 0),
-				},
-			)
-		case model.BatchCardSupport[RK]:
-			json.NewEncoder(res).Encode(
-				model.BatchCardSupport[RK]{
-					ReferencedBy:          make([]model.CardReference, 0),
-					MaterialFor:           make([]model.CardReference, 0),
-					UnknownResources:      make(RK, 0),
-					IntersectingResources: make(RK, 0),
-				},
-			)
-		}
+		logger.Warn("Batch card req body has no card ID's")
 		return nil
 	}
 
@@ -99,7 +78,18 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSuggestions[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			model.BatchCardSuggestions[cModel.CardIDs]{
+				NamedMaterials:        make([]model.CardReference, 0),
+				NamedReferences:       make([]model.CardReference, 0),
+				MaterialArchetypes:    make([]string, 0),
+				ReferencedArchetypes:  make([]string, 0),
+				UnknownResources:      make(cModel.CardIDs, 0),
+				IntersectingResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
@@ -110,6 +100,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(suggestions)
+		return
 	}
 }
 
@@ -138,8 +129,8 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	sort.SliceStable(suggestions.NamedMaterials, sortBatchReferences(suggestions.NamedMaterials, ccIDs))
-	sort.SliceStable(suggestions.NamedReferences, sortBatchReferences(suggestions.NamedReferences, ccIDs))
+	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
+	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
 	sort.Strings(suggestions.MaterialArchetypes)
 	sort.Strings(suggestions.ReferencedArchetypes)
 	sort.Strings(suggestions.IntersectingResources)
@@ -167,20 +158,6 @@ func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardD
 	}
 
 	return suggestionByCardName
-}
-
-func sortBatchReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
-	return func(i, j int) bool {
-		iv, jv := refs[i], refs[j]
-		switch {
-		case iv.Occurrences != jv.Occurrences:
-			return iv.Occurrences > jv.Occurrences
-		case iv.Card.GetColor() != jv.Card.GetColor():
-			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
-		default:
-			return iv.Card.GetName() < jv.Card.GetName()
-		}
-	}
 }
 
 func groupArchetypes(archetypesToParse []string, uniqueArchetypeSet map[string]struct{}, uniqueArchetypes *[]string) {
@@ -224,7 +201,16 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
-	if reqBody := batchRequestValidator[cModel.CardIDs, model.BatchCardSupport[cModel.CardIDs]](ctx, res, req); reqBody == nil {
+	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(
+			model.BatchCardSupport[cModel.CardIDs]{
+				ReferencedBy:          make([]model.CardReference, 0),
+				MaterialFor:           make([]model.CardReference, 0),
+				UnknownResources:      make(cModel.CardIDs, 0),
+				IntersectingResources: make(cModel.CardIDs, 0),
+			},
+		)
 		return
 	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
@@ -232,47 +218,52 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		res.WriteHeader(http.StatusOK)
 		json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData))
+		return
 	}
 }
 
-func getBatchSupport(ctx context.Context, suggestionSubjectsCardData cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
+func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
+	var wg sync.WaitGroup
+	awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
+	go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
+		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+		awg.Store(ccIDs)                                               // TODO: handle error
+	}(awg)
+
 	support := model.BatchCardSupport[cModel.CardIDs]{
 		IntersectingResources: make(cModel.CardIDs, 0, 5),
-		UnknownResources:      suggestionSubjectsCardData.UnknownResources,
+		UnknownResources:      requestedCards.UnknownResources,
 	}
 
-	cardNames := make([]string, 0, len(suggestionSubjectsCardData.CardInfo))
-	for _, card := range suggestionSubjectsCardData.CardInfo {
-		cardNames = append(cardNames, card.GetName())
+	cardNames := make([]string, len(requestedCards.CardInfo))
+	ind := 0
+	for _, card := range requestedCards.CardInfo {
+		cardNames[ind] = card.GetName()
+		ind++
 	}
 
 	if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, cardNames); err != nil {
 		// TODO: error handling
 	} else {
-		var wg sync.WaitGroup
-		awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
-		go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
-			ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-			awg.Store(ccIDs)                                               // TODO: handle error
-		}(awg)
-
 		uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
-		for _, card := range suggestionSubjectsCardData.CardInfo {
-			s1, s2 := determineSupportCards(card, cardRefs)
-			if len(s1) > 0 {
-				parseSuggestionReferences(s1, uniqueReferenceByCardID, suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
+		for _, card := range requestedCards.CardInfo {
+			referencedBy, materialFor := determineSupportCards(card, cardRefs)
+			if len(referencedBy) > 0 {
+				parseSuggestionReferences(referencedBy, uniqueReferenceByCardID, requestedCards.CardInfo, &support.IntersectingResources)
 			}
-			if len(s2) > 0 {
-				parseSuggestionReferences(s2, uniqueMaterialByCardIDs, suggestionSubjectsCardData.CardInfo, &support.IntersectingResources)
+			if len(materialFor) > 0 {
+				parseSuggestionReferences(materialFor, uniqueMaterialByCardIDs, requestedCards.CardInfo, &support.IntersectingResources)
 			}
 		}
 
 		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
+		sort.Strings(support.IntersectingResources)
+		sort.Strings(support.UnknownResources)
 		ccIDs := awg.Load()
-		sort.SliceStable(support.ReferencedBy, sortBatchReferences(support.ReferencedBy, ccIDs.Values))
-		sort.SliceStable(support.MaterialFor, sortBatchReferences(support.MaterialFor, ccIDs.Values))
+		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.Values))
+		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.Values))
 	}
 	return support
 }

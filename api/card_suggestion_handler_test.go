@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/ygo-skc/skc-go/common/client"
-	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/parser"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
@@ -35,13 +35,13 @@ func TestCleanupReference(t *testing.T) {
 
 	baseCases := []string{"'Sunrise", "'Sunrise'", "Sunrise'"}
 	for _, value := range baseCases {
-		cModel.CleanupToken(&value)
+		parser.CleanupToken(&value)
 		assert.Equal("Sunrise", value, "Expected token - after cleanup - does not equal actual value")
 	}
 
 	specialCases := []string{"Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru", "'Iron Core of Koa'ki Meiru'", "Iron Core of Koa'ki Meiru\""}
 	for _, value := range specialCases {
-		cModel.CleanupToken(&value)
+		parser.CleanupToken(&value)
 		assert.Equal("Iron Core of Koa'ki Meiru", value, "Expected token - after cleanup - does not equal actual value")
 	}
 }

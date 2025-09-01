@@ -13,6 +13,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -63,8 +64,8 @@ func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[s
 	suggestions := parseSuggestionData(materialText, effectText, usd)
 	suggestions.Card = subject
 
-	sortCardReferences(&suggestions.NamedReferences, ccIDs)
-	sortCardReferences(&suggestions.NamedMaterials, ccIDs)
+	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
+	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
 	sort.Strings(suggestions.ReferencedArchetypes)
 	sort.Strings(suggestions.MaterialArchetypes)
 	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)
@@ -95,7 +96,7 @@ func parseSuggestionData(materialText string, effectText string, usd unparsedSug
 func partitionTokensInCardText(cardText string, archetypeSet map[string]struct{}, archetypesInCardText *[]string) map[string]int {
 	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
 	for _, token := range quotedStringRegex.FindAllString(cardText, -1) {
-		cModel.CleanupToken(&token)
+		parser.CleanupToken(&token)
 		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypesInCardText, token) {
 			*archetypesInCardText = append(*archetypesInCardText, token)
 		} else if !exists {
@@ -121,7 +122,7 @@ func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unpars
 
 	if totalTokens != 0 {
 		for i := range totalTokens {
-			cModel.CleanupToken(&tokens[i])
+			parser.CleanupToken(&tokens[i])
 		}
 
 		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
@@ -151,14 +152,16 @@ func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unpars
 	return usd
 }
 
-func sortCardReferences(cr *[]model.CardReference, ccIDs map[string]uint32) {
-	// sorting alphabetically from a-z
-	sort.SliceStable(*cr, func(i, j int) bool {
-		return (*cr)[i].Card.GetName() < (*cr)[j].Card.GetName()
-	})
-
-	// sorting by card color
-	sort.SliceStable(*cr, func(i, j int) bool {
-		return ccIDs[(*cr)[i].Card.GetColor()] < ccIDs[(*cr)[j].Card.GetColor()]
-	})
+func sortCardReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
+	return func(i, j int) bool {
+		iv, jv := refs[i], refs[j]
+		switch {
+		case iv.Occurrences != jv.Occurrences:
+			return iv.Occurrences > jv.Occurrences
+		case iv.Card.GetColor() != jv.Card.GetColor():
+			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
+		default:
+			return iv.Card.GetName() < jv.Card.GetName()
+		}
+	}
 }

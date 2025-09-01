@@ -10,6 +10,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
+	"github.com/ygo-skc/skc-go/common/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -25,25 +26,28 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if cardToGetSupportFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
+	if subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		cardName := (*cardToGetSupportFor).GetName()
-		support := model.CardSupport{Card: *cardToGetSupportFor, ReferencedBy: []model.CardReference{}, MaterialFor: []model.CardReference{}}
+		cardName := (*subject).GetName()
+		support := model.CardSupport{Card: *subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
 
 		if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName}); err != nil {
 			err.HandleServerResponse(res)
 			return
-		} else if err == nil && len(cardRefs) == 0 {
-			logger.Warn("No support found")
 		} else {
 			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
-			logger.Info(fmt.Sprintf("%d direct references (excluding cards referencing it as a material)", len(support.ReferencedBy)))
-			logger.Info(fmt.Sprintf("Can be used as a material for %d cards", len(support.MaterialFor)))
+			numNamedReferences, numMaterialReferences := len(support.ReferencedBy), len(support.MaterialFor)
+			if numNamedReferences == 0 && numMaterialReferences == 0 {
+				logger.Warn("Card has no support")
+			} else {
+				logger.Info(fmt.Sprintf("Referenced by %d non-ED cards. Referenced by %d ED cards", numNamedReferences, numMaterialReferences))
+			}
+			res.WriteHeader(http.StatusOK)
+			json.NewEncoder(res).Encode(support)
+			return
 		}
-		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(support)
 	}
 }
 
@@ -52,8 +56,6 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) ([]model.CardReference, []model.CardReference) {
 	referencedBy := []model.CardReference{}
 	materialFor := []model.CardReference{}
-	doubleQuotedCardName := fmt.Sprintf(`"%s"`, subject.GetName())
-	singleQuotedCardName := fmt.Sprintf(`'%s'`, subject.GetName())
 
 	for _, reference := range references {
 		if reference.GetName() == subject.GetName() {
@@ -62,13 +64,12 @@ func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) 
 
 		effect := reference.GetEffect()
 
-		if materialString := cModel.GetPotentialMaterialsAsString(reference); materialString != "" &&
-			(strings.Contains(materialString, doubleQuotedCardName) || strings.Contains(materialString, singleQuotedCardName)) {
+		if materialString := cModel.GetPotentialMaterialsAsString(reference); materialString != "" && parser.TextContainsSubStr(materialString, subject.GetName()) {
 			materialFor = append(materialFor, model.CardReference{Occurrences: 1, Card: reference})
 			effect = strings.ReplaceAll(effect, materialString, "") // effect without materials
 		}
 
-		if strings.Contains(effect, doubleQuotedCardName) || strings.Contains(effect, singleQuotedCardName) {
+		if parser.TextContainsSubStr(effect, subject.GetName()) {
 			referencedBy = append(referencedBy, model.CardReference{Occurrences: 1, Card: reference})
 		}
 	}
