@@ -10,6 +10,7 @@ import (
 	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/model"
 	cUtil "github.com/ygo-skc/skc-go/common/util"
+	"github.com/ygo-skc/skc-go/common/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
@@ -25,26 +26,56 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
-	var wg sync.WaitGroup
-	awg := cUtil.NewAtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]](&wg)
-	go func(awg *cUtil.AtomicWaitGroup[cModel.BatchCardData[cModel.CardIDs]]) {
-		productContents, _ := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		awg.Store(cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey))
-	}(awg)
-
-	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+	cards, ccIDs, err := loadPSData(ctx, productID)
 
 	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
 	var support model.BatchCardSupport[cModel.CardIDs]
 
-	cardsInProduct := awg.Load()
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	} else {
+		var wg sync.WaitGroup
+		wg.Add(2)
+		go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cards, ccIDs.Values) }()
+		go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards) }()
+		wg.Wait()
 
-	wg.Add(2)
-	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cardsInProduct, ccIDs.Values) }()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cardsInProduct) }()
-	wg.Wait()
+		logger.Info("Successfully retrieved product card suggestions")
+		res.WriteHeader(http.StatusOK)
+		json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support})
+	}
+}
 
-	logger.Info("Successfully retrieved product card suggestions")
-	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support})
+// load data needed to form product suggestions
+func loadPSData(ctx context.Context, productID string) (*cModel.BatchCardData[cModel.CardIDs], *ygo.CardColors, *cModel.APIError) {
+	type productCardsRes struct {
+		cards *cModel.BatchCardData[cModel.CardIDs]
+		err   *cModel.APIError
+	}
+
+	var wg sync.WaitGroup
+	awg := cUtil.NewAtomicWaitGroup[productCardsRes](&wg)
+	go func(awg *cUtil.AtomicWaitGroup[productCardsRes]) {
+		productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
+		r := productCardsRes{
+			err: err,
+		}
+		if productContents != nil {
+			r.cards = cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
+		}
+		awg.Store(&r)
+	}(awg)
+
+	ccIDs, err := downstream.YGO.CardService.GetCardColorsProto(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	r := awg.Load()
+	if r.err != nil {
+		return nil, nil, r.err
+	}
+
+	return r.cards, ccIDs, nil
 }
