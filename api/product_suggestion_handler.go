@@ -28,13 +28,13 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	cards, ccIDs, err := loadPSData(ctx, productID)
 
-	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
-	var support model.BatchCardSupport[cModel.CardIDs]
-
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
+		var suggestions model.BatchCardSuggestions[cModel.CardIDs]
+		var support model.BatchCardSupport[cModel.CardIDs]
+
 		var wg sync.WaitGroup
 		wg.Add(2)
 		go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cards, ccIDs.Values) }()
