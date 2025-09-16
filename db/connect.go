@@ -14,8 +14,8 @@ import (
 )
 
 const (
-	minPoolSize = 5
-	maxPoolSize = 50
+	minPoolSize = 40
+	maxPoolSize = 60
 )
 
 func EstablishSKCSuggestionEngineDBConn() {
@@ -33,9 +33,8 @@ func EstablishSKCSuggestionEngineDBConn() {
 		SetMaxPoolSize(maxPoolSize).
 		SetMaxConnIdleTime(20 * time.Minute).
 		SetTimeout(2 * time.Second).
-		SetReadConcern(readconcern.Majority()).   // prefer strongly consistent reeds
+		SetReadConcern(readconcern.Available()).  // prefer eventually consistent reeds
 		SetWriteConcern(writeconcern.Majority()). // writes to most replicas before acknowledging the write is complete
-		SetCompressors([]string{"zlib"}).
 		SetAppName("SKC Suggestion Engine")); err != nil {
 		log.Fatalln("Error creating new mongodb client for skc-suggestion-engine DB", err)
 	} else {
