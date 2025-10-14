@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	cModel "github.com/ygo-skc/skc-go/common/model"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"
 )

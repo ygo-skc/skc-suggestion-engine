@@ -11,9 +11,9 @@ import (
 	"sort"
 
 	json "github.com/goccy/go-json"
-	cModel "github.com/ygo-skc/skc-go/common/model"
-	cUtil "github.com/ygo-skc/skc-go/common/util"
-	"github.com/ygo-skc/skc-go/common/ygo"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	"github.com/ygo-skc/skc-go/common/v2/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"

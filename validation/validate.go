@@ -2,7 +2,7 @@ package validation
 
 import (
 	"github.com/go-playground/validator/v10"
-	cModel "github.com/ygo-skc/skc-go/common/model"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 

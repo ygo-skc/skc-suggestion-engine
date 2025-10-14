@@ -6,8 +6,8 @@ import (
 	"net/http"
 
 	json "github.com/goccy/go-json"
-	cModel "github.com/ygo-skc/skc-go/common/model"
-	cUtil "github.com/ygo-skc/skc-go/common/util"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 )
 
