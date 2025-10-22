@@ -4,8 +4,8 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	"github.com/ygo-skc/skc-go/common/client"
-	"github.com/ygo-skc/skc-go/common/parser"
+	"github.com/ygo-skc/skc-go/common/v2/client"
+	"github.com/ygo-skc/skc-go/common/v2/parser"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	skc_testing "github.com/ygo-skc/skc-suggestion-engine/testing"

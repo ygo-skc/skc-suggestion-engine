@@ -3,8 +3,8 @@ package testing
 import (
 	"context"
 
-	"github.com/ygo-skc/skc-go/common/model"
-	"github.com/ygo-skc/skc-go/common/ygo"
+	"github.com/ygo-skc/skc-go/common/v2/model"
+	"github.com/ygo-skc/skc-go/common/v2/ygo"
 )
 
 const (

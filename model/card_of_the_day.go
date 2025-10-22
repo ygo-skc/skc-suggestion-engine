@@ -1,7 +1,7 @@
 package model
 
 import (
-	cModel "github.com/ygo-skc/skc-go/common/model"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 )
 
 type CardOfTheDay struct {
