@@ -12,7 +12,7 @@ require (
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
 	github.com/ygo-skc/skc-go/common/v2 v2.1.1
-	go.mongodb.org/mongo-driver/v2 v2.4.0
+	go.mongodb.org/mongo-driver/v2 v2.4.1
 	google.golang.org/grpc v1.77.0
 )
 
