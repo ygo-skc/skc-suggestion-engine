@@ -11,7 +11,7 @@ require (
 	github.com/ip2location/ip2location-go/v9 v9.8.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.11.1
-	github.com/ygo-skc/skc-go/common/v2 v2.1.1
+	github.com/ygo-skc/skc-go/common/v2 v2.1.2
 	go.mongodb.org/mongo-driver/v2 v2.4.1
 	google.golang.org/grpc v1.77.0
 )
@@ -35,7 +35,7 @@ require (
 	golang.org/x/sys v0.38.0 // indirect
 	golang.org/x/text v0.31.0 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20251022142026-3a174f9686a8 // indirect
-	google.golang.org/protobuf v1.36.10 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	lukechampine.com/uint128 v1.3.0 // indirect
 )
