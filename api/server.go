@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -34,6 +35,13 @@ var (
 
 	serverAPIKey    string
 	chicagoLocation *time.Location
+
+	gzipPool = sync.Pool{
+		New: func() any {
+			w, _ := gzip.NewWriterLevel(io.Discard, 2)
+			return w
+		},
+	}
 )
 
 func init() {
@@ -98,8 +106,10 @@ func commonResponseMiddleware(next http.Handler) http.Handler {
 
 		// gzip
 		if acceptsGzip(req) {
-			zip, _ := gzip.NewWriterLevel(res, 2)
+			zip := gzipPool.Get().(*gzip.Writer)
+			zip.Reset(res)
 			defer zip.Close()
+			defer gzipPool.Put(zip)
 
 			res.Header().Set("Content-Encoding", "gzip")
 			res.Header().Del("Content-Length")
