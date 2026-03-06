@@ -1,8 +1,8 @@
-// Core package used to configure skc-suggestion-engine api and its endpoints.
 package api
 
 import (
 	"compress/gzip"
+	"crypto/tls"
 	"fmt"
 	"io"
 	"log"
@@ -19,6 +19,7 @@ import (
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
+	"golang.org/x/net/http2"
 )
 
 const (
@@ -177,9 +178,43 @@ func RunHttpServer() {
 func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 	cUtil.CombineCerts("certs")
 	port := 9000
+
+	tlsCfg := &tls.Config{
+		MinVersion: tls.VersionTLS13,
+		NextProtos: []string{"h2"},
+		CurvePreferences: []tls.CurveID{
+			tls.X25519,
+			tls.CurveP256,
+		},
+	}
+
+	server := &http.Server{
+		Addr:      fmt.Sprintf(":%d", port),
+		Handler:   corsOpts.Handler(router),
+		TLSConfig: tlsCfg,
+
+		ReadTimeout:       6 * time.Second,
+		ReadHeaderTimeout: 2 * time.Second,
+		WriteTimeout:      4 * time.Second,
+		IdleTimeout:       15 * time.Second,
+
+		MaxHeaderBytes: 64 << 10,
+	}
+
+	if err := http2.ConfigureServer(server, &http2.Server{
+		MaxConcurrentStreams:         100,
+		MaxHandlers:                  25,
+		IdleTimeout:                  15 * time.Second,
+		WriteByteTimeout:             4 * time.Second,
+		MaxUploadBufferPerConnection: 8 << 10,
+		MaxUploadBufferPerStream:     8 << 10,
+	}); err != nil {
+		log.Fatalf("Failed to configure HTTP/2: %v", err)
+	}
+
 	slog.Info(fmt.Sprintf("API starting on port %d", port))
 
-	if err := http.ListenAndServeTLS(fmt.Sprintf(":%d", port), "certs/concatenated.crt", "certs/private.key", corsOpts.Handler(router)); err != nil {
+	if err := server.ListenAndServeTLS("certs/concatenated.crt", "certs/private.key"); err != nil {
 		log.Fatalf("There was an error starting api server: %s", err)
 	}
 }
