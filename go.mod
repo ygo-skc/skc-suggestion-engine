@@ -13,7 +13,7 @@ require (
 	github.com/ygo-skc/skc-go/common/v2 v2.1.3
 	go.mongodb.org/mongo-driver/v2 v2.5.0
 	golang.org/x/net v0.51.0
-	google.golang.org/grpc v1.79.1
+	google.golang.org/grpc v1.79.2
 )
 
 require (
