@@ -157,7 +157,12 @@ func RunHttpServer() {
 
 	// Cors
 	corsOpts := cors.New(cors.Options{
-		AllowedOrigins: []string{"http://localhost:3000", "https://dev.thesupremekingscastle.com", "https://thesupremekingscastle.com", "https://www.thesupremekingscastle.com"},
+		AllowedOrigins: []string{
+			"http://localhost:3000",
+			"https://dev.thesupremekingscastle.com",
+			"https://thesupremekingscastle.com",
+			"https://www.thesupremekingscastle.com",
+		},
 		AllowedMethods: []string{
 			http.MethodGet,
 			http.MethodPost,
