@@ -165,7 +165,7 @@ func RunHttpServer() {
 		},
 
 		AllowedHeaders: []string{
-			"*", //or you can your header key values which you are using in your application
+			"*",
 		},
 	})
 
