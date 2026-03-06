@@ -213,7 +213,7 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		WriteTimeout:      4 * time.Second,
 		IdleTimeout:       15 * time.Second,
 
-		MaxHeaderBytes: 64 << 10,
+		MaxHeaderBytes: 32 << 10,
 	}
 
 	if err := http2.ConfigureServer(server, &http2.Server{
