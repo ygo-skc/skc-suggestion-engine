@@ -3,6 +3,7 @@ package api
 import (
 	"compress/gzip"
 	"crypto/tls"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	json "github.com/goccy/go-json"
 	"github.com/ip2location/ip2location-go/v9"
 	"github.com/rs/cors"
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"

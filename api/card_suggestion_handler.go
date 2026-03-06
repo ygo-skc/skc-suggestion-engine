@@ -2,6 +2,7 @@ package api
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -11,7 +12,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	json "github.com/goccy/go-json"
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	"github.com/ygo-skc/skc-go/common/v2/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
