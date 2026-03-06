@@ -96,15 +96,26 @@ func commonResponseMiddleware(next http.Handler) http.Handler {
 		res.Header().Add("Cache-Control", "max-age=300")
 
 		// gzip
-		if strings.Contains(req.Header.Get("Accept-Encoding"), "gzip") {
+		if acceptsGzip(req) {
+			zip, _ := gzip.NewWriterLevel(res, 2)
+			defer zip.Close()
+
 			res.Header().Set("Content-Encoding", "gzip")
-			zip := gzip.NewWriter(res)
+			res.Header().Del("Content-Length")
 			next.ServeHTTP(gzipResponseWriter{Writer: zip, ResponseWriter: res}, req)
-			zip.Close()
 		} else {
 			next.ServeHTTP(res, req)
 		}
 	})
+}
+
+func acceptsGzip(req *http.Request) bool {
+	for _, val := range strings.Split(req.Header.Get("Accept-Encoding"), ",") {
+		if strings.TrimSpace(strings.Split(val, ";")[0]) == "gzip" {
+			return true
+		}
+	}
+	return false
 }
 
 // Configures routes and their middle wares
