@@ -59,7 +59,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		downstream.YGO.CardService.GetExplicitArchetypalExclusions)
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
-	for i := 0; i < 3; i++ {
+	for range 3 {
 		select {
 		case ar := <-supportUsingCardNameChannel:
 			if ar.err != nil {
