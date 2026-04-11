@@ -142,15 +142,15 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs]) map[string]model.CardSuggestions {
 	numSubjects := len(subjects.CardInfo)
 	materialTextByCardName, effectTextByCardName := make(map[string]string, numSubjects), make(map[string]string, numSubjects)
-	fullText4AllCards := ""
+	var fullText4AllCards strings.Builder
 	for _, card := range subjects.CardInfo {
 		materialText := cModel.GetPotentialMaterialsAsString(card)
 		materialTextByCardName[card.GetName()] = materialText
 		effectTextByCardName[card.GetName()] = strings.ReplaceAll(card.GetEffect(), materialText, "")
-		fullText4AllCards += fmt.Sprintf("%s\n", card.GetEffect())
+		fullText4AllCards.WriteString(fmt.Sprintf("%s\n", card.GetEffect()))
 	}
 
-	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards, -1))
+	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards.String(), -1))
 
 	suggestionByCardName := make(map[string]model.CardSuggestions, numSubjects)
 	for cardName := range materialTextByCardName {
