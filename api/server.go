@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
@@ -49,8 +48,9 @@ func init() {
 	isCICD := os.Getenv("IS_CICD")
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		slog.Debug("Loading IP DB...")
-		if ip, err := ip2location.OpenDB("./data/IPv4-DB9.BIN"); err != nil {
-			log.Fatalln("Could not load IP DB file...")
+		if ip, err := ip2location.OpenDB("./data/IPv4-DB11.BIN"); err != nil {
+			slog.Error("Could not load IP DB file", "err", err)
+			os.Exit(1)
 		} else {
 			ipDB = ip
 		}
@@ -60,7 +60,8 @@ func init() {
 
 	// init Location
 	if location, err := time.LoadLocation("America/Chicago"); err != nil {
-		log.Fatalf("Could not load Chicago location - err %v", err)
+		slog.Error("Could not load Chicago location", "err", err)
+		os.Exit(1)
 	} else {
 		chicagoLocation = location
 	}
@@ -184,6 +185,7 @@ func RunHttpServer() {
 		},
 	})
 
+	cUtil.CombineCerts("certs")
 	serveTLS(router, corsOpts)
 }
 
@@ -191,7 +193,6 @@ func RunHttpServer() {
 // It combines the TLS certificate and CA bundle, and utilizes the private key.
 // Finally, it applies CORS middleware.
 func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
-	cUtil.CombineCerts("certs")
 	port := 9000
 
 	tlsCfg := &tls.Config{
@@ -224,12 +225,14 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		MaxUploadBufferPerConnection: 8 << 10,
 		MaxUploadBufferPerStream:     8 << 10,
 	}); err != nil {
-		log.Fatalf("Failed to configure HTTP/2: %v", err)
+		slog.Error("Failed to configure HTTP/2", "err", err)
+		os.Exit(1)
 	}
 
-	slog.Info(fmt.Sprintf("API starting on port %d", port))
+	slog.Info("API starting", "port", port)
 
 	if err := server.ListenAndServeTLS("certs/concatenated.crt", "certs/private.key"); err != nil {
-		log.Fatalf("There was an error starting api server: %s", err)
+		slog.Error("There was an error starting api server", "err", err)
+		os.Exit(1)
 	}
 }
