@@ -10,15 +10,7 @@ import (
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
-	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
-)
-
-var (
-	skcSuggestionDB           *mongo.Database
-	blackListCollection       *mongo.Collection
-	trafficAnalysisCollection *mongo.Collection
-	cardOfTheDayCollection    *mongo.Collection
 )
 
 const (
