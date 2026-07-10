@@ -45,5 +45,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", ygoServiceVersion, skcSuggestionDBVersion))
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(status)
+	if err := json.NewEncoder(res).Encode(status); err != nil {
+		logger.Error("Could not encode API status response", "err", err)
+	}
 }
