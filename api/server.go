@@ -90,7 +90,7 @@ func verifyApiKey(headers http.Header) *cModel.APIError {
 func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if err := verifyApiKey(req.Header); err != nil {
-			res.Header().Add("Content-Type", "application/json")
+			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(res).Encode(err)
 		} else {
@@ -102,15 +102,15 @@ func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 // sets common headers for response
 func commonResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Add("Content-Type", "application/json")
-		res.Header().Add("Cache-Control", "max-age=300")
+		res.Header().Set("Content-Type", "application/json")
+		res.Header().Set("Cache-Control", "max-age=300")
 
 		// gzip
 		if acceptsGzip(req) {
 			zip := gzipPool.Get().(*gzip.Writer)
 			zip.Reset(res)
-			defer zip.Close()
 			defer gzipPool.Put(zip)
+			defer zip.Close()
 
 			res.Header().Set("Content-Encoding", "gzip")
 			res.Header().Del("Content-Length")
