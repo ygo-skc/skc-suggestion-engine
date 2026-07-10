@@ -25,6 +25,7 @@ import (
 const (
 	apiContext = "/api/v1/suggestions"
 	apiName    = "skc-suggestion-engine"
+	apiPort    = 9000
 )
 
 var (
@@ -193,8 +194,6 @@ func RunHttpServer() {
 // It combines the TLS certificate and CA bundle, and utilizes the private key.
 // Finally, it applies CORS middleware.
 func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
-	port := 9000
-
 	tlsCfg := &tls.Config{
 		MinVersion: tls.VersionTLS13,
 		NextProtos: []string{"h2"},
@@ -205,7 +204,7 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 	}
 
 	server := &http.Server{
-		Addr:      fmt.Sprintf(":%d", port),
+		Addr:      fmt.Sprintf(":%d", apiPort),
 		Handler:   corsOpts.Handler(router),
 		TLSConfig: tlsCfg,
 
@@ -229,7 +228,7 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		os.Exit(1)
 	}
 
-	slog.Info("API starting", "port", port)
+	slog.Info("API starting", "port", apiPort)
 
 	if err := server.ListenAndServeTLS("certs/concatenated.crt", "certs/private.key"); err != nil {
 		slog.Error("There was an error starting api server", "err", err)
