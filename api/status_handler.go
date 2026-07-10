@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"sync"
 
@@ -55,7 +54,9 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	status := cModel.APIHealth{Version: "2.2.5", Downstream: downstreamHealth}
 
-	logger.Info(fmt.Sprintf("API Status Info! SKC DB version: %s, and SKC Suggestion Engine version: %s", ygoServiceVersion, skcSuggestionDBVersion))
+	logger.Info("API Status",
+		"ygoServiceStatus", downstreamHealth[0].Status, "ygoServiceVersion", ygoServiceVersion,
+		"skcSuggestionDBStatus", downstreamHealth[1].Status, "skcSuggestionDBVersion", skcSuggestionDBVersion)
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(status); err != nil {
 		logger.Error("Could not encode API status response", "err", err)
