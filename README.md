@@ -15,6 +15,24 @@ Go API that extends functionality of [SKC API](https://github.com/ygo-skc/skc-ap
 * Clients can send browsing/traffic data to build the suggestion and trending database.
 * Status endpoint that reports health of the API and its downstream dependencies (SKC DB, Suggestion DB)
 
+## Languages & Tools
+
+* **Go** - primary language the API is written in
+* **Bash**
+* **YAML**
+* **[chi](https://github.com/go-chi/chi)** - HTTP router/middleware
+* **gRPC / Protocol Buffers** - communication with the downstream `ygo-service`
+* **MongoDB** (`mongo-driver`) - persistence for suggestion/traffic data
+* **[go-playground/validator](https://github.com/go-playground/validator)** - request payload validation
+* **[rs/cors](https://github.com/rs/cors)** - CORS handling
+* **[ip2location](https://github.com/ip2location/ip2location-go)** - IP geolocation used for traffic/trending analysis
+* **[testify](https://github.com/stretchr/testify)** - unit testing
+* **TLS 1.3 / HTTP2** - the API is served exclusively over HTTPS
+* **Docker / Docker Compose** - containerized local and prod runtime
+* **GitHub Actions** - CI for unit tests and CodeQL scanning
+* **CodeQL** - static analysis/security scanning
+* **AWS Secrets Manager** (via AWS CLI + `jq`) - secret/config retrieval for local setup
+
 ## Local Setup
 
 In order for the API to work locally, do the following steps
