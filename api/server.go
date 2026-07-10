@@ -221,8 +221,8 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		MaxHandlers:                  25,
 		IdleTimeout:                  15 * time.Second,
 		WriteByteTimeout:             4 * time.Second,
-		MaxUploadBufferPerConnection: 8 << 10,
-		MaxUploadBufferPerStream:     8 << 10,
+		MaxUploadBufferPerConnection: 1 << 20,
+		MaxUploadBufferPerStream:     1 << 20,
 	}); err != nil {
 		slog.Error("Failed to configure HTTP/2", "err", err)
 		os.Exit(1)
