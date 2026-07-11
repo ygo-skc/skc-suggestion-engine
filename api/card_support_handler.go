@@ -45,7 +45,7 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	if numNamedReferences == 0 && numMaterialReferences == 0 {
 		logger.Warn("Card has no support")
 	} else {
-		logger.Info("Card support determined", "referencedByCount", numNamedReferences, "materialForCount", numMaterialReferences)
+		logger.Info("Card support generated", "referencedByCount", numNamedReferences, "materialForCount", numMaterialReferences)
 	}
 
 	res.WriteHeader(http.StatusOK)
