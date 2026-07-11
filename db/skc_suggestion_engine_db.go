@@ -235,6 +235,11 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 					{Key: "index", Value: "text_embedding"},
 					{Key: "path", Value: "text"},
 					{Key: "exact", Value: false}, // false = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
+					{Key: "filter", Value: bson.D{
+						{Key: "id", Value: bson.D{
+							{Key: "$ne", Value: subject.GetID()},
+						}},
+					}},
 					{Key: "query", Value: bson.D{
 						{Key: "text", Value: subjectEffect},
 					}},

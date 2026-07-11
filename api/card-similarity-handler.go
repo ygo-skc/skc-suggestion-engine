@@ -38,9 +38,6 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 
 	similarCardIDs := make(cModel.CardIDs, 0, len(vectorSearchResults))
 	for _, result := range vectorSearchResults {
-		if result.ID == cardID {
-			continue
-		}
 		similarCardIDs = append(similarCardIDs, result.ID)
 	}
 
