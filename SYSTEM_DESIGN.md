@@ -146,6 +146,25 @@ sequenceDiagram
     end
 ```
 
+### `GET /api/v1/suggestions/card/{cardID}/similar`
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as skc-suggestion-engine
+    participant YGO as ygo-service (gRPC)
+    participant DB as Suggestion DB (MongoDB)
+
+    Client->>API: GET /api/v1/suggestions/card/{cardID}/similar
+    API->>YGO: CardService.GetCardByID(cardID)
+    YGO-->>API: subject card
+    API->>DB: GetSimilarCards(subject) - $vectorSearch (ENN) + $rerank on card_embedding text
+    DB-->>API: similar card IDs
+    API->>YGO: CardService.GetCardsByID(similar card IDs)
+    YGO-->>API: CardDataMap
+    API-->>Client: 200 CardSimilarity{Card, Similar[]}
+```
+
 ### `GET /api/v1/suggestions/product/{productID}`
 
 ```mermaid
