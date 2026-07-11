@@ -3,13 +3,11 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"strings"
-	"sync"
-
-	"fmt"
 	"net/http"
 	"slices"
 	"sort"
+	"strings"
+	"sync"
 
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
@@ -156,7 +154,8 @@ func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardD
 		materialText := cModel.GetPotentialMaterialsAsString(card)
 		materialTextByCardName[card.GetName()] = materialText
 		effectTextByCardName[card.GetName()] = strings.ReplaceAll(card.GetEffect(), materialText, "")
-		fullText4AllCards.WriteString(fmt.Sprintf("%s\n", card.GetEffect()))
+		fullText4AllCards.WriteString(card.GetEffect())
+		fullText4AllCards.WriteByte('\n')
 	}
 
 	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards.String(), -1))
