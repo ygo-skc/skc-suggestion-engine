@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"time"
 
@@ -21,7 +20,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
-	logger.Info(fmt.Sprintf("Fetching card of the day - todays date %s", cardOfTheDay.Date))
+	logger.Info("Fetching card of the day", "date", cardOfTheDay.Date)
 
 	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, cardOfTheDay.Date, cardOfTheDay.Version); cardID == nil {
 		if err := fetchNewCardOfTheDayAndPersist(ctx, &cardOfTheDay); err != nil {
@@ -31,7 +30,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	} else if err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		logger.Warn(fmt.Sprintf("Existing card of the day found! COTD: %s", *cardID))
+		logger.Warn("Existing card of the day found", "COTD", *cardID)
 		cardOfTheDay.CardID = *cardID
 	}
 
@@ -60,7 +59,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 		return e
 	}
 
-	logger.Warn(fmt.Sprintf("Ignoring cards that were previously COTD, total ignored: %d", len(previousCOTDData)))
+	logger.Warn("Ignoring cards that were previously COTD", "totalIgnored", len(previousCOTDData))
 
 	if randomCard, err := downstream.YGO.CardService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e
