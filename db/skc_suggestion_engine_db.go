@@ -75,8 +75,8 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	query := bson.A{
-		bson.D{
+	pipeline := mongo.Pipeline{
+		{
 			{Key: "$match",
 				Value: bson.D{
 					{Key: "resourceUtilized.name", Value: resourceName},
@@ -89,7 +89,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 				},
 			},
 		},
-		bson.D{
+		{
 			{Key: "$group",
 				Value: bson.D{
 					{Key: "_id", Value: "$resourceUtilized.value"},
@@ -97,15 +97,15 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 				},
 			},
 		},
-		bson.D{
+		{
 			{Key: "$sort", Value: bson.D{
 				{Key: "occurrences", Value: -1},
 				{Key: "_id", Value: -1},
 			}}},
-		bson.D{{Key: "$limit", Value: 10}},
+		{{Key: "$limit", Value: 10}},
 	}
 
-	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
+	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, pipeline); err != nil {
 		logger.Error("Error retrieving traffic data",
 			"resource", resourceName, "from", from.Format(intervalFormat), "to", to.Format(intervalFormat), "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
