@@ -157,6 +157,9 @@ func RunHttpServer() {
 			r.Get(`/card/support/{cardID:\d{8}}`, getCardSupportHandler)
 			r.Post("/card/support", getBatchSupportHandler)
 
+			// similar resources
+			r.Get(`/card/{cardID:\d{8}}/similar`, getSimilarCardsHandler)
+
 			r.Get(`/product/{productID:[0-9A-Z]{3,4}}`, getProductSuggestionsHandler)
 			r.Get("/archetype/{archetypeName}", getArchetypeSupportHandler)
 			r.Get(`/trending/{resource:(?i)card|product}`, trending)
