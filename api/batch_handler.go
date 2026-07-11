@@ -45,7 +45,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
-			logger.Warn(fmt.Sprintf("Following card IDs are not valid (no card data found in DB). IDs: %v", batchCardInfo.UnknownResources))
+			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknownResources", batchCardInfo.UnknownResources)
 		}
 
 		res.WriteHeader(http.StatusOK)
@@ -60,7 +60,7 @@ func parseBatchRequestBody(ctx context.Context, res http.ResponseWriter, req *ht
 	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		logger.Error(fmt.Sprintf("Error occurred while reading batch request body: Error %v", err))
+		logger.Error("Error occurred while reading batch request body", "err", err)
 		cModel.HandleServerResponse(cModel.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return nil
 	}
