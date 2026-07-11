@@ -224,6 +224,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 
 	logger.Info("Performing vector search on card")
 
+	limit := 30
 	desiredResults := 20
 	subjectEffect := subject.GetEffect()
 
@@ -233,11 +234,12 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 				Key: "$vectorSearch", Value: bson.D{
 					{Key: "index", Value: "text_embedding"},
 					{Key: "path", Value: "text"},
+					{Key: "exact", Value: false}, // false = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
 					{Key: "query", Value: bson.D{
 						{Key: "text", Value: subjectEffect},
 					}},
-					{Key: "numCandidates", Value: 100},
-					{Key: "limit", Value: 30},
+					{Key: "numCandidates", Value: limit * 20}, // recommended to use 20 times limit
+					{Key: "limit", Value: limit},
 				},
 			},
 		},
@@ -249,7 +251,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 						{Key: "text", Value: subjectEffect}, // TODO: update rerank query
 					}},
 					{Key: "path", Value: "text"},
-					{Key: "numDocsToRerank", Value: 30},
+					{Key: "numDocsToRerank", Value: limit},
 				},
 			},
 		},
