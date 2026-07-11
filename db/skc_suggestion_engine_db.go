@@ -175,22 +175,22 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 		},
 	)
 
-	if cursor, err := cardOfTheDayCollection.Find(ctx, query, opts); err != nil {
+	cursor, err := cardOfTheDayCollection.Find(ctx, query, opts)
+	if err != nil {
 		logger.Error("Error retrieving card of the day history", "version", version, "err", err)
-	} else {
-		historicalCOTD := make([]string, 0, 100)
-		defer cursor.Close(ctx)
-
-		for cursor.Next(ctx) {
-			var cotd model.CardOfTheDay
-			if err := cursor.Decode(&cotd); err != nil {
-				logger.Error("Error transforming DB data to COTD struct", "version", version, "err", err)
-			}
-			historicalCOTD = append(historicalCOTD, cotd.CardID)
-		}
-		return historicalCOTD, nil
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 	}
-	return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
+	defer cursor.Close(ctx)
+
+	historicalCOTD := make([]string, 0, 100)
+	for cursor.Next(ctx) {
+		var cotd model.CardOfTheDay
+		if err := cursor.Decode(&cotd); err != nil {
+			logger.Error("Error transforming DB data to COTD struct", "version", version, "err", err)
+		}
+		historicalCOTD = append(historicalCOTD, cotd.CardID)
+	}
+	return historicalCOTD, nil
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *cModel.APIError {
