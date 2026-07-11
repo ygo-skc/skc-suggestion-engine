@@ -45,7 +45,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx c
 	defer cancel()
 
 	if err := skcSuggestionDB.RunCommand(ctx, command).Decode(&commandResult); err != nil {
-		cUtil.RetrieveLogger(ctx).Error(fmt.Sprintf("Error getting SKC Suggestion DB version %v", err))
+		cUtil.RetrieveLogger(ctx).Error("Error getting SKC Suggestion DB version", "err", err)
 		return "", err
 	} else {
 		return fmt.Sprintf("%v", commandResult["version"]), nil
@@ -55,16 +55,16 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx c
 // Will update the database with a new traffic record.
 func (impl SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *cModel.APIError {
 	logger := cUtil.RetrieveLogger(ctx)
-	logger.Info(fmt.Sprintf("Inserting traffic data for resource %+v and system %+v.", ta.ResourceUtilized, ta.Source))
+	logger.Info("Inserting traffic data", "resource", ta.ResourceUtilized, "system", ta.Source)
 
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	if res, err := trafficAnalysisCollection.InsertOne(ctx, ta); err != nil {
-		logger.Error(fmt.Sprintf("Error inserting traffic data into DB: %v", err))
+		logger.Error("Error inserting traffic data into DB", "err", err)
 		return &cModel.APIError{Message: "Error occurred while attempting to insert new traffic data.", StatusCode: http.StatusInternalServerError}
 	} else {
-		logger.Info(fmt.Sprintf("Successfully inserted traffic data into DB, ID: %v", res.InsertedID))
+		logger.Info("Successfully inserted traffic data into DB", "id", res.InsertedID)
 		return nil
 	}
 }
@@ -106,20 +106,14 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, query); err != nil {
-		logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %s thru %s. Err: %v",
-			resourceName,
-			from.Format(intervalFormat),
-			to.Format(intervalFormat),
-			err))
+		logger.Error("Error retrieving traffic data",
+			"resource", resourceName, "from", from.Format(intervalFormat), "to", to.Format(intervalFormat), "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
-			logger.Error(fmt.Sprintf("Error retrieving traffic data for resource w/ name %s and interval %s thru %s. Err: %v",
-				resourceName,
-				from.Format(intervalFormat),
-				to.Format(intervalFormat),
-				err))
+			logger.Error("Error retrieving traffic data",
+				"resource", resourceName, "from", from.Format(intervalFormat), "to", to.Format(intervalFormat), "err", err)
 			return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
@@ -138,7 +132,7 @@ func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Conte
 		message := fmt.Sprintf("Black list query failed using type %s and phrase %s.", blackListType, blackListPhrase)
 		return false, &cModel.APIError{Message: message, StatusCode: http.StatusInternalServerError}
 	} else if count > 0 {
-		logger.Info(fmt.Sprintf("%s is blacklisted", blackListPhrase))
+		logger.Info("Phrase is blacklisted", "phrase", blackListPhrase)
 		return true, nil
 	} else {
 		return false, nil
@@ -162,7 +156,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Con
 		if err.Error() == "mongo: no documents in result" { // no card of the day present in db for specified date
 			return nil, nil
 		}
-		logger.Error(fmt.Sprintf("Error retrieving card of the day for given date: %s. Err: %s", date, err))
+		logger.Error("Error retrieving card of the day", "date", date, "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get card of the day."}
 	}
 
@@ -182,7 +176,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 	)
 
 	if cursor, err := cardOfTheDayCollection.Find(ctx, query, opts); err != nil {
-		logger.Error(fmt.Sprintf("Error retrieving card of the day history. Version: %d. Err: %s", version, err))
+		logger.Error("Error retrieving card of the day history", "version", version, "err", err)
 	} else {
 		historicalCOTD := make([]string, 0, 100)
 		defer cursor.Close(ctx)
@@ -190,7 +184,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 		for cursor.Next(ctx) {
 			var cotd model.CardOfTheDay
 			if err := cursor.Decode(&cotd); err != nil {
-				logger.Error(fmt.Sprintf("Error transforming DB data to COTD struct. Version: %d. Err: %s", version, err))
+				logger.Error("Error transforming DB data to COTD struct", "version", version, "err", err)
 			}
 			historicalCOTD = append(historicalCOTD, cotd.CardID)
 		}
@@ -204,10 +198,10 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	logger.Info(fmt.Sprintf("Inserting new COTD - ID: %s version %d", cotd.CardID, cotd.Version))
+	logger.Info("Inserting new COTD", "id", cotd.CardID, "version", cotd.Version)
 
 	if _, err := cardOfTheDayCollection.InsertOne(ctx, cotd); err != nil {
-		logger.Error(fmt.Sprintf("Could not insert card of the day, err %s", err))
+		logger.Error("Could not insert card of the day", "err", err)
 		return &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error saving card of the day."}
 	}
 
@@ -275,7 +269,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 	for cursor.Next(ctx) {
 		var r model.VectorSearchResult
 		if err := cursor.Decode(&r); err != nil {
-			logger.Error(fmt.Sprintf("Error transforming DB data to Vector Search struct. Err: %s", err))
+			logger.Error("Error transforming DB data to Vector Search struct", "err", err)
 		}
 		results = append(results, r)
 	}
