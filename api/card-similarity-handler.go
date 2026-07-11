@@ -7,8 +7,10 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
+	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
 const (
@@ -26,11 +28,30 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	}
+	similarCards := model.CardSimilarity{Card: *subject}
 
-	_, err = skcSuggestionEngineDBInterface.GetSimilarCards(ctx, *subject)
+	vectorSearchResults, err := skcSuggestionEngineDBInterface.GetSimilarCards(ctx, *subject)
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+
+	similarIDList := make([]string, len(vectorSearchResults))
+	for i, card := range vectorSearchResults {
+		// if card.ID == cardID {	TODO:
+		// 	continue
+		// }
+		similarIDList[i] = card.ID
+	}
+
+	vectorSearchResultsMetadata, _ := downstream.YGO.CardService.GetCardsByID(ctx, similarIDList) // TODO: handle error
+	similarCards.Similar = make([]cModel.YGOCard, len(vectorSearchResults))
+	for i, id := range similarIDList {
+		similarCards.Similar[i] = vectorSearchResultsMetadata.CardInfo[id]
+	}
 
 	res.WriteHeader(http.StatusOK)
-	if err := json.NewEncoder(res).Encode(subject); err != nil {
-		// TODO: add logger
+	if err := json.NewEncoder(res).Encode(similarCards); err != nil {
+		logger.Error("Could not encode card similarity response", "err", err, "card_id", cardID)
 	}
 }

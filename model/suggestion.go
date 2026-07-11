@@ -78,3 +78,8 @@ func RemoveSelfReference(self string, cr *[]CardReference) bool {
 type VectorSearchResult struct {
 	ID string `bson:"id"`
 }
+
+type CardSimilarity struct {
+	Card    cModel.YGOCard   `json:"card"`
+	Similar []cModel.YGOCard `json:"similar"`
+}

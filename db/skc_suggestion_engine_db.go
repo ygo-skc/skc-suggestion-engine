@@ -267,7 +267,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
 		logger.Error("Error retrieving similar card", "err", err)
-		return make([]model.VectorSearchResult, 0, 0), &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
 	defer cursor.Close(ctx)
@@ -286,7 +286,6 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 		logger.Error("Error iterating similar card results", "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
-	logger.Info("results", "res", results)
 
 	return results, nil
 }
