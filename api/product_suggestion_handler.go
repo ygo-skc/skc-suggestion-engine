@@ -27,25 +27,24 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Getting product card suggestions")
 
 	cards, ccIDs, err := loadPSData(ctx, productID)
-
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
-	} else {
-		var suggestions model.BatchCardSuggestions[cModel.CardIDs]
-		var support model.BatchCardSupport[cModel.CardIDs]
+	}
 
-		var wg sync.WaitGroup
-		wg.Add(2)
-		go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cards, ccIDs.Values) }()
-		go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards) }()
-		wg.Wait()
+	var suggestions model.BatchCardSuggestions[cModel.CardIDs]
+	var support model.BatchCardSupport[cModel.CardIDs]
 
-		logger.Info("Successfully retrieved product card suggestions")
-		res.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support}); err != nil {
-			logger.Error("Could not encode product suggestions response", "err", err, "productID", productID)
-		}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cards, ccIDs.Values) }()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards) }()
+	wg.Wait()
+
+	logger.Info("Successfully retrieved product card suggestions")
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support}); err != nil {
+		logger.Error("Could not encode product suggestions response", "err", err, "productID", productID)
 	}
 }
 
