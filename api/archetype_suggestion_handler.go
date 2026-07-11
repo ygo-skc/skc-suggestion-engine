@@ -72,7 +72,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 				res.WriteHeader(notAnArchetypeErr.StatusCode)
 				if err := json.NewEncoder(res).Encode(notAnArchetypeErr); err != nil {
-					logger.Error("Could not encode archetype error response", "err", err, "archetypeName", archetypeName)
+					logger.Error("Could not encode archetype error response", "err", err, "archetype_name", archetypeName)
 				}
 				return
 			} else {
@@ -99,14 +99,14 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
 	logger.Info("Returning archetypal suggestions",
-		"archetypeName", archetypeName,
-		"cardsFoundUsingName", len(archetypalSuggestions.UsingName),
-		"cardsFoundUsingText", len(archetypalSuggestions.UsingText),
-		"excludedCards", len(archetypalSuggestions.Exclusions))
+		"archetype_name", archetypeName,
+		"cards_found_using_name", len(archetypalSuggestions.UsingName),
+		"cards_found_using_text", len(archetypalSuggestions.UsingText),
+		"excluded_cards", len(archetypalSuggestions.Exclusions))
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
-		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetypeName", archetypeName, "totalCards", archetypalSuggestions.Total)
+		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetype_name", archetypeName, "total_cards", archetypalSuggestions.Total)
 	}
 }
 
@@ -131,7 +131,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
-		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", "cardName", uniqueExclusion.GetName())
+		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", "card_name", uniqueExclusion.GetName())
 	}
 
 	newList := []cModel.YGOCard{}

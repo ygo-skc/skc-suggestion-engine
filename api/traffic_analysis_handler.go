@@ -44,19 +44,19 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
 		if _, err := downstream.YGO.CardService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error("Card resource not valid", "resourceID", trafficData.ResourceUtilized.Value, "err", err)
+			logger.Error("Card resource not valid", "resource_id", trafficData.ResourceUtilized.Value, "err", err)
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
-				logger.Error("Could not encode API error response", "err", err, "resourceType", "card", "resourceID", trafficData.ResourceUtilized.Value)
+				logger.Error("Could not encode API error response", "err", err, "resource_type", "card", "resource_id", trafficData.ResourceUtilized.Value)
 			}
 			return
 		}
 	case model.ProductResource:
 		if _, err := downstream.YGO.ProductService.GetProductSummaryByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error("Product resource not valid", "resourceID", trafficData.ResourceUtilized.Value, "err", err)
+			logger.Error("Product resource not valid", "resource_id", trafficData.ResourceUtilized.Value, "err", err)
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
-				logger.Error("Could not encode API error response", "err", err, "resourceType", "product", "resourceID", trafficData.ResourceUtilized.Value)
+				logger.Error("Could not encode API error response", "err", err, "resource_type", "product", "resource_id", trafficData.ResourceUtilized.Value)
 			}
 			return
 		}
@@ -88,7 +88,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(cModel.Success{Message: "Successfully inserted new traffic data."}); err != nil {
-		logger.Error("Could not encode success response", "err", err, "resourceType", trafficData.ResourceUtilized.Name, "resourceID", trafficData.ResourceUtilized.Value)
+		logger.Error("Could not encode success response", "err", err, "resource_type", trafficData.ResourceUtilized.Name, "resource_id", trafficData.ResourceUtilized.Value)
 	}
 }
 
@@ -132,7 +132,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		addResourceInfoToTrendingMetric(tm)
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(trending); err != nil {
-			logger.Error("Could not encode trending response", "err", err, "resourceName", resourceName, "totalMetrics", len(tm))
+			logger.Error("Could not encode trending response", "err", err, "resource_name", resourceName, "total_metrics", len(tm))
 		}
 	}
 }

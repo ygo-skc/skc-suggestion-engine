@@ -55,8 +55,8 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 	status := cModel.APIHealth{Version: "2.2.5", Downstream: downstreamHealth}
 
 	logger.Info("API Status",
-		"ygoServiceStatus", downstreamHealth[0].Status, "ygoServiceVersion", ygoServiceVersion,
-		"skcSuggestionDBStatus", downstreamHealth[1].Status, "skcSuggestionDBVersion", skcSuggestionDBVersion)
+		"ygo_service_status", downstreamHealth[0].Status, "ygo_service_version", ygoServiceVersion,
+		"skc_suggestion_db_status", downstreamHealth[1].Status, "skc_suggestion_db_version", skcSuggestionDBVersion)
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(status); err != nil {
 		logger.Error("Could not encode API status response", "err", err)

@@ -45,12 +45,12 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	if numNamedReferences == 0 && numMaterialReferences == 0 {
 		logger.Warn("Card has no support")
 	} else {
-		logger.Info("Card support generated", "referencedByCount", numNamedReferences, "materialForCount", numMaterialReferences)
+		logger.Info("Card support generated", "referenced_by_count", numNamedReferences, "material_for_count", numMaterialReferences)
 	}
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(support); err != nil {
-		logger.Error("Could not encode card support response", "err", err, "cardID", cardID)
+		logger.Error("Could not encode card support response", "err", err)
 	}
 }
 

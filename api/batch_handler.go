@@ -43,12 +43,12 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		if len(batchCardInfo.UnknownResources) > 0 {
-			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknownResources", batchCardInfo.UnknownResources)
+			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknown_resources", batchCardInfo.UnknownResources)
 		}
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(batchCardInfo); err != nil {
-			logger.Error("Could not encode batch card info response", "err", err, "cardIDCount", len(reqBody.CardIDs))
+			logger.Error("Could not encode batch card info response", "err", err)
 		}
 		return
 	}
@@ -105,7 +105,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
-			logger.Error("Could not encode batch card suggestions response", "err", err, "cardIDCount", len(reqBody.CardIDs))
+			logger.Error("Could not encode batch card suggestions response", "err", err, "card_id_count", len(reqBody.CardIDs))
 		}
 		return
 	}
@@ -228,7 +228,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData)); err != nil {
-			logger.Error("Could not encode batch card support response", "err", err, "cardIDCount", len(reqBody.CardIDs))
+			logger.Error("Could not encode batch card support response", "err", err)
 		}
 		return
 	}

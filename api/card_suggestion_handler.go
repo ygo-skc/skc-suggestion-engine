@@ -50,12 +50,12 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues())
 
 	logger.Info("Card suggestions generated",
-		"cardName", (*cardToGetSuggestionsFor).GetName(),
-		"namedMaterials", len(suggestions.NamedMaterials),
-		"namedReferences", len(suggestions.NamedReferences))
+		"card_name", (*cardToGetSuggestionsFor).GetName(),
+		"named_materials", len(suggestions.NamedMaterials),
+		"named_references", len(suggestions.NamedReferences))
 
 	if err := json.NewEncoder(res).Encode(suggestions); err != nil {
-		logger.Error("Could not encode card suggestions response", "err", err, "cardID", cardID)
+		logger.Error("Could not encode card suggestions response", "err", err, "card_id", cardID)
 	}
 }
 
