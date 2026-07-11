@@ -32,7 +32,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
-		logger.Error("Failed archetype validation")
+		logger.Error("Failed archetype validation", "err", err)
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
 		validationErr.HandleServerResponse(res)
 		return
