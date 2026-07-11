@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -48,11 +47,12 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
+	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues())
 
-	logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
-		(*cardToGetSuggestionsFor).GetName(),
-		len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
+	logger.Info("Card suggestions generated",
+		"cardName", (*cardToGetSuggestionsFor).GetName(),
+		"namedMaterials", len(suggestions.NamedMaterials),
+		"namedReferences", len(suggestions.NamedReferences))
 
 	if err := json.NewEncoder(res).Encode(suggestions); err != nil {
 		logger.Error("Could not encode card suggestions response", "err", err, "cardID", cardID)
