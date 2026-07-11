@@ -28,6 +28,7 @@ var (
 	blackListCollection       *mongo.Collection
 	trafficAnalysisCollection *mongo.Collection
 	cardOfTheDayCollection    *mongo.Collection
+	cardEmbeddingCollection   *mongo.Collection
 )
 
 func EstablishSKCSuggestionEngineDBConn() {
@@ -69,6 +70,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 	blackListCollection = skcSuggestionDB.Collection("blackList")
 	trafficAnalysisCollection = skcSuggestionDB.Collection("trafficAnalysis")
 	cardOfTheDayCollection = skcSuggestionDB.Collection("cardOfTheDay")
+	cardEmbeddingCollection = skcSuggestionDB.Collection("cardEmbedding")
 
 	slog.Info("Connected to suggestion engine DB")
 }
