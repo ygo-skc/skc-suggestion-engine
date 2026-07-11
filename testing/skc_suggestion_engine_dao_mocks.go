@@ -47,6 +47,6 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context, subject cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError) {
-	log.Fatalln("InsertCardOfTheDay() not mocked")
+	log.Fatalln("GetSimilarCards() not mocked")
 	return nil, nil
 }
