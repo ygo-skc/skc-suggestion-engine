@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -26,31 +25,32 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	if subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
+	subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	if err != nil {
 		err.HandleServerResponse(res)
 		return
+	}
+
+	cardName := (*subject).GetName()
+	support := model.CardSupport{Card: *subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
+
+	cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName})
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+
+	support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
+	numNamedReferences, numMaterialReferences := len(support.ReferencedBy), len(support.MaterialFor)
+	if numNamedReferences == 0 && numMaterialReferences == 0 {
+		logger.Warn("Card has no support")
 	} else {
-		cardName := (*subject).GetName()
-		support := model.CardSupport{Card: *subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
+		logger.Info("Card support determined", "referencedByCount", numNamedReferences, "materialForCount", numMaterialReferences)
+	}
 
-		if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName}); err != nil {
-			err.HandleServerResponse(res)
-			return
-		} else {
-			support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
-			numNamedReferences, numMaterialReferences := len(support.ReferencedBy), len(support.MaterialFor)
-			if numNamedReferences == 0 && numMaterialReferences == 0 {
-				logger.Warn("Card has no support")
-			} else {
-				logger.Info(fmt.Sprintf("Referenced by %d non-ED cards. Referenced by %d ED cards", numNamedReferences, numMaterialReferences))
-			}
-
-			res.WriteHeader(http.StatusOK)
-			if err := json.NewEncoder(res).Encode(support); err != nil {
-				logger.Error("Could not encode card support response", "err", err, "cardID", cardID)
-			}
-			return
-		}
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(support); err != nil {
+		logger.Error("Could not encode card support response", "err", err, "cardID", cardID)
 	}
 }
 
