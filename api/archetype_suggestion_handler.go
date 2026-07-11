@@ -98,8 +98,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	removeExclusions(ctx, &archetypalSuggestions)
 	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
-	logger.Info(fmt.Sprintf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d cards", archetypeName,
-		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText)))
+	logger.Info("Returning archetypal suggestions",
+		"archetypeName", archetypeName,
+		"cardsFoundUsingName", len(archetypalSuggestions.UsingName),
+		"cardsFoundUsingText", len(archetypalSuggestions.UsingText),
+		"excludedCards", len(archetypalSuggestions.Exclusions))
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
@@ -128,7 +131,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
-		cUtil.RetrieveLogger(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.GetName()))
+		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", "cardName", uniqueExclusion.GetName())
 	}
 
 	newList := []cModel.YGOCard{}
