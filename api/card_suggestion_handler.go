@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"regexp"
@@ -41,18 +40,22 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	if cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID); err != nil {
+	cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	if err != nil {
 		err.HandleServerResponse(res)
 		return
-	} else {
-		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-		suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.Values)
+	}
 
-		logger.Info(fmt.Sprintf("%s: %d unique material references - %d unique named references",
-			(*cardToGetSuggestionsFor).GetName(),
-			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
+	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues())
 
-		json.NewEncoder(res).Encode(suggestions)
+	logger.Info("Card suggestions generated",
+		"cardName", (*cardToGetSuggestionsFor).GetName(),
+		"namedMaterials", len(suggestions.NamedMaterials),
+		"namedReferences", len(suggestions.NamedReferences))
+
+	if err := json.NewEncoder(res).Encode(suggestions); err != nil {
+		logger.Error("Could not encode card suggestions response", "err", err, "cardID", cardID)
 	}
 }
 

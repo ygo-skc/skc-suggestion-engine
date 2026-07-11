@@ -25,6 +25,7 @@ import (
 const (
 	apiContext = "/api/v1/suggestions"
 	apiName    = "skc-suggestion-engine"
+	apiPort    = 9000
 )
 
 var (
@@ -90,9 +91,11 @@ func verifyApiKey(headers http.Header) *cModel.APIError {
 func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if err := verifyApiKey(req.Header); err != nil {
-			res.Header().Add("Content-Type", "application/json")
+			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(res).Encode(err)
+			if encodingErr := json.NewEncoder(res).Encode(err); encodingErr != nil {
+				slog.Error("Could not encode API key error response", "err", encodingErr, "path", req.URL.Path)
+			}
 		} else {
 			next.ServeHTTP(res, req)
 		}
@@ -102,15 +105,15 @@ func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 // sets common headers for response
 func commonResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
-		res.Header().Add("Content-Type", "application/json")
-		res.Header().Add("Cache-Control", "max-age=300")
+		res.Header().Set("Content-Type", "application/json")
+		res.Header().Set("Cache-Control", "max-age=300")
 
 		// gzip
 		if acceptsGzip(req) {
 			zip := gzipPool.Get().(*gzip.Writer)
 			zip.Reset(res)
-			defer zip.Close()
 			defer gzipPool.Put(zip)
+			defer zip.Close()
 
 			res.Header().Set("Content-Encoding", "gzip")
 			res.Header().Del("Content-Length")
@@ -193,8 +196,6 @@ func RunHttpServer() {
 // It combines the TLS certificate and CA bundle, and utilizes the private key.
 // Finally, it applies CORS middleware.
 func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
-	port := 9000
-
 	tlsCfg := &tls.Config{
 		MinVersion: tls.VersionTLS13,
 		NextProtos: []string{"h2"},
@@ -205,7 +206,7 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 	}
 
 	server := &http.Server{
-		Addr:      fmt.Sprintf(":%d", port),
+		Addr:      fmt.Sprintf(":%d", apiPort),
 		Handler:   corsOpts.Handler(router),
 		TLSConfig: tlsCfg,
 
@@ -222,14 +223,14 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		MaxHandlers:                  25,
 		IdleTimeout:                  15 * time.Second,
 		WriteByteTimeout:             4 * time.Second,
-		MaxUploadBufferPerConnection: 8 << 10,
-		MaxUploadBufferPerStream:     8 << 10,
+		MaxUploadBufferPerConnection: 20 << 10,
+		MaxUploadBufferPerStream:     4 << 10,
 	}); err != nil {
 		slog.Error("Failed to configure HTTP/2", "err", err)
 		os.Exit(1)
 	}
 
-	slog.Info("API starting", "port", port)
+	slog.Info("API starting", "port", apiPort)
 
 	if err := server.ListenAndServeTLS("certs/concatenated.crt", "certs/private.key"); err != nil {
 		slog.Error("There was an error starting api server", "err", err)

@@ -3,7 +3,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"sync"
@@ -45,16 +44,20 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
 		if _, err := downstream.YGO.CardService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error(fmt.Sprintf("Card resource %s not valid", trafficData.ResourceUtilized.Value))
+			logger.Error("Card resource not valid", "resourceID", trafficData.ResourceUtilized.Value, "err", err)
 			res.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
+			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
+				logger.Error("Could not encode API error response", "err", err, "resourceType", "card", "resourceID", trafficData.ResourceUtilized.Value)
+			}
 			return
 		}
 	case model.ProductResource:
 		if _, err := downstream.YGO.ProductService.GetProductSummaryByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error(fmt.Sprintf("Product resource %s not valid", trafficData.ResourceUtilized.Value))
+			logger.Error("Product resource not valid", "resourceID", trafficData.ResourceUtilized.Value, "err", err)
 			res.WriteHeader(http.StatusUnprocessableEntity)
-			json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"})
+			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
+				logger.Error("Could not encode API error response", "err", err, "resourceType", "product", "resourceID", trafficData.ResourceUtilized.Value)
+			}
 			return
 		}
 	}
@@ -62,10 +65,12 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// get IP number info
 	var location model.Location
 	if ipData, err := ipDB.Get_all(trafficData.IP); err != nil {
-		logger.Error(fmt.Sprintf("Error getting info for IP address %s. Error %v", trafficData.IP, err))
+		logger.Error("Error getting info for IP address", "ip", trafficData.IP, "err", err)
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
-		json.NewEncoder(res).Encode(cModel.APIError{Message: "The IP provided was not found in the IP Database. Therefor, not storing traffic pattern."})
+		if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "The IP provided was not found in the IP Database. Therefore, not storing traffic pattern."}); err != nil {
+			logger.Error("Could not encode API error response", "err", err, "ip", trafficData.IP)
+		}
 		return
 	} else {
 		location = model.Location{Zip: ipData.Zipcode, City: ipData.City, Country: ipData.Country_short}
@@ -82,7 +87,9 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(cModel.Success{Message: "Successfully inserted new traffic data."})
+	if err := json.NewEncoder(res).Encode(cModel.Success{Message: "Successfully inserted new traffic data."}); err != nil {
+		logger.Error("Could not encode success response", "err", err, "resourceType", trafficData.ResourceUtilized.Name, "resourceID", trafficData.ResourceUtilized.Value)
+	}
 }
 
 func trending(res http.ResponseWriter, req *http.Request) {
@@ -124,7 +131,9 @@ func trending(res http.ResponseWriter, req *http.Request) {
 
 		addResourceInfoToTrendingMetric(tm)
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(trending)
+		if err := json.NewEncoder(res).Encode(trending); err != nil {
+			logger.Error("Could not encode trending response", "err", err, "resourceName", resourceName, "totalMetrics", len(tm))
+		}
 	}
 }
 

@@ -6,11 +6,32 @@
 
 Go API that extends functionality of [SKC API](https://github.com/ygo-skc/skc-api) with the following:
 
-* Allow storage of deck lists - currently not everyone can submit a deck list, functionality might be opened later.
-* Clients can send browsing data to build a suggestion database. Clients need to be authenticated to do this.
-* Suggest materials by parsing text of a card
-* Suggest references by parsing text of a card
-* Suggest support cards by analyzing every card in the DB
+* Suggest materials and other named references by parsing the text of a card, individually or in batch
+* Suggest support cards for a given card or batch of cards by analyzing every card in the DB
+* Suggest related cards for a product or batch of product
+* Suggest cards belonging to an archetype
+* Card of the Day - a card is chosen and cached daily
+* Track and report trending cards/products based on submitted traffic data
+* Clients can send browsing/traffic data to build the suggestion and trending database.
+* Status endpoint that reports health of the API and its downstream dependencies (SKC DB, Suggestion DB)
+
+## Languages & Tools
+
+* **Go** - primary language the API is written in
+* **Bash**
+* **YAML**
+* **[chi](https://github.com/go-chi/chi)** - HTTP router/middleware
+* **gRPC / Protocol Buffers** - communication with the downstream `ygo-service`
+* **MongoDB** (`mongo-driver`) - persistence for suggestion/traffic data
+* **[go-playground/validator](https://github.com/go-playground/validator)** - request payload validation
+* **[rs/cors](https://github.com/rs/cors)** - CORS handling
+* **[ip2location](https://github.com/ip2location/ip2location-go)** - IP geolocation used for traffic/trending analysis
+* **[testify](https://github.com/stretchr/testify)** - unit testing
+* **TLS 1.3 / HTTP2** - the API is served exclusively over HTTPS
+* **Docker / Docker Compose** - containerized local and prod runtime
+* **GitHub Actions** - CI for unit tests and CodeQL scanning
+* **CodeQL** - static analysis/security scanning
+* **AWS Secrets Manager** (via AWS CLI + `jq`) - secret/config retrieval for local setup
 
 ## Local Setup
 
@@ -18,7 +39,8 @@ In order for the API to work locally, do the following steps
 
 1. Run `go mod tidy` to download deps
 2. Execute the shell script `aws-secrets-local-setup.sh` to download all the secrets. This will only work if you are logged into AWS and have access the secrets.
-3. Create directory called data and include the IP DB file. Ensure the file is called **IPv4-DB.BIN**.
+3. Create directory called data and include the IP DB file. Ensure the file is called **IPv4-DB11.BIN**.
+4. Run the API with `go run .` (serves HTTPS on port `9000`), or build the binary and run it via `docker-compose-local.yaml`.
 
 ## Testing
 

@@ -32,7 +32,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
-		logger.Error("Failed archetype validation")
+		logger.Error("Failed archetype validation", "err", err)
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
 		validationErr.HandleServerResponse(res)
 		return
@@ -48,8 +48,8 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// setup channels
-	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan archetypeResults),
-		make(chan archetypeResults), make(chan archetypeResults)
+	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan archetypeResults, 1),
+		make(chan archetypeResults, 1), make(chan archetypeResults, 1)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
 		downstream.YGO.CardService.GetArchetypalCardsUsingCardName)
@@ -69,8 +69,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 				notAnArchetypeErr := cModel.APIError{
 					Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
 					StatusCode: http.StatusNotFound}
+
 				res.WriteHeader(notAnArchetypeErr.StatusCode)
-				json.NewEncoder(res).Encode(notAnArchetypeErr)
+				if err := json.NewEncoder(res).Encode(notAnArchetypeErr); err != nil {
+					logger.Error("Could not encode archetype error response", "err", err, "archetypeName", archetypeName)
+				}
 				return
 			} else {
 				archetypalSuggestions.UsingName = ar.cards
@@ -95,10 +98,16 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	removeExclusions(ctx, &archetypalSuggestions)
 	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
-	logger.Info(fmt.Sprintf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d cards", archetypeName,
-		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText)))
+	logger.Info("Returning archetypal suggestions",
+		"archetypeName", archetypeName,
+		"cardsFoundUsingName", len(archetypalSuggestions.UsingName),
+		"cardsFoundUsingText", len(archetypalSuggestions.UsingText),
+		"excludedCards", len(archetypalSuggestions.Exclusions))
+
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(archetypalSuggestions)
+	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
+		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetypeName", archetypeName, "totalCards", archetypalSuggestions.Total)
+	}
 }
 
 func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,
@@ -122,7 +131,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
-		cUtil.RetrieveLogger(ctx).Warn(fmt.Sprintf("Removing %s as it is explicitly mentioned as not being part of the archetype ", uniqueExclusion.GetName()))
+		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", "cardName", uniqueExclusion.GetName())
 	}
 
 	newList := []cModel.YGOCard{}
