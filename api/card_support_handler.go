@@ -44,8 +44,11 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 			} else {
 				logger.Info(fmt.Sprintf("Referenced by %d non-ED cards. Referenced by %d ED cards", numNamedReferences, numMaterialReferences))
 			}
+
 			res.WriteHeader(http.StatusOK)
-			json.NewEncoder(res).Encode(support)
+			if err := json.NewEncoder(res).Encode(support); err != nil {
+				logger.Error("Could not encode card support response", "err", err, "cardID", cardID)
+			}
 			return
 		}
 	}

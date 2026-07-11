@@ -44,7 +44,9 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	}
 
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(cardOfTheDay)
+	if err := json.NewEncoder(res).Encode(cardOfTheDay); err != nil {
+		logger.Error("Could not encode card of the day response", "err", err, "cardOfTheDayID", cardOfTheDay.CardID, "date", cardOfTheDay.Date)
+	}
 }
 
 func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDay) *cModel.APIError {

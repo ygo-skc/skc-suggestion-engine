@@ -69,8 +69,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 				notAnArchetypeErr := cModel.APIError{
 					Message:    fmt.Sprintf("There are fewer than 2 cards matching requested archetype, as such it is likely '%s' is not an archetype. Note: archetypes are case sensitive (eg HERO != Hero).", archetypeName),
 					StatusCode: http.StatusNotFound}
+
 				res.WriteHeader(notAnArchetypeErr.StatusCode)
-				json.NewEncoder(res).Encode(notAnArchetypeErr)
+				if err := json.NewEncoder(res).Encode(notAnArchetypeErr); err != nil {
+					logger.Error("Could not encode archetype error response", "err", err, "archetypeName", archetypeName)
+				}
 				return
 			} else {
 				archetypalSuggestions.UsingName = ar.cards
@@ -97,8 +100,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	logger.Info(fmt.Sprintf("Returning the following cards related to %s archetype: %d cards found using card names, %d cards found using card text, and excluding %d cards", archetypeName,
 		len(archetypalSuggestions.UsingName), len(archetypalSuggestions.UsingText), len(archetypalSuggestions.UsingText)))
+
 	res.WriteHeader(http.StatusOK)
-	json.NewEncoder(res).Encode(archetypalSuggestions)
+	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
+		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetypeName", archetypeName, "totalCards", archetypalSuggestions.Total)
+	}
 }
 
 func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,

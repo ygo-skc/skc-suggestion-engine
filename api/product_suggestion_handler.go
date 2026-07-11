@@ -43,7 +43,9 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		logger.Info("Successfully retrieved product card suggestions")
 		res.WriteHeader(http.StatusOK)
-		json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support})
+		if err := json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support}); err != nil {
+			logger.Error("Could not encode product suggestions response", "err", err, "productID", productID)
+		}
 	}
 }
 

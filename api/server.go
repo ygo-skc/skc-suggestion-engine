@@ -93,7 +93,9 @@ func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 		if err := verifyApiKey(req.Header); err != nil {
 			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(res).Encode(err)
+			if encodingErr := json.NewEncoder(res).Encode(err); encodingErr != nil {
+				slog.Error("Could not encode API key error response", "err", encodingErr, "path", req.URL.Path)
+			}
 		} else {
 			next.ServeHTTP(res, req)
 		}

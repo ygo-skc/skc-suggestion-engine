@@ -59,7 +59,9 @@ type ValidationErrors struct {
 
 func (e *ValidationErrors) HandleServerResponse(res http.ResponseWriter) {
 	res.WriteHeader(http.StatusUnprocessableEntity)
-	json.NewEncoder(res).Encode(e)
+	if err := json.NewEncoder(res).Encode(e); err != nil {
+		slog.Error("Could not encode validation error response", "err", err, "totalErrors", e.TotalErrors)
+	}
 }
 
 func HandleValidationErrors(err validator.ValidationErrors) *ValidationErrors {

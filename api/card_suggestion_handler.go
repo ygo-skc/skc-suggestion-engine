@@ -52,7 +52,9 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 			(*cardToGetSuggestionsFor).GetName(),
 			len(suggestions.NamedMaterials), len(suggestions.NamedReferences)))
 
-		json.NewEncoder(res).Encode(suggestions)
+		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
+			logger.Error("Could not encode card suggestions response", "err", err, "cardID", cardID)
+		}
 	}
 }
 
