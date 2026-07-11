@@ -37,7 +37,7 @@ type SKCSuggestionEngineDAO interface {
 type SKCSuggestionEngineDAOImplementation struct{}
 
 // Retrieves the version number of the SKC Suggestion DB or throws an error if an exception occurs.
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, error) {
+func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, error) {
 	var commandResult bson.M
 	command := bson.D{{Key: "serverStatus", Value: 1}}
 
@@ -53,7 +53,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersio
 }
 
 // Will update the database with a new traffic record.
-func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *cModel.APIError {
+func (impl SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *cModel.APIError {
 	logger := cUtil.RetrieveLogger(ctx)
 	logger.Info(fmt.Sprintf("Inserting traffic data for resource %+v and system %+v.", ta.ResourceUtilized, ta.Source))
 
@@ -69,7 +69,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx co
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
+func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	ctx context.Context, resourceName model.ResourceName, from time.Time, to time.Time) ([]model.TrafficResourceUtilizationMetric, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -127,7 +127,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -145,7 +145,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx contex
 	}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -169,7 +169,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx cont
 	return &cotd.CardID, nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(ctx context.Context, version int) ([]string, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(ctx context.Context, version int) ([]string, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -199,7 +199,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDa
 	return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *cModel.APIError {
+func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.Context, cotd model.CardOfTheDay) *cModel.APIError {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -215,7 +215,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx c
 	return nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context,
+func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context,
 	subject cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -224,6 +224,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 	logger.Info("Performing vector search on card")
 
 	desiredResults := 20
+	subjectEffect := subject.GetEffect()
 
 	pipeline := mongo.Pipeline{
 		{
@@ -232,7 +233,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 					{Key: "index", Value: "text_embedding"},
 					{Key: "path", Value: "text"},
 					{Key: "query", Value: bson.D{
-						{Key: "text", Value: subject.GetEffect()},
+						{Key: "text", Value: subjectEffect},
 					}},
 					{Key: "numCandidates", Value: 100},
 					{Key: "limit", Value: 30},
@@ -244,7 +245,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 				Key: "$rerank", Value: bson.D{
 					{Key: "model", Value: "rerank-2.5"},
 					{Key: "query", Value: bson.D{
-						{Key: "text", Value: subject.GetEffect()}, // TODO: update rerank query
+						{Key: "text", Value: subjectEffect}, // TODO: update rerank query
 					}},
 					{Key: "path", Value: "text"},
 					{Key: "numDocsToRerank", Value: 30},
