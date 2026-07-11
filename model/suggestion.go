@@ -74,3 +74,7 @@ func RemoveSelfReference(self string, cr *[]CardReference) bool {
 		return hasSelfRef
 	}
 }
+
+type VectorSearchResult struct {
+	ID string `bson:"id"`
+}

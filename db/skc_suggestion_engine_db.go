@@ -222,6 +222,8 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 
 	logger.Info("Performing vector search on card")
 
+	desiredResults := 20
+
 	pipeline := mongo.Pipeline{
 		{
 			{
@@ -249,7 +251,7 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 			},
 		},
 		{
-			{Key: "$limit", Value: 20},
+			{Key: "$limit", Value: desiredResults},
 		},
 		{
 			{Key: "$project", Value: bson.D{
@@ -267,9 +269,14 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 
 	defer cursor.Close(ctx)
 
-	var results []bson.M
-	if err := cursor.All(ctx, &results); err != nil {
-		logger.Error("Err") // TODO: update
+	results := make([]model.VectorSearchResult, 0, desiredResults)
+
+	for cursor.Next(ctx) {
+		var r model.VectorSearchResult
+		if err := cursor.Decode(&r); err != nil {
+			logger.Error(fmt.Sprintf("Error transforming DB data to Vector Search struct. Err: %s", err))
+		}
+		results = append(results, r)
 	}
 	logger.Info("results", "res", results)
 
