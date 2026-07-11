@@ -30,7 +30,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	} else if err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		logger.Warn("Existing card of the day found", "COTD", *cardID)
+		logger.Warn("Existing card of the day exists", "COTD", *cardID)
 		cardOfTheDay.CardID = *cardID
 	}
 

@@ -101,7 +101,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.Values)
+		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.GetValues())
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
@@ -274,8 +274,8 @@ func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cM
 		sort.Strings(support.IntersectingResources)
 		sort.Strings(support.UnknownResources)
 		ccIDs := awg.Load()
-		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.Values))
-		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.Values))
+		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.GetValues()))
+		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.GetValues()))
 	}
 	return support
 }
