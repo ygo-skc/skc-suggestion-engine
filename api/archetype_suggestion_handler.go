@@ -48,8 +48,8 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	}
 
 	// setup channels
-	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan archetypeResults),
-		make(chan archetypeResults), make(chan archetypeResults)
+	supportUsingCardNameChannel, supportUsingTextChannel, exclusionsChannel := make(chan archetypeResults, 1),
+		make(chan archetypeResults, 1), make(chan archetypeResults, 1)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
 		downstream.YGO.CardService.GetArchetypalCardsUsingCardName)
