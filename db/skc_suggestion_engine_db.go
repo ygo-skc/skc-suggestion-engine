@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
+	"unicode"
 
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
@@ -17,6 +19,8 @@ import (
 
 const (
 	intervalFormat = "2006-01-02"
+
+	maxBlackListPhraseLength = 40
 )
 
 // interface
@@ -122,10 +126,27 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 }
 
+// sanitizeQueryInput trims surrounding whitespace and strips control characters from user-supplied input before it is used to build a query.
+func sanitizeQueryInput(s string) string {
+	s = strings.TrimSpace(s)
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
+}
+
 func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
+
+	blackListPhrase = sanitizeQueryInput(blackListPhrase)
+	if blackListPhrase == "" || len(blackListPhrase) > maxBlackListPhraseLength {
+		logger.Error("Rejecting black list check for invalid phrase", "type", blackListType, "phrase_length", len(blackListPhrase))
+		return false, &cModel.APIError{Message: "Internal server error", StatusCode: http.StatusInternalServerError}
+	}
 
 	query := bson.M{"type": blackListType, "phrase": blackListPhrase}
 
