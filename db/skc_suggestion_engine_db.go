@@ -30,7 +30,7 @@ type SKCSuggestionEngineDAO interface {
 	GetCardOfTheDay(context.Context, string, int) (*string, *cModel.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
-	GetSimilarCards(context.Context, cModel.YGOCard) *cModel.APIError
+	GetSimilarCards(context.Context, cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError)
 }
 
 // impl
@@ -215,7 +215,8 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx c
 	return nil
 }
 
-func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context, subject cModel.YGOCard) *cModel.APIError {
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context,
+	subject cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
@@ -264,13 +265,12 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
 		logger.Error("Error retrieving similar card", "err", err)
-		return &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		return make([]model.VectorSearchResult, 0, 0), &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
 	defer cursor.Close(ctx)
 
 	results := make([]model.VectorSearchResult, 0, desiredResults)
-
 	for cursor.Next(ctx) {
 		var r model.VectorSearchResult
 		if err := cursor.Decode(&r); err != nil {
@@ -280,5 +280,5 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx cont
 	}
 	logger.Info("results", "res", results)
 
-	return nil
+	return results, nil
 }

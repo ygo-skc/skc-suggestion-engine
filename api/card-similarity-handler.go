@@ -27,7 +27,7 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = skcSuggestionEngineDBInterface.GetSimilarCards(ctx, *subject)
+	_, err = skcSuggestionEngineDBInterface.GetSimilarCards(ctx, *subject)
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(subject); err != nil {
