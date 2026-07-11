@@ -36,18 +36,24 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	similarIDList := make([]string, len(vectorSearchResults))
-	for i, card := range vectorSearchResults {
-		// if card.ID == cardID {	TODO:
-		// 	continue
-		// }
-		similarIDList[i] = card.ID
+	similarCardIDs := make(cModel.CardIDs, 0, len(vectorSearchResults))
+	for _, result := range vectorSearchResults {
+		if result.ID == cardID {
+			continue
+		}
+		similarCardIDs = append(similarCardIDs, result.ID)
 	}
 
-	vectorSearchResultsMetadata, _ := downstream.YGO.CardService.GetCardsByID(ctx, similarIDList) // TODO: handle error
-	similarCards.Similar = make([]cModel.YGOCard, len(vectorSearchResults))
-	for i, id := range similarIDList {
-		similarCards.Similar[i] = vectorSearchResultsMetadata.CardInfo[id]
+	similarCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, similarCardIDs)
+	if err != nil {
+		logger.Error("Could not retrieve data for vector search results", "err", err)
+		err.HandleServerResponse(res)
+		return
+	}
+
+	similarCards.Similar = make([]cModel.YGOCard, 0, len(similarCardIDs))
+	for _, id := range similarCardIDs {
+		similarCards.Similar = append(similarCards.Similar, similarCardData.CardInfo[id])
 	}
 
 	res.WriteHeader(http.StatusOK)
