@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
 	"time"
@@ -153,7 +154,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Con
 
 	var cotd model.CardOfTheDay
 	if err := cardOfTheDayCollection.FindOne(ctx, query, opts).Decode(&cotd); err != nil {
-		if err.Error() == "mongo: no documents in result" { // no card of the day present in db for specified date
+		if errors.Is(err, mongo.ErrNoDocuments) { // no card of the day present in db for specified date
 			return nil, nil
 		}
 		logger.Error("Error retrieving card of the day", "date", date, "err", err)
@@ -189,6 +190,12 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 			logger.Error("Error transforming DB data to COTD struct", "version", version, "err", err)
 		}
 		historicalCOTD = append(historicalCOTD, cotd.CardID)
+	}
+
+	// check if there was an error using cursor
+	if err := cursor.Err(); err != nil {
+		logger.Error("Error iterating card of the day history", "version", version, "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 	}
 	return historicalCOTD, nil
 }
@@ -272,6 +279,12 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 			logger.Error("Error transforming DB data to Vector Search struct", "err", err)
 		}
 		results = append(results, r)
+	}
+
+	// check if there was an error using cursor
+	if err := cursor.Err(); err != nil {
+		logger.Error("Error iterating similar card results", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 	logger.Info("results", "res", results)
 
