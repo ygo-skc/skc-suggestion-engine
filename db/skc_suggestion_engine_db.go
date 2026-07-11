@@ -10,6 +10,7 @@ import (
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"go.mongodb.org/mongo-driver/v2/bson"
+	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 )
 
@@ -29,6 +30,7 @@ type SKCSuggestionEngineDAO interface {
 	GetCardOfTheDay(context.Context, string, int) (*string, *cModel.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
+	GetSimilarCards(context.Context, cModel.YGOCard) *cModel.APIError
 }
 
 // impl
@@ -210,5 +212,66 @@ func (dbInterface SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx c
 	}
 
 	logger.Info("Successfully inserted new card of the day.")
+	return nil
+}
+
+func (dbInterface SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context, subject cModel.YGOCard) *cModel.APIError {
+	logger := cUtil.RetrieveLogger(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	logger.Info("Performing vector search on card")
+
+	pipeline := mongo.Pipeline{
+		{
+			{
+				Key: "$vectorSearch", Value: bson.D{
+					{Key: "index", Value: "text_embedding"},
+					{Key: "path", Value: "text"},
+					{Key: "query", Value: bson.D{
+						{Key: "text", Value: subject.GetEffect()},
+					}},
+					{Key: "numCandidates", Value: 100},
+					{Key: "limit", Value: 30},
+				},
+			},
+		},
+		{
+			{
+				Key: "$rerank", Value: bson.D{
+					{Key: "model", Value: "rerank-2.5"},
+					{Key: "query", Value: bson.D{
+						{Key: "text", Value: subject.GetEffect()}, // TODO: update rerank query
+					}},
+					{Key: "path", Value: "text"},
+					{Key: "numDocsToRerank", Value: 30},
+				},
+			},
+		},
+		{
+			{Key: "$limit", Value: 20},
+		},
+		{
+			{Key: "$project", Value: bson.D{
+				{Key: "_id", Value: 0},
+				{Key: "id", Value: 1},
+			}},
+		},
+	}
+
+	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		logger.Error("Error retrieving similar card", "err", err)
+		return &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+	}
+
+	defer cursor.Close(ctx)
+
+	var results []bson.M
+	if err := cursor.All(ctx, &results); err != nil {
+		logger.Error("Err") // TODO: update
+	}
+	logger.Info("results", "res", results)
+
 	return nil
 }
