@@ -48,9 +48,15 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	if len(similarCardData.UnknownResources) > 0 {
+		logger.Warn("Some vector search IDs had no matching metadata", "unknown_card_ids", similarCardData.UnknownResources)
+	}
+
 	similarCards.Similar = make([]cModel.YGOCard, 0, len(similarCardIDs))
 	for _, id := range similarCardIDs {
-		similarCards.Similar = append(similarCards.Similar, similarCardData.CardInfo[id])
+		if card, isPresent := similarCardData.CardInfo[id]; isPresent {
+			similarCards.Similar = append(similarCards.Similar, card)
+		}
 	}
 
 	res.WriteHeader(http.StatusOK)
