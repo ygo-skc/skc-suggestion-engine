@@ -69,6 +69,7 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 
 	vectorSearchResults, err = rerank(ctx, vectorSearchResults, subject.GetEffect(), 20)
 	if err != nil {
+		logger.Error("Error during re-ranking", "err", err)
 		return nil, err
 	}
 
@@ -98,9 +99,9 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 }
 
 func rerank(ctx context.Context, vectorSearchResults []model.VectorSearchResult, query string, topK uint8) ([]model.VectorSearchResult, *cModel.APIError) {
-	docs := make([]string, 0, len(vectorSearchResults))
-	for _, vectorSearchResult := range vectorSearchResults {
-		docs = append(docs, vectorSearchResult.Text)
+	docs := make([]string, len(vectorSearchResults))
+	for i, vectorSearchResult := range vectorSearchResults {
+		docs[i] = vectorSearchResult.Text
 	}
 
 	voyageRes, err := downstream.RerankVectorResults(ctx, docs, query, topK)

@@ -88,6 +88,11 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 		return nil, voyageEmbeddingErr
 	}
 
+	if len(result.Data) != len(input) {
+		logger.Error("Voyage API returned incorrect number of embeddings", "input", input, "num_embeddings", len(result.Data))
+		return nil, voyageEmbeddingErr
+	}
+
 	return &result, nil
 }
 
@@ -127,6 +132,11 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 	var result model.RerankResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Error("Error unmarshalling Voyage rerank response", "err", err)
+		return nil, voyageRerankErr
+	}
+
+	if expectedSize := min(int(topK), len(input)); len(result.Data) != expectedSize {
+		logger.Error("Voyage API returned incorrect number of re-ranked elements", "expected_size", topK, "actual", len(result.Data))
 		return nil, voyageRerankErr
 	}
 
