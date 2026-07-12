@@ -45,7 +45,7 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGOCard, []float64, *cModel.APIError) {
+func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGOCard, []float32, *cModel.APIError) {
 	subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
 	if err != nil {
 		return nil, nil, err
@@ -59,7 +59,7 @@ func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGO
 	return subject, voyageRes.Data[0].Embedding, nil
 }
 
-func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery []float64) ([]cModel.YGOCard, *cModel.APIError) {
+func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery []float32) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 
 	vectorSearchResults, err := skcSuggestionEngineDBInterface.VectorSearchOnCardEmbedding(ctx, subject, embeddedQuery)

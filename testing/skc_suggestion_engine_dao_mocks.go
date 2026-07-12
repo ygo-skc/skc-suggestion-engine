@@ -46,7 +46,7 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	return nil
 }
 
-func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context, subject cModel.YGOCard, queryVector []float64) ([]model.VectorSearchResult, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context, subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	log.Fatalln("VectorSearchOnCardEmbedding() not mocked")
 	return nil, nil
 }

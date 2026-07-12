@@ -36,7 +36,7 @@ type SKCSuggestionEngineDAO interface {
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
 
-	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float64) ([]model.VectorSearchResult, *cModel.APIError)
+	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 }
 
 // impl
@@ -239,7 +239,7 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
-	subject cModel.YGOCard, queryVector []float64) ([]model.VectorSearchResult, *cModel.APIError) {
+	subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()

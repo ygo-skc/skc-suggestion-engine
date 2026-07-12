@@ -21,7 +21,7 @@ type EmbeddingResponse struct {
 }
 
 type Data struct {
-	Embedding []float64 `json:"embedding"`
+	Embedding []float32 `json:"embedding"`
 	Index     int       `json:"index"`
 }
 
@@ -37,6 +37,6 @@ type RerankResponse struct {
 }
 
 type RerankResults struct {
-	Index uint    `json:"index"`
+	Index int     `json:"index"`
 	Score float64 `json:"relevance_score"`
 }

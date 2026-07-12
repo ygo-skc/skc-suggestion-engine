@@ -18,8 +18,9 @@ const (
 	voyageEmbeddingsPath = "embeddings"
 	voyageRerankPath     = "rerank"
 
-	voyageEmbeddingModel = "voyage-4"
-	voyageRerankModel    = "rerank-2.5"
+	voyageEmbeddingModel      = "voyage-4"
+	voyageRerankModel         = "rerank-2.5"
+	voyageEmbeddingDimensions = 512
 )
 
 var (
@@ -103,7 +104,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 		Input:           input,
 		Model:           voyageEmbeddingModel,
 		InputType:       inputType,
-		OutputDimension: 512,
+		OutputDimension: voyageEmbeddingDimensions,
 	}
 
 	result, apiErr := doVoyageRequest[model.EmbeddingResponse](ctx, voyageEmbeddingsPath, reqBody, newVoyageEmbeddingErr)
