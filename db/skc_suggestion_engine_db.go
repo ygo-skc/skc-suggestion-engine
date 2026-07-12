@@ -35,7 +35,8 @@ type SKCSuggestionEngineDAO interface {
 	GetCardOfTheDay(context.Context, string, int) (*string, *cModel.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
-	GetSimilarCards(context.Context, cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError)
+
+	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float64) ([]model.VectorSearchResult, *cModel.APIError)
 }
 
 // impl
@@ -237,52 +238,32 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	return nil
 }
 
-func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Context,
-	subject cModel.YGOCard) ([]model.VectorSearchResult, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
+	subject cModel.YGOCard, queryVector []float64) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	logger.Info("Performing vector search on card")
+	logger.Info("Performing vector search on card text")
 
 	limit := 30
-	desiredResults := 20
-	subjectEffect := subject.GetEffect()
 
 	pipeline := mongo.Pipeline{
 		{
 			{
 				Key: "$vectorSearch", Value: bson.D{
 					{Key: "index", Value: "text_embedding"},
-					{Key: "path", Value: "text"},
-					{Key: "exact", Value: false}, // false = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
+					{Key: "path", Value: "embedding"},
+					{Key: "exact", Value: true}, // true = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
 					{Key: "filter", Value: bson.D{
 						{Key: "id", Value: bson.D{
 							{Key: "$ne", Value: subject.GetID()},
 						}},
 					}},
-					{Key: "query", Value: bson.D{
-						{Key: "text", Value: subjectEffect},
-					}},
-					{Key: "numCandidates", Value: limit * 20}, // recommended to use 20 times limit
+					{Key: "queryVector", Value: queryVector},
 					{Key: "limit", Value: limit},
 				},
 			},
-		},
-		{
-			{
-				Key: "$rerank", Value: bson.D{
-					{Key: "model", Value: "rerank-2.5"},
-					{Key: "query", Value: bson.D{
-						{Key: "text", Value: subjectEffect}, // TODO: update rerank query
-					}},
-					{Key: "path", Value: "text"},
-					{Key: "numDocsToRerank", Value: limit},
-				},
-			},
-		},
-		{
-			{Key: "$limit", Value: desiredResults},
 		},
 		{
 			{Key: "$project", Value: bson.D{
@@ -294,13 +275,13 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
-		logger.Error("Error retrieving similar card", "err", err)
+		logger.Error("Error while searching card embedding", "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
 	defer cursor.Close(ctx)
 
-	results := make([]model.VectorSearchResult, 0, desiredResults)
+	results := make([]model.VectorSearchResult, 0, limit)
 	for cursor.Next(ctx) {
 		var r model.VectorSearchResult
 		if err := cursor.Decode(&r); err != nil {
@@ -311,7 +292,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSimilarCards(ctx context.Con
 
 	// check if there was an error using cursor
 	if err := cursor.Err(); err != nil {
-		logger.Error("Error iterating similar card results", "err", err)
+		logger.Error("There was an error parsing db results", "err", err)
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
