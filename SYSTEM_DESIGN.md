@@ -153,16 +153,21 @@ sequenceDiagram
     participant Client
     participant API as skc-suggestion-engine
     participant YGO as ygo-service (gRPC)
+    participant Voyage as Voyage AI
     participant DB as Suggestion DB (MongoDB)
 
     Client->>API: GET /api/v1/suggestions/card/{cardID}/similar
     API->>YGO: CardService.GetCardByID(cardID)
     YGO-->>API: subject card
-    API->>DB: GetSimilarCards(subject) - $vectorSearch (ENN) + $rerank on card_embedding text
-    DB-->>API: similar card IDs
-    API->>YGO: CardService.GetCardsByID(similar card IDs)
+    API->>Voyage: EmbedText(subject effect, input_type=query)
+    Voyage-->>API: query embedding
+    API->>DB: VectorSearchOnCardEmbedding(subject, embedding) - $vectorSearch (ENN, limit 30)
+    DB-->>API: candidate results (id + text)
+    API->>Voyage: RerankVectorResults(candidate texts, subject effect, topK=20)
+    Voyage-->>API: reranked results
+    API->>YGO: CardService.GetCardsByID(reranked card IDs)
     YGO-->>API: CardDataMap
-    API-->>Client: 200 CardSimilarity{Card, Similar[]}
+    API-->>Client: 200 SimilarCards{Card, Matches[]}
 ```
 
 ### `GET /api/v1/suggestions/product/{productID}`
