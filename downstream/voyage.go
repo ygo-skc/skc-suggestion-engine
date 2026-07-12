@@ -14,11 +14,30 @@ import (
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
-const voyageEmbeddingsPath = "embeddings"
-const voyageRerankPath = "rerank"
+const (
+	voyageEmbeddingsPath = "embeddings"
+	voyageRerankPath     = "rerank"
 
-const voyageEmbeddingModel = "voyage-4"
-const voyageRerankModel = "rerank-2.5"
+	voyageEmbeddingModel = "voyage-4"
+	voyageRerankModel    = "rerank-2.5"
+)
+
+var (
+	voyageBaseURL = &url.URL{Scheme: "https", Host: "api.voyageai.com", Path: "/v1"}
+
+	voyageHTTPClient = &http.Client{
+		Timeout: 10 * time.Second,
+		Transport: &http.Transport{
+			MaxIdleConns:          10,
+			MaxIdleConnsPerHost:   10,
+			IdleConnTimeout:       60 * time.Second,
+			TLSHandshakeTimeout:   2 * time.Second,
+			ResponseHeaderTimeout: 1 * time.Second,
+			ExpectContinueTimeout: 1 * time.Second,
+			ForceAttemptHTTP2:     true,
+		},
+	}
+)
 
 func newVoyageEmbeddingErr() *cModel.APIError {
 	return &cModel.APIError{Message: "Error occurred while generating embeddings", StatusCode: http.StatusInternalServerError}
@@ -26,21 +45,6 @@ func newVoyageEmbeddingErr() *cModel.APIError {
 
 func newVoyageRerankErr() *cModel.APIError {
 	return &cModel.APIError{Message: "Error occurred while re-ranking", StatusCode: http.StatusInternalServerError}
-}
-
-var voyageBaseURL = &url.URL{Scheme: "https", Host: "api.voyageai.com", Path: "/v1"}
-
-var voyageHTTPClient = &http.Client{
-	Timeout: 10 * time.Second,
-	Transport: &http.Transport{
-		MaxIdleConns:          10,
-		MaxIdleConnsPerHost:   10,
-		IdleConnTimeout:       60 * time.Second,
-		TLSHandshakeTimeout:   2 * time.Second,
-		ResponseHeaderTimeout: 1 * time.Second,
-		ExpectContinueTimeout: 1 * time.Second,
-		ForceAttemptHTTP2:     true,
-	},
 }
 
 func newVoyageRequest(ctx context.Context, method string, path string, body io.Reader) (*http.Request, *cModel.APIError) {
@@ -57,6 +61,42 @@ func newVoyageRequest(ctx context.Context, method string, path string, body io.R
 	return req, nil
 }
 
+// doVoyageRequest marshals reqBody, POSTs it to path, and unmarshals the response into T.
+// newErr is invoked fresh on each failure path so callers never share a mutable *cModel.APIError.
+func doVoyageRequest[T any](ctx context.Context, path string, reqBody any, newErr func() *cModel.APIError) (*T, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+
+	payload, err := json.Marshal(reqBody)
+	if err != nil {
+		logger.Error("Error marshalling Voyage request", "err", err, "path", path)
+		return nil, newErr()
+	}
+
+	req, apiErr := newVoyageRequest(ctx, http.MethodPost, path, bytes.NewReader(payload))
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	voyageRes, err := voyageHTTPClient.Do(req)
+	if err != nil {
+		logger.Error("Error calling Voyage API", "err", err, "path", path)
+		return nil, newErr()
+	}
+
+	body, apiErr := parseResponseBody(ctx, voyageRes)
+	if apiErr != nil {
+		return nil, apiErr
+	}
+
+	var result T
+	if err := json.Unmarshal(body, &result); err != nil {
+		logger.Error("Error unmarshalling Voyage response", "err", err, "path", path)
+		return nil, newErr()
+	}
+
+	return &result, nil
+}
+
 func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputType) (*model.EmbeddingResponse, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	logger.Info("Calling Voyage API to embed text")
@@ -68,32 +108,9 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 		OutputDimension: 512,
 	}
 
-	payload, err := json.Marshal(reqBody)
-	if err != nil {
-		logger.Error("Error marshalling Voyage embedding request", "err", err)
-		return nil, newVoyageEmbeddingErr()
-	}
-
-	req, apiErr := newVoyageRequest(ctx, http.MethodPost, voyageEmbeddingsPath, bytes.NewReader(payload))
+	result, apiErr := doVoyageRequest[model.EmbeddingResponse](ctx, voyageEmbeddingsPath, reqBody, newVoyageEmbeddingErr)
 	if apiErr != nil {
 		return nil, apiErr
-	}
-
-	voyageRes, err := voyageHTTPClient.Do(req)
-	if err != nil {
-		logger.Error("Error calling Voyage embeddings API", "err", err)
-		return nil, newVoyageEmbeddingErr()
-	}
-
-	body, apiErr := parseResponseBody(ctx, voyageRes)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	var result model.EmbeddingResponse
-	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Error("Error unmarshalling Voyage embeddings response", "err", err)
-		return nil, newVoyageEmbeddingErr()
 	}
 
 	if len(result.Data) != len(input) {
@@ -101,7 +118,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 		return nil, newVoyageEmbeddingErr()
 	}
 
-	return &result, nil
+	return result, nil
 }
 
 func RerankVectorResults(ctx context.Context, input []string, query string, topK uint8) (*model.RerankResponse, *cModel.APIError) {
@@ -115,32 +132,9 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 		TopK:      topK,
 	}
 
-	payload, err := json.Marshal(reqBody)
-	if err != nil {
-		logger.Error("Error marshalling Voyage rerank request", "err", err)
-		return nil, newVoyageRerankErr()
-	}
-
-	req, apiErr := newVoyageRequest(ctx, http.MethodPost, voyageRerankPath, bytes.NewReader(payload))
+	result, apiErr := doVoyageRequest[model.RerankResponse](ctx, voyageRerankPath, reqBody, newVoyageRerankErr)
 	if apiErr != nil {
 		return nil, apiErr
-	}
-
-	voyageRes, err := voyageHTTPClient.Do(req)
-	if err != nil {
-		logger.Error("Error calling Voyage rerank API", "err", err)
-		return nil, newVoyageRerankErr()
-	}
-
-	body, apiErr := parseResponseBody(ctx, voyageRes)
-	if apiErr != nil {
-		return nil, apiErr
-	}
-
-	var result model.RerankResponse
-	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Error("Error unmarshalling Voyage rerank response", "err", err)
-		return nil, newVoyageRerankErr()
 	}
 
 	if expectedSize := min(int(topK), len(input)); len(result.Data) != expectedSize {
@@ -148,5 +142,5 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 		return nil, newVoyageRerankErr()
 	}
 
-	return &result, nil
+	return result, nil
 }
