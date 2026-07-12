@@ -61,8 +61,6 @@ func newVoyageRequest(ctx context.Context, method string, path string, body io.R
 	return req, nil
 }
 
-// doVoyageRequest marshals reqBody, POSTs it to path, and unmarshals the response into T.
-// newErr is invoked fresh on each failure path so callers never share a mutable *cModel.APIError.
 func doVoyageRequest[T any](ctx context.Context, path string, reqBody any, newErr func() *cModel.APIError) (*T, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 
