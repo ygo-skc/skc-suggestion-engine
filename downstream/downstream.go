@@ -1,7 +1,12 @@
 package downstream
 
 import (
+	"context"
+	"io"
 	"log"
+	"net/http"
+
+	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 
 	"github.com/ygo-skc/skc-go/common/v2/client"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
@@ -17,4 +22,22 @@ func ConnectToYGOService() {
 	} else {
 		YGO = *c
 	}
+}
+
+func parseResponseBody(ctx context.Context, resp *http.Response) ([]byte, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		logger.Error("Error reading downstream response body", "err", err, "url", resp.Request.URL)
+		return nil, &cModel.APIError{Message: "Error reading response from downstream service", StatusCode: http.StatusInternalServerError}
+	}
+
+	if resp.StatusCode != http.StatusOK {
+		logger.Error("Downstream service returned non-200 response", "status", resp.StatusCode, "url", resp.Request.URL, "body", string(body))
+		return nil, &cModel.APIError{Message: "Downstream service returned an unexpected response", StatusCode: http.StatusInternalServerError}
+	}
+
+	return body, nil
 }

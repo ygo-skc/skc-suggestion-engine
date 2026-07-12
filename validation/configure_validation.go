@@ -2,7 +2,6 @@ package validation
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -60,17 +59,17 @@ type ValidationErrors struct {
 func (e *ValidationErrors) HandleServerResponse(res http.ResponseWriter) {
 	res.WriteHeader(http.StatusUnprocessableEntity)
 	if err := json.NewEncoder(res).Encode(e); err != nil {
-		slog.Error("Could not encode validation error response", "err", err, "totalErrors", e.TotalErrors)
+		slog.Error("Could not encode validation error response", "err", err, "total_errors", e.TotalErrors)
 	}
 }
 
 func HandleValidationErrors(err validator.ValidationErrors) *ValidationErrors {
-	validationErrors := []validationError{}
+	validationErrors := make([]validationError, 0, len(err))
 	for _, e := range err {
 		validationErrors = append(validationErrors, validationError{Field: e.Field(), Hint: e.Translate(Translator)})
 	}
 
 	ve := ValidationErrors{Errors: validationErrors, TotalErrors: len(validationErrors)}
-	slog.Info(fmt.Sprintf("There were %d errors while validating input. Errors: %s", ve.TotalErrors, ve.Errors))
+	slog.Info("There were errors while validating input", "totalErrors", ve.TotalErrors, "errors", ve.Errors)
 	return &ve
 }

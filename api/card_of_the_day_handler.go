@@ -30,7 +30,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	} else if err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		logger.Warn("Existing card of the day exists", "COTD", *cardID)
+		logger.Warn("Existing card of the day exists", "cotd", *cardID)
 		cardOfTheDay.CardID = *cardID
 	}
 
@@ -44,7 +44,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(cardOfTheDay); err != nil {
-		logger.Error("Could not encode card of the day response", "err", err, "cardOfTheDayID", cardOfTheDay.CardID, "date", cardOfTheDay.Date)
+		logger.Error("Could not encode card of the day response", "err", err, "card_of_the_day_id", cardOfTheDay.CardID, "date", cardOfTheDay.Date)
 	}
 }
 
@@ -59,7 +59,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 		return e
 	}
 
-	logger.Warn("Ignoring cards that were previously COTD", "totalIgnored", len(previousCOTDData))
+	logger.Warn("Ignoring cards that were previously COTD", "total_ignored", len(previousCOTDData))
 
 	if randomCard, err := downstream.YGO.CardService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e
