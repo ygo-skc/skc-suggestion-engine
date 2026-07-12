@@ -51,7 +51,7 @@ func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGO
 		return nil, nil, err
 	}
 
-	voyageRes, err := downstream.GetEmbeddings(ctx, []string{(*subject).GetEffect()}, "query")
+	voyageRes, err := downstream.EmbedText(ctx, []string{(*subject).GetEffect()}, model.VoyageQueryInput)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -67,6 +67,11 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 		return nil, err
 	}
 
+	vectorSearchResults, err = rerank(ctx, vectorSearchResults, subject.GetEffect(), 20)
+	if err != nil {
+		return nil, err
+	}
+
 	similarCardIDs := make(cModel.CardIDs, 0, len(vectorSearchResults))
 	for _, vectorSearchResult := range vectorSearchResults {
 		similarCardIDs = append(similarCardIDs, vectorSearchResult.ID)
@@ -74,7 +79,7 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 
 	similarCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, similarCardIDs)
 	if err != nil {
-		logger.Error("Could not retrieve data on vector search results", "err", err)
+		logger.Error("Could not retrieve information about cards from search results", "err", err)
 		return nil, err
 	}
 
@@ -90,4 +95,23 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 	}
 
 	return similarCards, nil
+}
+
+func rerank(ctx context.Context, vectorSearchResults []model.VectorSearchResult, query string, topK uint8) ([]model.VectorSearchResult, *cModel.APIError) {
+	docs := make([]string, 0, len(vectorSearchResults))
+	for _, vectorSearchResult := range vectorSearchResults {
+		docs = append(docs, vectorSearchResult.Text)
+	}
+
+	voyageRes, err := downstream.RerankVectorResults(ctx, docs, query, topK)
+	if err != nil {
+		return nil, err
+	}
+
+	rankedResults := make([]model.VectorSearchResult, 0, topK)
+	for _, rerankResult := range voyageRes.Data {
+		rankedResults = append(rankedResults, vectorSearchResults[rerankResult.Index])
+	}
+
+	return rankedResults, nil
 }

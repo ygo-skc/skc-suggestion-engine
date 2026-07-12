@@ -269,6 +269,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 0},
 				{Key: "id", Value: 1},
+				{Key: "text", Value: 1},
 			}},
 		},
 	}
