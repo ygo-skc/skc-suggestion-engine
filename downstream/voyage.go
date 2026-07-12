@@ -17,8 +17,16 @@ import (
 const voyageEmbeddingsPath = "embeddings"
 const voyageRerankPath = "rerank"
 
-var voyageEmbeddingErr = &cModel.APIError{Message: "Error occurred while generating embeddings", StatusCode: http.StatusInternalServerError}
-var voyageRerankErr = &cModel.APIError{Message: "Error occurred while re-ranking", StatusCode: http.StatusInternalServerError}
+const voyageEmbeddingModel = "voyage-4"
+const voyageRerankModel = "rerank-2.5"
+
+func newVoyageEmbeddingErr() *cModel.APIError {
+	return &cModel.APIError{Message: "Error occurred while generating embeddings", StatusCode: http.StatusInternalServerError}
+}
+
+func newVoyageRerankErr() *cModel.APIError {
+	return &cModel.APIError{Message: "Error occurred while re-ranking", StatusCode: http.StatusInternalServerError}
+}
 
 var voyageBaseURL = &url.URL{Scheme: "https", Host: "api.voyageai.com", Path: "/v1"}
 
@@ -55,7 +63,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 
 	reqBody := model.EmbeddingRequest{
 		Input:           input,
-		Model:           "voyage-4",
+		Model:           voyageEmbeddingModel,
 		InputType:       inputType,
 		OutputDimension: 512,
 	}
@@ -63,7 +71,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		logger.Error("Error marshalling Voyage embedding request", "err", err)
-		return nil, voyageEmbeddingErr
+		return nil, newVoyageEmbeddingErr()
 	}
 
 	req, apiErr := newVoyageRequest(ctx, http.MethodPost, voyageEmbeddingsPath, bytes.NewReader(payload))
@@ -74,7 +82,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 	voyageRes, err := voyageHTTPClient.Do(req)
 	if err != nil {
 		logger.Error("Error calling Voyage embeddings API", "err", err)
-		return nil, voyageEmbeddingErr
+		return nil, newVoyageEmbeddingErr()
 	}
 
 	body, apiErr := parseResponseBody(ctx, voyageRes)
@@ -85,12 +93,12 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 	var result model.EmbeddingResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Error("Error unmarshalling Voyage embeddings response", "err", err)
-		return nil, voyageEmbeddingErr
+		return nil, newVoyageEmbeddingErr()
 	}
 
 	if len(result.Data) != len(input) {
-		logger.Error("Voyage API returned incorrect number of embeddings", "input", input, "num_embeddings", len(result.Data))
-		return nil, voyageEmbeddingErr
+		logger.Error("Voyage API returned incorrect number of embeddings", "num_input", len(input), "num_embeddings", len(result.Data))
+		return nil, newVoyageEmbeddingErr()
 	}
 
 	return &result, nil
@@ -103,14 +111,14 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 	reqBody := model.RerankRequest{
 		Query:     query,
 		Documents: input,
-		Model:     "rerank-2.5",
+		Model:     voyageRerankModel,
 		TopK:      topK,
 	}
 
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
 		logger.Error("Error marshalling Voyage rerank request", "err", err)
-		return nil, voyageRerankErr
+		return nil, newVoyageRerankErr()
 	}
 
 	req, apiErr := newVoyageRequest(ctx, http.MethodPost, voyageRerankPath, bytes.NewReader(payload))
@@ -121,7 +129,7 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 	voyageRes, err := voyageHTTPClient.Do(req)
 	if err != nil {
 		logger.Error("Error calling Voyage rerank API", "err", err)
-		return nil, voyageRerankErr
+		return nil, newVoyageRerankErr()
 	}
 
 	body, apiErr := parseResponseBody(ctx, voyageRes)
@@ -132,12 +140,12 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 	var result model.RerankResponse
 	if err := json.Unmarshal(body, &result); err != nil {
 		logger.Error("Error unmarshalling Voyage rerank response", "err", err)
-		return nil, voyageRerankErr
+		return nil, newVoyageRerankErr()
 	}
 
 	if expectedSize := min(int(topK), len(input)); len(result.Data) != expectedSize {
 		logger.Error("Voyage API returned incorrect number of re-ranked elements", "expected_size", topK, "actual", len(result.Data))
-		return nil, voyageRerankErr
+		return nil, newVoyageRerankErr()
 	}
 
 	return &result, nil
