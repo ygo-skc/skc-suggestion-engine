@@ -79,7 +79,7 @@ type VectorSearchResult struct {
 	ID string `bson:"id"`
 }
 
-type CardSimilarity struct {
+type SimilarCards struct {
 	Card    cModel.YGOCard   `json:"card"`
-	Similar []cModel.YGOCard `json:"similar"`
+	Matches []cModel.YGOCard `json:"matches"`
 }
