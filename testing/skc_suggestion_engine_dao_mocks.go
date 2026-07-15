@@ -46,6 +46,11 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	return nil
 }
 
+func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(context.Context, string) ([]string, []string, []string, *cModel.APIError) {
+	log.Fatalln("GetArchetypeMembers() not mocked")
+	return nil, nil, nil, nil
+}
+
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context, subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	log.Fatalln("VectorSearchOnCardEmbedding() not mocked")
 	return nil, nil
