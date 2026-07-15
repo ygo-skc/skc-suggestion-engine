@@ -253,7 +253,6 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 			{
 				Key: "$vectorSearch", Value: bson.D{
 					{Key: "index", Value: "text_embedding"},
-					{Key: "path", Value: "embedding"},
 					{Key: "exact", Value: true}, // true = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
 					{Key: "filter", Value: bson.D{
 						{Key: "id", Value: bson.D{
@@ -261,15 +260,67 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 						}},
 					}},
 					{Key: "queryVector", Value: queryVector},
-					{Key: "limit", Value: limit},
+					{Key: "limit", Value: limit * 3},
 				},
 			},
+		},
+		{
+			{Key: "$addFields", Value: bson.D{
+				{Key: "cosineSimilarity", Value: bson.D{
+					{Key: "$meta", Value: "vectorSearchScore"},
+				}},
+				{Key: "sharedType", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$type", subject.GetMonsterType()}}},
+						1,
+						0,
+					}},
+				}},
+				{Key: "sharedAttribute", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$attribute", subject.GetAttribute()}}},
+						1,
+						0,
+					}},
+				}},
+				{Key: "sharedMonsterType", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$monster_type", subject.GetMonsterType()}}},
+						1,
+						0,
+					}},
+				}},
+			}},
+		},
+		{
+			{Key: "$addFields", Value: bson.D{
+				{Key: "finalScore", Value: bson.D{
+					{Key: "$add", Value: bson.A{
+						"$cosineSimilarity",
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedType", 0.03}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedAttribute", 0.05}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedMonsterType", 0.08}}},
+					}},
+				}},
+			}},
+		},
+		{
+			{Key: "$sort", Value: bson.D{
+				{Key: "finalScore", Value: -1},
+			}},
+		},
+		{
+			{Key: "$limit", Value: limit},
 		},
 		{
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 0},
 				{Key: "id", Value: 1},
 				{Key: "text", Value: 1},
+				{Key: "cosineSimilarity", Value: 1},
+				{Key: "sharedAttribute", Value: 1},
+				{Key: "sharedMonsterType", Value: 1},
+				{Key: "finalScore", Value: 1},
 			}},
 		},
 	}
