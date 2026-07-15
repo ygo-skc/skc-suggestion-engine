@@ -283,6 +283,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 			{
 				Key: "$vectorSearch", Value: bson.D{
 					{Key: "index", Value: "text_embedding"},
+					{Key: "path", Value: "textEmbedding"},
 					{Key: "exact", Value: true}, // true = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
 					{Key: "filter", Value: bson.D{
 						{Key: "id", Value: bson.D{
@@ -315,7 +316,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 				}},
 				{Key: "sharedMonsterType", Value: bson.D{
 					{Key: "$cond", Value: bson.A{
-						bson.D{{Key: "$eq", Value: bson.A{"$monster_type", subject.GetMonsterType()}}},
+						bson.D{{Key: "$eq", Value: bson.A{"$monsterType", subject.GetMonsterType()}}},
 						1,
 						0,
 					}},
