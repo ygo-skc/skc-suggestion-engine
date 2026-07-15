@@ -17,7 +17,8 @@ import (
 )
 
 const (
-	archetypeSupportOp = "Archetype Support"
+	archetypeSupportOp   = "Archetype Support"
+	archetypeSupportV2Op = "Archetype Support v2"
 )
 
 type archetypeResults struct {
@@ -142,4 +143,71 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	}
 
 	archetypalSuggestions.UsingName = newList
+}
+
+func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
+	archetypeName := chi.URLParam(req, "archetypeName")
+
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportV2Op, slog.String("archetype_name", archetypeName))
+	logger.Info("Getting cards within archetype")
+
+	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
+		logger.Error("Failed archetype validation", "err", err)
+		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
+		validationErr.HandleServerResponse(res)
+		return
+	}
+
+	i, q, e, err := skcSuggestionEngineDBInterface.GetArchetypeMembers(ctx, archetypeName)
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+
+	m := make(cModel.CardIDs, 0, len(i)+len(q)+len(e))
+	for _, item := range i {
+		m = append(m, item)
+	}
+	for _, item := range q {
+		m = append(m, item)
+	}
+	for _, item := range e {
+		m = append(m, item)
+	}
+
+	batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, m)
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+
+	archetypeMembers := model.ArchetypeMembers{
+		Archetype:        archetypeName,
+		InheritMembers:   make([]cModel.YGOCard, 0, len(i)),
+		QualifiedMembers: make([]cModel.YGOCard, 0, len(q)),
+		ExcludedMembers:  make([]cModel.YGOCard, 0, len(e)),
+	}
+
+	for _, member := range i {
+		archetypeMembers.InheritMembers = append(archetypeMembers.InheritMembers, batchCardInfo.CardInfo[member])
+	}
+
+	for _, member := range q {
+		archetypeMembers.QualifiedMembers = append(archetypeMembers.QualifiedMembers, batchCardInfo.CardInfo[member])
+	}
+
+	for _, member := range e {
+		archetypeMembers.ExcludedMembers = append(archetypeMembers.ExcludedMembers, batchCardInfo.CardInfo[member])
+	}
+
+	logger.Info("Returning archetypal suggestions",
+		"archetype_name", archetypeName,
+		"inherit_members", len(archetypeMembers.InheritMembers),
+		"qualified_members", len(archetypeMembers.QualifiedMembers),
+		"excluded_members", len(archetypeMembers.ExcludedMembers))
+
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(archetypeMembers); err != nil {
+		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetype_name", archetypeName)
+	}
 }

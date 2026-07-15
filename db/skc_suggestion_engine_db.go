@@ -35,6 +35,7 @@ type SKCSuggestionEngineDAO interface {
 	GetCardOfTheDay(context.Context, string, int) (*string, *cModel.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
+	GetArchetypeMembers(context.Context, string) ([]string, []string, []string, *cModel.APIError)
 
 	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 }
@@ -127,17 +128,6 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 }
 
-// sanitizeQueryInput trims surrounding whitespace and strips control characters from user-supplied input before it is used to build a query.
-func sanitizeQueryInput(s string) string {
-	s = strings.TrimSpace(s)
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, s)
-}
-
 func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -160,6 +150,17 @@ func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Conte
 	} else {
 		return false, nil
 	}
+}
+
+// sanitizeQueryInput trims surrounding whitespace and strips control characters from user-supplied input before it is used to build a query.
+func sanitizeQueryInput(s string) string {
+	s = strings.TrimSpace(s)
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *cModel.APIError) {
@@ -236,6 +237,35 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 
 	logger.Info("Successfully inserted new card of the day.")
 	return nil
+}
+
+func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context.Context, subject string) ([]string, []string, []string, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	logger.Info("Fetching archetype members")
+
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{"archetype": subject}
+
+	type archetypeMembers struct {
+		Archetype        string   `bson:"archetype"`
+		InheritMembers   []string `bson:"inheritMembers"`
+		QualifiedMembers []string `bson:"qualifiedMembers"`
+		ExcludedMembers  []string `bson:"excludedMembers"`
+	}
+
+	var members archetypeMembers
+	if err := archetypeCollection.FindOne(ctx, query).Decode(&members); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			logger.Error("Could not find archetype in DB", "err", err)
+			return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusNotFound, Message: "Archetype does not exist"}
+		}
+		logger.Error("Error retrieving archetype data", "err", err)
+		return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get archetype data"}
+	}
+
+	return members.InheritMembers, members.QualifiedMembers, members.ExcludedMembers, nil
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,

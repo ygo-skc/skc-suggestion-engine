@@ -52,6 +52,13 @@ type ArchetypalSuggestions struct {
 	Exclusions []cModel.YGOCard `json:"exclusions"`
 }
 
+type ArchetypeMembers struct {
+	Archetype        string           `bson:"archetype" json:"archetype"`
+	InheritMembers   []cModel.YGOCard `bson:"inheritMembers" json:"inheritMembers"`
+	QualifiedMembers []cModel.YGOCard `bson:"qualifiedMembers" json:"qualifiedMembers"`
+	ExcludedMembers  []cModel.YGOCard `bson:"excludedMembers" json:"excludedMembers"`
+}
+
 // looks for a self reference, if a self reference is found it is removed from original slice
 // this method returns true if a self reference is found
 func RemoveSelfReference(self string, cr *[]CardReference) bool {
