@@ -158,22 +158,17 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	i, q, e, err := skcSuggestionEngineDBInterface.GetArchetypeMembers(ctx, archetypeName)
+	inherit, qualified, excluded, err := skcSuggestionEngineDBInterface.GetArchetypeMembers(ctx, archetypeName)
 	if err != nil {
+		logger.Error("Failed to retrieve archetype data", "err", err)
 		err.HandleServerResponse(res)
 		return
 	}
 
-	m := make(cModel.CardIDs, 0, len(i)+len(q)+len(e))
-	for _, item := range i {
-		m = append(m, item)
-	}
-	for _, item := range q {
-		m = append(m, item)
-	}
-	for _, item := range e {
-		m = append(m, item)
-	}
+	m := make(cModel.CardIDs, 0, len(inherit)+len(qualified)+len(excluded))
+	m = append(m, inherit...)
+	m = append(m, qualified...)
+	m = append(m, excluded...)
 
 	batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, m)
 	if err != nil {
@@ -183,21 +178,19 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 
 	archetypeMembers := model.ArchetypeMembers{
 		Archetype:        archetypeName,
-		InheritMembers:   make([]cModel.YGOCard, 0, len(i)),
-		QualifiedMembers: make([]cModel.YGOCard, 0, len(q)),
-		ExcludedMembers:  make([]cModel.YGOCard, 0, len(e)),
+		InheritMembers:   make([]cModel.YGOCard, len(inherit)),
+		QualifiedMembers: make([]cModel.YGOCard, len(qualified)),
+		ExcludedMembers:  make([]cModel.YGOCard, len(excluded)),
 	}
 
-	for _, member := range i {
-		archetypeMembers.InheritMembers = append(archetypeMembers.InheritMembers, batchCardInfo.CardInfo[member])
+	for i, member := range inherit {
+		archetypeMembers.InheritMembers[i] = batchCardInfo.CardInfo[member]
 	}
-
-	for _, member := range q {
-		archetypeMembers.QualifiedMembers = append(archetypeMembers.QualifiedMembers, batchCardInfo.CardInfo[member])
+	for i, member := range qualified {
+		archetypeMembers.QualifiedMembers[i] = batchCardInfo.CardInfo[member]
 	}
-
-	for _, member := range e {
-		archetypeMembers.ExcludedMembers = append(archetypeMembers.ExcludedMembers, batchCardInfo.CardInfo[member])
+	for i, member := range excluded {
+		archetypeMembers.ExcludedMembers[i] = batchCardInfo.CardInfo[member]
 	}
 
 	logger.Info("Returning archetypal suggestions",
@@ -208,6 +201,6 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypeMembers); err != nil {
-		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetype_name", archetypeName)
+		logger.Error("Could not encode archetypal suggestions v2 response", "err", err, "archetype_name", archetypeName)
 	}
 }
