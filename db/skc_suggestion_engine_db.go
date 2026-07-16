@@ -35,7 +35,9 @@ type SKCSuggestionEngineDAO interface {
 	GetCardOfTheDay(context.Context, string, int) (*string, *cModel.APIError)
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
+
 	GetArchetypeMembers(context.Context, string) ([]string, []string, []string, *cModel.APIError)
+	GetRelevantArchetypes(context.Context, cModel.CardIDs) ([]string, *cModel.APIError)
 
 	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 }
@@ -266,6 +268,54 @@ func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context
 	}
 
 	return members.InheritMembers, members.QualifiedMembers, members.ExcludedMembers, nil
+}
+
+func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx context.Context, subjects cModel.CardIDs) ([]string, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{
+		"$or": bson.A{
+			bson.M{"inheritMembers": bson.M{"$in": subjects}},
+			bson.M{"qualifiedMembers": bson.M{"$in": subjects}},
+		},
+	}
+
+	opts := options.Find().SetProjection(
+		bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "archetype", Value: 1},
+		},
+	)
+
+	cursor, err := archetypeCollection.Find(ctx, query, opts)
+	if err != nil {
+		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+	defer cursor.Close(ctx)
+
+	type relevantArchetypes struct {
+		Archetype string `bson:"archetype"`
+	}
+
+	var ra []relevantArchetypes
+	if err := cursor.All(ctx, &ra); err != nil {
+		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+
+	if err := cursor.Err(); err != nil {
+		logger.Error("Error iterating relevant archetype DB data", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+
+	f := make([]string, len(ra))
+	for i := range ra {
+		f[i] = ra[i].Archetype
+	}
+	return f, nil
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
