@@ -45,8 +45,17 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
+	// TODO: can you make this in parallel?
 	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues())
+	relevantArchetypes, err := skcSuggestionEngineDBInterface.GetRelevantArchetypes(ctx, []string{cardID})
+	if err != nil {
+		logger.Error("Failed to retrieve relevant archetype data", "err", err)
+		err.HandleServerResponse(res)
+		return
+	}
+	// TODO: include exclusions?
+
+	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
 
 	logger.Info("Card suggestions generated",
 		"card_name", (*cardToGetSuggestionsFor).GetName(),
@@ -58,16 +67,22 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[string]uint32) model.CardSuggestions {
+func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[string]uint32, relevantArchetypes []string) model.CardSuggestions {
 	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(subject.GetEffect(), -1))
+
+	for _, archetype := range relevantArchetypes {
+		usd.archetypeSet[archetype] = struct{}{}
+	}
 
 	materialText := cModel.GetPotentialMaterialsAsString(subject)
 	effectText := strings.ReplaceAll(subject.GetEffect(), materialText, "")
-	suggestions := parseSuggestionData(materialText, effectText, usd)
+
+	suggestions := parseSuggestionData(subject.GetName(), materialText, effectText, usd)
 	suggestions.Card = subject
 
 	slices.SortStableFunc(suggestions.NamedMaterials, sortCardReferences(ccIDs))
 	slices.SortStableFunc(suggestions.NamedReferences, sortCardReferences(ccIDs))
+	slices.Sort(suggestions.RelevantArchetypes)
 	slices.Sort(suggestions.ReferencedArchetypes)
 	slices.Sort(suggestions.MaterialArchetypes)
 	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)

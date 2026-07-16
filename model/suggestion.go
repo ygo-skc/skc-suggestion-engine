@@ -14,6 +14,7 @@ type CardSuggestions struct {
 	HasSelfReference     bool            `json:"hasSelfReference"`
 	NamedMaterials       []CardReference `json:"namedMaterials"`
 	NamedReferences      []CardReference `json:"namedReferences"`
+	RelevantArchetypes   []string        `json:"relevantArchetypes"`
 	MaterialArchetypes   []string        `json:"materialArchetypes"`
 	ReferencedArchetypes []string        `json:"referencedArchetypes"`
 }
