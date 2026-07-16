@@ -239,14 +239,14 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	return nil
 }
 
-func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context.Context, subject string) ([]string, []string, []string, *cModel.APIError) {
+func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context.Context, archetype string) ([]string, []string, []string, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	logger.Info("Fetching archetype members")
 
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	query := bson.M{"archetype": subject}
+	query := bson.M{"archetype": archetype}
 
 	type archetypeMembers struct {
 		Archetype        string   `bson:"archetype"`
