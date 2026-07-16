@@ -1,11 +1,13 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -193,6 +195,10 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 		archetypeMembers.ExcludedMembers[i] = batchCardInfo.CardInfo[member]
 	}
 
+	slices.SortFunc(archetypeMembers.InheritMembers, archetypeSort)
+	slices.SortFunc(archetypeMembers.QualifiedMembers, archetypeSort)
+	slices.SortFunc(archetypeMembers.ExcludedMembers, archetypeSort)
+
 	logger.Info("Returning archetypal suggestions",
 		"archetype_name", archetypeName,
 		"inherit_members", len(archetypeMembers.InheritMembers),
@@ -203,4 +209,8 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 	if err := json.NewEncoder(res).Encode(archetypeMembers); err != nil {
 		logger.Error("Could not encode archetypal suggestions v2 response", "err", err, "archetype_name", archetypeName)
 	}
+}
+
+func archetypeSort(a, b cModel.YGOCard) int {
+	return cmp.Compare(a.GetName(), b.GetName())
 }
