@@ -29,7 +29,6 @@ const (
 type unparsedSuggestionData struct {
 	namedReferencesByToken cModel.CardDataMap
 	archetypeSet           map[string]struct{}
-	cardIdByToken          map[string]string
 }
 
 // Handler that will be used by suggestion endpoint.
