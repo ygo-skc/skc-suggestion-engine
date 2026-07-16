@@ -1,13 +1,13 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
@@ -67,10 +67,10 @@ func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[s
 	suggestions := parseSuggestionData(materialText, effectText, usd)
 	suggestions.Card = subject
 
-	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
-	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
-	sort.Strings(suggestions.ReferencedArchetypes)
-	sort.Strings(suggestions.MaterialArchetypes)
+	slices.SortStableFunc(suggestions.NamedMaterials, sortCardReferences(ccIDs))
+	slices.SortStableFunc(suggestions.NamedReferences, sortCardReferences(ccIDs))
+	slices.Sort(suggestions.ReferencedArchetypes)
+	slices.Sort(suggestions.MaterialArchetypes)
 	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)
 
 	return suggestions
@@ -155,16 +155,15 @@ func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unpars
 	return usd
 }
 
-func sortCardReferences(refs []model.CardReference, ccIDs map[string]uint32) func(i, j int) bool {
-	return func(i, j int) bool {
-		iv, jv := refs[i], refs[j]
+func sortCardReferences(ccIDs map[string]uint32) func(a, b model.CardReference) int {
+	return func(a, b model.CardReference) int {
 		switch {
-		case iv.Occurrences != jv.Occurrences:
-			return iv.Occurrences > jv.Occurrences
-		case iv.Card.GetColor() != jv.Card.GetColor():
-			return ccIDs[iv.Card.GetColor()] < ccIDs[jv.Card.GetColor()]
+		case a.Occurrences != b.Occurrences:
+			return cmp.Compare(b.Occurrences, a.Occurrences)
+		case a.Card.GetColor() != b.Card.GetColor():
+			return cmp.Compare(ccIDs[a.Card.GetColor()], ccIDs[b.Card.GetColor()])
 		default:
-			return iv.Card.GetName() < jv.Card.GetName()
+			return cmp.Compare(a.Card.GetName(), b.Card.GetName())
 		}
 	}
 }

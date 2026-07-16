@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -136,12 +135,12 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
-	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
-	sort.Strings(suggestions.MaterialArchetypes)
-	sort.Strings(suggestions.ReferencedArchetypes)
-	sort.Strings(suggestions.IntersectingResources)
-	sort.Strings(suggestions.UnknownResources)
+	slices.SortStableFunc(suggestions.NamedMaterials, sortCardReferences(ccIDs))
+	slices.SortStableFunc(suggestions.NamedReferences, sortCardReferences(ccIDs))
+	slices.Sort(suggestions.MaterialArchetypes)
+	slices.Sort(suggestions.ReferencedArchetypes)
+	slices.Sort(suggestions.IntersectingResources)
+	slices.Sort(suggestions.UnknownResources)
 
 	return suggestions
 }
@@ -271,11 +270,11 @@ func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cM
 		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
-		sort.Strings(support.IntersectingResources)
-		sort.Strings(support.UnknownResources)
+		slices.Sort(support.IntersectingResources)
+		slices.Sort(support.UnknownResources)
 		ccIDs := awg.Load()
-		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.GetValues()))
-		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.GetValues()))
+		slices.SortStableFunc(support.ReferencedBy, sortCardReferences(ccIDs.GetValues()))
+		slices.SortStableFunc(support.MaterialFor, sortCardReferences(ccIDs.GetValues()))
 	}
 	return support
 }
