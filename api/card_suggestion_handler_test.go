@@ -20,13 +20,13 @@ func TestGetSuggestions(t *testing.T) {
 	ccIDs := skc_testing.CardColors
 	for cardName := range cardSuggestionsWithSelfReferenceMock {
 		mock := skc_testing.CardMocks[cardName]
-		suggestions := getCardSuggestions(skc_testing.TestContext, mock, ccIDs)
+		suggestions := getCardSuggestions(skc_testing.TestContext, mock, ccIDs, skc_testing.CardArchetypeMock[cardName])
 
-		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, "Named Material values did not match")
-		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, "Material Archetype values did not match")
+		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].NamedMaterials, suggestions.NamedMaterials, cardName+":Named Material values did not match")
+		assert.Equal(cardSuggestionsWithSelfReferenceMock[cardName].MaterialArchetypes, suggestions.MaterialArchetypes, cardName+":Material Archetype values did not match")
 
-		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, "Named References values did not match")
-		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, "Referenced Archetype values did not match")
+		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].NamedReferences, suggestions.NamedReferences, cardName+":Named References values did not match")
+		assert.Equal(cardSuggestionsWithoutSelfReferenceMock[cardName].ReferencedArchetypes, suggestions.ReferencedArchetypes, cardName+":Referenced Archetype values did not match")
 	}
 }
 
@@ -64,13 +64,13 @@ var (
 			NamedMaterials:       []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			MaterialArchetypes:   []string{},
 			NamedReferences:      []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"Polymerization"},
 		},
 		"The Legendary Fisherman II": {
 			NamedMaterials:       []model.CardReference{},
 			MaterialArchetypes:   []string{},
 			NamedReferences:      []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"The Legendary Fisherman", "Umi"},
 		},
 		"Armityle the Chaos Phantasm": {
 			NamedMaterials: []model.CardReference{
@@ -82,7 +82,7 @@ var (
 			NamedReferences: []model.CardReference{
 				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
 			},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"Polymerization"},
 		},
 		"Armityle the Chaos Phantasm - Phantom of Fury": {
 			NamedMaterials: []model.CardReference{
@@ -141,13 +141,13 @@ var (
 			NamedMaterials:       []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}},
 			MaterialArchetypes:   []string{},
 			NamedReferences:      []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["ABC-Dragon Buster"]}, {Occurrences: 1, Card: skc_testing.CardMocks["XYZ-Dragon Cannon"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]}},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"Polymerization"},
 		},
 		"The Legendary Fisherman II": {
 			NamedMaterials:       []model.CardReference{},
 			MaterialArchetypes:   []string{},
 			NamedReferences:      []model.CardReference{{Occurrences: 1, Card: skc_testing.CardMocks["The Legendary Fisherman"]}, {Occurrences: 1, Card: skc_testing.CardMocks["Umi"]}},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"The Legendary Fisherman", "Umi"},
 		},
 		"Armityle the Chaos Phantasm": {
 			NamedMaterials: []model.CardReference{
@@ -159,7 +159,7 @@ var (
 			NamedReferences: []model.CardReference{
 				{Occurrences: 1, Card: skc_testing.CardMocks["Polymerization"]},
 			},
-			ReferencedArchetypes: []string{},
+			ReferencedArchetypes: []string{"Polymerization"},
 		},
 		"Armityle the Chaos Phantasm - Phantom of Fury": {
 			NamedMaterials: []model.CardReference{
