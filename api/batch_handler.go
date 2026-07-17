@@ -198,11 +198,17 @@ func parseSuggestionReferences(
 ) {
 	for _, suggestion := range referencesToParse {
 		suggestionID := suggestion.Card.GetID()
-		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
+		_, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]
+		_, isIntersecting := subjects[suggestionID]
+
+		switch {
+		case refPreviouslyAdded:
 			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
-		} else if _, isIntersecting := subjects[suggestionID]; isIntersecting && !slices.Contains(*intersectingResources, suggestionID) {
-			*intersectingResources = append(*intersectingResources, suggestionID)
-		} else if !refPreviouslyAdded && !isIntersecting {
+		case isIntersecting:
+			if !slices.Contains(*intersectingResources, suggestionID) {
+				*intersectingResources = append(*intersectingResources, suggestionID)
+			}
+		default:
 			uniqueReferencesByCardID[suggestionID] = &model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences}
 		}
 	}
