@@ -121,7 +121,6 @@ func GenerateUnparsedSuggestionData(ctx context.Context, tokens []string, releva
 		usd.archetypeSet[archetype] = struct{}{}
 	}
 
-	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
 	totalTokens := len(tokens)
 
 	if totalTokens != 0 {
@@ -132,14 +131,8 @@ func GenerateUnparsedSuggestionData(ctx context.Context, tokens []string, releva
 		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
 
 		for _, token := range tokens {
-			// already processed
-			if _, isPresent := tokenToCardId[token]; isPresent {
-				continue
-			}
-
 			if card, isPresent := batchCardData.CardInfo[token]; isPresent {
 				usd.namedReferencesByToken[token] = card
-				tokenToCardId[token] = card.GetID()
 			}
 		}
 	}
