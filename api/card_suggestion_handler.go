@@ -1,35 +1,24 @@
 package api
 
 import (
-	"cmp"
 	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"regexp"
 	"slices"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	"github.com/ygo-skc/skc-go/common/v2/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
-)
-
-var (
-	quotedStringRegex = regexp.MustCompile("^(\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')|[\\W](\"[ \\w\\d-:@,'.]{3,}?\"|'[ \\w\\d-:@,'.]{3,}?')")
+	"github.com/ygo-skc/skc-suggestion-engine/suggest"
 )
 
 const (
 	cardSuggestionsOp = "Card Suggestions"
 )
-
-type unparsedSuggestionData struct {
-	namedReferencesByToken cModel.CardDataMap
-	archetypeSet           map[string]struct{}
-}
 
 // Handler that will be used by suggestion endpoint.
 // Will retrieve fusion, synchro, etc materials and other references if they are explicitly mentioned by name and their name exists in the DB.
@@ -45,11 +34,9 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	// TODO: can you make this in parallel?
-	ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-	relevantArchetypes, err := skcSuggestionEngineDBInterface.GetRelevantArchetypes(ctx, []string{cardID})
+	ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, []string{cardID}, skcSuggestionEngineDBInterface)
 	if err != nil {
-		logger.Error("Failed to retrieve relevant archetype data", "err", err)
+		logger.Error("Failed to retrieve suggestion metadata", "err", err)
 		err.HandleServerResponse(res)
 		return
 	}
@@ -68,116 +55,22 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getCardSuggestions(ctx context.Context, subject cModel.YGOCard, ccIDs map[string]uint32, relevantArchetypes []string) model.CardSuggestions {
-	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(subject.GetEffect(), -1))
-
-	for _, archetype := range relevantArchetypes {
-		usd.archetypeSet[archetype] = struct{}{}
-	}
+	usd := suggest.GenerateUnparsedSuggestionData(ctx,
+		suggest.QuotedStringRegex.FindAllString(subject.GetEffect(), -1), relevantArchetypes)
 
 	materialText := cModel.GetPotentialMaterialsAsString(subject)
 	effectText := strings.ReplaceAll(subject.GetEffect(), materialText, "")
 
-	suggestions := parseSuggestionData(subject.GetName(), materialText, effectText, usd)
+	suggestions := suggest.ParseSuggestionData(subject.GetName(), materialText, effectText, usd)
 	suggestions.Card = subject
+	suggestions.RelevantArchetypes = relevantArchetypes // this is all archetypes the card belongs to
 
-	slices.SortStableFunc(suggestions.NamedMaterials, sortCardReferences(ccIDs))
-	slices.SortStableFunc(suggestions.NamedReferences, sortCardReferences(ccIDs))
+	slices.SortStableFunc(suggestions.NamedMaterials, suggest.SortCardReferences(ccIDs))
+	slices.SortStableFunc(suggestions.NamedReferences, suggest.SortCardReferences(ccIDs))
 	slices.Sort(suggestions.RelevantArchetypes)
 	slices.Sort(suggestions.ReferencedArchetypes)
 	slices.Sort(suggestions.MaterialArchetypes)
 	suggestions.HasSelfReference = model.RemoveSelfReference(subject.GetName(), &suggestions.NamedReferences)
 
 	return suggestions
-}
-
-// parses suggestion data by transforming it into a CardSuggestion object
-func parseSuggestionData(materialText string, effectText string, usd unparsedSuggestionData) model.CardSuggestions {
-	numArchetypes, numReferences := len(usd.archetypeSet), len(usd.namedReferencesByToken)
-	suggestions := model.CardSuggestions{
-		NamedMaterials:       make([]model.CardReference, 0, numReferences),
-		NamedReferences:      make([]model.CardReference, 0, numReferences),
-		MaterialArchetypes:   make([]string, 0, numArchetypes),
-		ReferencedArchetypes: make([]string, 0, numArchetypes),
-	}
-
-	nonArchetypeMaterialTokens := partitionTokensInCardText(materialText, usd.archetypeSet, &suggestions.MaterialArchetypes)
-	nonArchetypeReferenceTokens := partitionTokensInCardText(effectText, usd.archetypeSet, &suggestions.ReferencedArchetypes)
-
-	parseTokenAsCard(nonArchetypeMaterialTokens, usd.namedReferencesByToken, &suggestions.NamedMaterials)
-	parseTokenAsCard(nonArchetypeReferenceTokens, usd.namedReferencesByToken, &suggestions.NamedReferences)
-
-	return suggestions
-}
-
-// Uses card text and archetypes to create a list of unique archetypes and a map of non archetype tokens and their occurrence
-func partitionTokensInCardText(cardText string, archetypeSet map[string]struct{}, archetypesInCardText *[]string) map[string]int {
-	nonArchetypeTokens := make(map[string]int, len(archetypeSet))
-	for _, token := range quotedStringRegex.FindAllString(cardText, -1) {
-		parser.CleanupToken(&token)
-		if _, exists := archetypeSet[token]; exists && !slices.Contains(*archetypesInCardText, token) {
-			*archetypesInCardText = append(*archetypesInCardText, token)
-		} else if !exists {
-			nonArchetypeTokens[token]++
-		}
-	}
-	return nonArchetypeTokens
-}
-
-// creates the suggestion references and their occurrence
-func parseTokenAsCard(tokenOccurrences map[string]int, namedReferencesByToken cModel.CardDataMap, references *[]model.CardReference) {
-	for token, occurrence := range tokenOccurrences {
-		*references = append(*references, model.CardReference{Occurrences: occurrence, Card: namedReferencesByToken[token]})
-	}
-}
-
-// cycles through tokens - makes DB calls where necessary and attempts to build objects containing direct references (and their occurrences), archetype references
-func generateUnparsedSuggestionData(ctx context.Context, tokens []string) unparsedSuggestionData {
-	usd := unparsedSuggestionData{namedReferencesByToken: cModel.CardDataMap{}, archetypeSet: make(map[string]struct{})}
-
-	tokenToCardId := map[string]string{} // maps token to its cardID - token will only have cardID if token is found in DB
-	totalTokens := len(tokens)
-
-	if totalTokens != 0 {
-		for i := range totalTokens {
-			parser.CleanupToken(&tokens[i])
-		}
-
-		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
-
-		for _, token := range tokens {
-			// if token is present in archetype slice, skip token
-			if _, isPresent := usd.archetypeSet[token]; isPresent {
-				continue
-			}
-
-			// already processed
-			if _, isPresent := tokenToCardId[token]; isPresent {
-				continue
-			}
-
-			if card, isPresent := batchCardData.CardInfo[token]; !isPresent {
-				// add occurrence of archetype to set
-				usd.archetypeSet[token] = struct{}{}
-			} else {
-				// add occurrence of referenced card to maps
-				usd.namedReferencesByToken[token] = card
-				tokenToCardId[token] = card.GetID()
-			}
-		}
-	}
-
-	return usd
-}
-
-func sortCardReferences(ccIDs map[string]uint32) func(a, b model.CardReference) int {
-	return func(a, b model.CardReference) int {
-		switch {
-		case a.Occurrences != b.Occurrences:
-			return cmp.Compare(b.Occurrences, a.Occurrences)
-		case a.Card.GetColor() != b.Card.GetColor():
-			return cmp.Compare(ccIDs[a.Card.GetColor()], ccIDs[b.Card.GetColor()])
-		default:
-			return cmp.Compare(a.Card.GetName(), b.Card.GetName())
-		}
-	}
 }

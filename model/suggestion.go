@@ -22,6 +22,7 @@ type CardSuggestions struct {
 type BatchCardSuggestions[RK cModel.YGOResourceKey] struct {
 	NamedMaterials        []CardReference `json:"namedMaterials"`
 	NamedReferences       []CardReference `json:"namedReferences"`
+	RelevantArchetypes    []string        `json:"relevantArchetypes"`
 	MaterialArchetypes    []string        `json:"materialArchetypes"`
 	ReferencedArchetypes  []string        `json:"referencedArchetypes"`
 	UnknownResources      RK              `json:"unknownResources"`
