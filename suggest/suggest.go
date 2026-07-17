@@ -3,7 +3,6 @@ package suggest
 import (
 	"context"
 	"regexp"
-	"slices"
 	"sync"
 
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
@@ -91,12 +90,16 @@ func ParseSuggestionData(cardName string, materialText string, effectText string
 // Uses card text and archetypes to create a list of unique archetypes and a map of non archetype tokens and their occurrence
 func partitionTokensByCardText(cardText string, usd UnparsedSuggestionData) ([]string, map[string]int) {
 	archetypeTokens := make([]string, 0, len(usd.archetypeSet))
+	seenArchetypeTokens := make(map[string]struct{}, len(usd.archetypeSet))
 	nonArchetypeTokens := make(map[string]int, len(usd.namedReferencesByToken))
 
 	for _, token := range QuotedStringRegex.FindAllString(cardText, -1) {
 		parser.CleanupToken(&token)
-		if _, exists := usd.archetypeSet[token]; exists && !slices.Contains(archetypeTokens, token) {
-			archetypeTokens = append(archetypeTokens, token)
+		if _, exists := usd.archetypeSet[token]; exists {
+			if _, seen := seenArchetypeTokens[token]; !seen {
+				seenArchetypeTokens[token] = struct{}{}
+				archetypeTokens = append(archetypeTokens, token)
+			}
 		}
 
 		if _, exists := usd.namedReferencesByToken[token]; exists {
