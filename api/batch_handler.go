@@ -215,7 +215,7 @@ func parseSuggestionReferences(
 }
 
 func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []model.CardReference {
-	references := []model.CardReference{}
+	references := make([]model.CardReference, 0, len(uniqueReferences))
 	for _, ref := range uniqueReferences {
 		references = append(references, *ref)
 	}

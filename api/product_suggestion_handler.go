@@ -56,31 +56,14 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 // load data needed to form product suggestions
 func loadPSData(ctx context.Context,
 	productID string) (*cModel.BatchCardData[cModel.CardIDs], *ygo.CardColors, []string, *cModel.APIError) {
-	type productCardsRes struct {
-		cards *cModel.BatchCardData[cModel.CardIDs]
-		err   *cModel.APIError
+	productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
+	if err != nil {
+		return nil, nil, nil, err
 	}
+	cards := cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
 
-	var wg sync.WaitGroup
-	awg := cUtil.NewAtomicWaitGroup[productCardsRes](&wg)
-	go func(awg *cUtil.AtomicWaitGroup[productCardsRes]) {
-		productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		r := productCardsRes{
-			err: err,
-		}
-		if productContents != nil {
-			r.cards = cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
-		}
-		awg.Store(&r)
-	}(awg)
-
-	r := awg.Load()
-	if r.err != nil {
-		return nil, nil, nil, r.err
-	}
-
-	cardIDs := make(cModel.CardIDs, 0, len(r.cards.CardInfo))
-	for id := range r.cards.CardInfo {
+	cardIDs := make(cModel.CardIDs, 0, len(cards.CardInfo))
+	for id := range cards.CardInfo {
 		cardIDs = append(cardIDs, id)
 	}
 
@@ -89,5 +72,5 @@ func loadPSData(ctx context.Context,
 		return nil, nil, nil, err
 	}
 
-	return r.cards, ccIDs, relevantArchetypes, nil
+	return cards, ccIDs, relevantArchetypes, nil
 }
