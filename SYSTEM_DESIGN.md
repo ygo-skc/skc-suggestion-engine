@@ -2,7 +2,7 @@
 
 Diagrams below reflect what each handler actually does, including downstream calls to `ygo-service` (gRPC), the `Suggestion DB` (MongoDB), and the local IP DB file.
 
-## Endpoints
+## Endpoints (v1)
 
 ### `GET /api/v1/suggestions/status`
 
@@ -51,12 +51,14 @@ sequenceDiagram
 
     Client->>API: GET /api/v1/suggestions/card-of-the-day
     API->>DB: GetCardOfTheDay(today, version)
+    DB-->>API: existing cardID (or none)
     alt no card picked yet today
         API->>DB: GetHistoricalCardOfTheDayData(version)
         DB-->>API: previously used card IDs
         API->>YGO: CardService.GetRandomCardProto(exclude previous)
         YGO-->>API: random cardID
         API->>DB: InsertCardOfTheDay(record)
+        DB-->>API: ack
     end
     API->>YGO: CardService.GetCardByID(cardID)
     YGO-->>API: card details
@@ -70,15 +72,22 @@ sequenceDiagram
     participant Client
     participant API as skc-suggestion-engine
     participant YGO as ygo-service (gRPC)
+    participant DB as Suggestion DB (MongoDB)
 
     Client->>API: GET /api/v1/suggestions/card/{cardID}
     API->>YGO: CardService.GetCardByID(cardID)
     YGO-->>API: card
-    API->>YGO: CardService.GetCardColorsProto()
-    Note over API: parse card's material/effect text into name tokens
+    par suggest.FetchMetadata
+        API->>YGO: CardService.GetCardColorsProto()
+        YGO-->>API: card color IDs
+    and
+        API->>DB: GetRelevantArchetypes([cardID])
+        DB-->>API: relevant archetypes
+    end
+    Note over API: parse card's material/effect text into name tokens<br/>(archetypes from DB seed the archetype set)
     API->>YGO: CardService.GetCardsByName(tokens)
     YGO-->>API: matched cards (named materials/references)
-    API-->>Client: 200 CardSuggestions
+    API-->>Client: 200 CardSuggestions{..., relevantArchetypes}
 ```
 
 ### `POST /api/v1/suggestions/card`
@@ -88,6 +97,7 @@ sequenceDiagram
     participant Client
     participant API as skc-suggestion-engine
     participant YGO as ygo-service (gRPC)
+    participant DB as Suggestion DB (MongoDB)
 
     Client->>API: POST /api/v1/suggestions/card {cardIDs}
     API->>API: decode + validate body
@@ -96,11 +106,17 @@ sequenceDiagram
     else
         API->>YGO: CardService.GetCardsByID(cardIDs)
         YGO-->>API: CardDataMap
-        API->>YGO: CardService.GetCardColorsProto()
-        Note over API: parse each card's text, dedupe references/archetypes
+        par suggest.FetchMetadata
+            API->>YGO: CardService.GetCardColorsProto()
+            YGO-->>API: card color IDs
+        and
+            API->>DB: GetRelevantArchetypes(cardIDs)
+            DB-->>API: relevant archetypes
+        end
+        Note over API: parse each card's text, dedupe references/archetypes<br/>(archetypes from DB seed the archetype set)
         API->>YGO: CardService.GetCardsByName(tokens)
         YGO-->>API: matched cards
-        API-->>Client: 200 BatchCardSuggestions
+        API-->>Client: 200 BatchCardSuggestions{..., relevantArchetypes}
     end
 ```
 
@@ -138,8 +154,10 @@ sequenceDiagram
         YGO-->>API: CardDataMap
         par
             API->>YGO: CardService.GetCardColorsProto()
+            YGO-->>API: card color IDs
         and
             API->>YGO: CardService.GetCardsReferencingNameInEffect(cardNames)
+            YGO-->>API: candidate referencing cards
         end
         Note over API: split into "material for" vs "referenced by" per card
         API-->>Client: 200 BatchCardSupport
@@ -177,13 +195,17 @@ sequenceDiagram
     participant Client
     participant API as skc-suggestion-engine
     participant YGO as ygo-service (gRPC)
+    participant DB as Suggestion DB (MongoDB)
 
     Client->>API: GET /api/v1/suggestions/product/{productID}
-    par
-        API->>YGO: ProductService.GetCardsByProductIDProto(productID)
-        YGO-->>API: cards in product
-    and
+    API->>YGO: ProductService.GetCardsByProductIDProto(productID)
+    YGO-->>API: cards in product
+    par suggest.FetchMetadata (cardIDs from product)
         API->>YGO: CardService.GetCardColorsProto()
+        YGO-->>API: card color IDs
+    and
+        API->>DB: GetRelevantArchetypes(cardIDs)
+        DB-->>API: relevant archetypes
     end
     par
         Note over API: getBatchSuggestions (may call GetCardsByName)
@@ -210,10 +232,13 @@ sequenceDiagram
     else
         par
             API->>YGO: CardService.GetArchetypalCardsUsingCardName(name)
+            YGO-->>API: cards matching name
         and
             API->>YGO: CardService.GetExplicitArchetypalInclusions(name)
+            YGO-->>API: explicitly included cards
         and
             API->>YGO: CardService.GetExplicitArchetypalExclusions(name)
+            YGO-->>API: explicitly excluded cards
         end
         alt fewer than 2 cards found by name
             API-->>Client: 404 not an archetype
@@ -236,13 +261,17 @@ sequenceDiagram
     Client->>API: GET /api/v1/suggestions/trending/{card|product}
     par
         API->>DB: GetTrafficData(last 10 days)
+        DB-->>API: recent traffic records
     and
         API->>DB: GetTrafficData(10-20 days ago)
+        DB-->>API: previous traffic records
     end
     alt resource == card
         API->>YGO: CardService.GetCardsByID(top resource IDs)
+        YGO-->>API: CardDataMap
     else resource == product
         API->>YGO: ProductService.GetProductsSummaryByID(top resource IDs)
+        YGO-->>API: product summaries
     end
     Note over API: compute occurrence + rank change vs. previous period
     API-->>Client: 200 Trending{metrics}
@@ -266,12 +295,37 @@ sequenceDiagram
     API->>API: decode + validate body
     alt resource type == card
         API->>YGO: CardService.GetCardByID(value)
+        YGO-->>API: card (or error -> 422)
     else resource type == product
         API->>YGO: ProductService.GetProductSummaryByIDProto(value)
+        YGO-->>API: product summary (or error -> 422)
     end
-    YGO-->>API: resource exists (or error -> 422)
     API->>IPDB: Get_all(ip)
     IPDB-->>API: zip/city/country (or error -> 422)
     API->>DB: InsertTrafficData(record)
+    DB-->>API: ack
     API-->>Client: 200 Success
 ```
+
+## Endpoints (v2)
+
+### `GET /api/v2/suggestions/archetype/{archetypeName}`
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as skc-suggestion-engine
+    participant DB as Suggestion DB (MongoDB)
+    participant YGO as ygo-service (gRPC)
+
+    Client->>API: GET /api/v2/suggestions/archetype/{archetypeName}
+    API->>API: validate archetype name format
+    API->>DB: GetArchetypeMembers(name)
+    DB-->>API: inheritMembers, qualifiedMembers, excludedMembers (or 404 not found)
+    API->>YGO: CardService.GetCardsByID(inherit + qualified + excluded IDs)
+    YGO-->>API: CardDataMap
+    Note over API: sort each member list by card name
+    API-->>Client: 200 ArchetypeMembers{InheritMembers, QualifiedMembers, ExcludedMembers}
+```
+
+Unlike the v1 `/archetype/{archetypeName}` endpoint (which derives membership by scanning card names/text via `ygo-service` and has no explicit-exclusion source of truth beyond that scan), v2 reads a curated membership document straight from the Suggestion DB (`inheritMembers`, `qualifiedMembers`, `excludedMembers` fields) and hydrates it with card data.
