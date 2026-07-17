@@ -245,20 +245,23 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		res.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData)); err != nil {
+		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData, nil)); err != nil {
 			logger.Error("Could not encode batch card support response", "err", err)
 		}
 		return
 	}
 }
 
-func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
-	var wg sync.WaitGroup
-	awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
-	go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
-		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-		awg.Store(ccIDs)                                               // TODO: handle error
-	}(awg)
+func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs], ccIDs map[string]uint32) model.BatchCardSupport[cModel.CardIDs] {
+	var ccIDsAWG *cUtil.AtomicWaitGroup[ygo.CardColors]
+	if ccIDs == nil {
+		var wg sync.WaitGroup
+		ccIDsAWG = cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
+		go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
+			cc, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+			awg.Store(cc)                                               // TODO: handle error
+		}(ccIDsAWG)
+	}
 
 	support := model.BatchCardSupport[cModel.CardIDs]{
 		IntersectingResources: make(cModel.CardIDs, 0, 5),
@@ -291,9 +294,11 @@ func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cM
 
 		slices.Sort(support.IntersectingResources)
 		slices.Sort(support.UnknownResources)
-		ccIDs := awg.Load()
-		slices.SortStableFunc(support.ReferencedBy, suggest.SortCardReferences(ccIDs.GetValues()))
-		slices.SortStableFunc(support.MaterialFor, suggest.SortCardReferences(ccIDs.GetValues()))
+		if ccIDsAWG != nil {
+			ccIDs = ccIDsAWG.Load().GetValues()
+		}
+		slices.SortStableFunc(support.ReferencedBy, suggest.SortCardReferences(ccIDs))
+		slices.SortStableFunc(support.MaterialFor, suggest.SortCardReferences(ccIDs))
 	}
 	return support
 }

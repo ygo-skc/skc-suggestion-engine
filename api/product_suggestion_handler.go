@@ -43,7 +43,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		defer wg.Done()
 		suggestions = getBatchSuggestions(ctx, *cards, relevantArchetypes, ccIDs.Values)
 	}()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards) }()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards, ccIDs.Values) }()
 	wg.Wait()
 
 	logger.Info("Successfully retrieved product card suggestions")
