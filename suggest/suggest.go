@@ -40,10 +40,8 @@ func FetchMetadata(ctx context.Context, subjects []string, dbInterface db.SKCSug
 	go func(awg *cUtil.AtomicWaitGroup[archetypeRes]) {
 		relevantArchetypes, err := dbInterface.GetRelevantArchetypes(ctx, subjects)
 		res := archetypeRes{
-			err: err,
-		}
-		if relevantArchetypes != nil {
-			res.archetypes = relevantArchetypes
+			archetypes: relevantArchetypes,
+			err:        err,
 		}
 		awg.Store(&res)
 	}(archetypeAWG)
@@ -53,10 +51,8 @@ func FetchMetadata(ctx context.Context, subjects []string, dbInterface db.SKCSug
 	go func(awg *cUtil.AtomicWaitGroup[cardColorRes]) {
 		ccIDs, err := downstream.YGO.CardService.GetCardColorsProto(ctx)
 		res := cardColorRes{
-			err: err,
-		}
-		if ccIDs != nil {
-			res.ccIDs = ccIDs
+			ccIDs: ccIDs,
+			err:   err,
 		}
 		awg.Store(&res)
 	}(cardColorAWG)
