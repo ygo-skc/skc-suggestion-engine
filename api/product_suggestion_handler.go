@@ -13,6 +13,7 @@ import (
 	"github.com/ygo-skc/skc-go/common/v2/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/suggest"
 )
 
 const (
@@ -26,8 +27,9 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
-	cards, ccIDs, err := loadPSData(ctx, productID)
+	cards, ccIDs, relevantArchetypes, err := loadPSData(ctx, productID)
 	if err != nil {
+		logger.Error("Failed to retrieve product data", "err", err)
 		err.HandleServerResponse(res)
 		return
 	}
@@ -37,8 +39,11 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	var wg sync.WaitGroup
 	wg.Add(2)
-	go func() { defer wg.Done(); suggestions = getBatchSuggestions(ctx, *cards, ccIDs.Values) }()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards) }()
+	go func() {
+		defer wg.Done()
+		suggestions = getBatchSuggestions(ctx, *cards, relevantArchetypes, ccIDs.Values)
+	}()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards, ccIDs.Values) }()
 	wg.Wait()
 
 	logger.Info("Successfully retrieved product card suggestions")
@@ -49,34 +54,23 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 // load data needed to form product suggestions
-func loadPSData(ctx context.Context, productID string) (*cModel.BatchCardData[cModel.CardIDs], *ygo.CardColors, *cModel.APIError) {
-	type productCardsRes struct {
-		cards *cModel.BatchCardData[cModel.CardIDs]
-		err   *cModel.APIError
-	}
-
-	var wg sync.WaitGroup
-	awg := cUtil.NewAtomicWaitGroup[productCardsRes](&wg)
-	go func(awg *cUtil.AtomicWaitGroup[productCardsRes]) {
-		productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
-		r := productCardsRes{
-			err: err,
-		}
-		if productContents != nil {
-			r.cards = cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
-		}
-		awg.Store(&r)
-	}(awg)
-
-	ccIDs, err := downstream.YGO.CardService.GetCardColorsProto(ctx)
+func loadPSData(ctx context.Context,
+	productID string) (*cModel.BatchCardData[cModel.CardIDs], *ygo.CardColors, []string, *cModel.APIError) {
+	productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, err
+	}
+	cards := cModel.BatchCardDataFromProductProto[cModel.CardIDs](productContents, cModel.CardIDAsKey)
+
+	cardIDs := make(cModel.CardIDs, 0, len(cards.CardInfo))
+	for id := range cards.CardInfo {
+		cardIDs = append(cardIDs, id)
 	}
 
-	r := awg.Load()
-	if r.err != nil {
-		return nil, nil, r.err
+	ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, cardIDs, skcSuggestionEngineDBInterface)
+	if err != nil {
+		return nil, nil, nil, err
 	}
 
-	return r.cards, ccIDs, nil
+	return cards, ccIDs, relevantArchetypes, nil
 }

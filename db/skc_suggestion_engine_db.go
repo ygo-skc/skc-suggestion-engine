@@ -36,6 +36,9 @@ type SKCSuggestionEngineDAO interface {
 	GetHistoricalCardOfTheDayData(context.Context, int) ([]string, *cModel.APIError)
 	InsertCardOfTheDay(context.Context, model.CardOfTheDay) *cModel.APIError
 
+	GetArchetypeMembers(context.Context, string) ([]string, []string, []string, *cModel.APIError)
+	GetRelevantArchetypes(context.Context, cModel.CardIDs) ([]string, *cModel.APIError)
+
 	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 }
 
@@ -127,17 +130,6 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 	}
 }
 
-// sanitizeQueryInput trims surrounding whitespace and strips control characters from user-supplied input before it is used to build a query.
-func sanitizeQueryInput(s string) string {
-	s = strings.TrimSpace(s)
-	return strings.Map(func(r rune) rune {
-		if unicode.IsControl(r) {
-			return -1
-		}
-		return r
-	}, s)
-}
-
 func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Context, blackListType string, blackListPhrase string) (bool, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
@@ -160,6 +152,17 @@ func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Conte
 	} else {
 		return false, nil
 	}
+}
+
+// sanitizeQueryInput trims surrounding whitespace and strips control characters from user-supplied input before it is used to build a query.
+func sanitizeQueryInput(s string) string {
+	s = strings.TrimSpace(s)
+	return strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) {
+			return -1
+		}
+		return r
+	}, s)
 }
 
 func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Context, date string, version int) (*string, *cModel.APIError) {
@@ -238,6 +241,83 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	return nil
 }
 
+func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context.Context, archetype string) ([]string, []string, []string, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	logger.Info("Fetching archetype members")
+
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{"archetype": archetype}
+
+	type archetypeMembers struct {
+		Archetype        string   `bson:"archetype"`
+		InheritMembers   []string `bson:"inheritMembers"`
+		QualifiedMembers []string `bson:"qualifiedMembers"`
+		ExcludedMembers  []string `bson:"excludedMembers"`
+	}
+
+	var members archetypeMembers
+	if err := archetypeCollection.FindOne(ctx, query).Decode(&members); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) {
+			logger.Error("Could not find archetype in DB", "err", err)
+			return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusNotFound, Message: "Archetype does not exist"}
+		}
+		logger.Error("Error retrieving archetype data", "err", err)
+		return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get archetype data"}
+	}
+
+	return members.InheritMembers, members.QualifiedMembers, members.ExcludedMembers, nil
+}
+
+func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx context.Context, subjects cModel.CardIDs) ([]string, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{
+		"$or": bson.A{
+			bson.M{"inheritMembers": bson.M{"$in": subjects}},
+			bson.M{"qualifiedMembers": bson.M{"$in": subjects}},
+		},
+	}
+
+	opts := options.Find().SetProjection(
+		bson.D{
+			{Key: "_id", Value: 0},
+			{Key: "archetype", Value: 1},
+		},
+	)
+
+	cursor, err := archetypeCollection.Find(ctx, query, opts)
+	if err != nil {
+		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+	defer cursor.Close(ctx)
+
+	type relevantArchetypes struct {
+		Archetype string `bson:"archetype"`
+	}
+
+	var ra []relevantArchetypes
+	if err := cursor.All(ctx, &ra); err != nil {
+		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+
+	if err := cursor.Err(); err != nil {
+		logger.Error("Error iterating relevant archetype DB data", "err", err)
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
+	}
+
+	f := make([]string, len(ra))
+	for i := range ra {
+		f[i] = ra[i].Archetype
+	}
+	return f, nil
+}
+
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
 	subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
@@ -253,7 +333,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 			{
 				Key: "$vectorSearch", Value: bson.D{
 					{Key: "index", Value: "text_embedding"},
-					{Key: "path", Value: "embedding"},
+					{Key: "path", Value: "textEmbedding"},
 					{Key: "exact", Value: true}, // true = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
 					{Key: "filter", Value: bson.D{
 						{Key: "id", Value: bson.D{
@@ -261,15 +341,67 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 						}},
 					}},
 					{Key: "queryVector", Value: queryVector},
-					{Key: "limit", Value: limit},
+					{Key: "limit", Value: limit * 3},
 				},
 			},
+		},
+		{
+			{Key: "$addFields", Value: bson.D{
+				{Key: "cosineSimilarity", Value: bson.D{
+					{Key: "$meta", Value: "vectorSearchScore"},
+				}},
+				{Key: "sharedType", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$type", subject.GetMonsterType()}}},
+						1,
+						0,
+					}},
+				}},
+				{Key: "sharedAttribute", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$attribute", subject.GetAttribute()}}},
+						1,
+						0,
+					}},
+				}},
+				{Key: "sharedMonsterType", Value: bson.D{
+					{Key: "$cond", Value: bson.A{
+						bson.D{{Key: "$eq", Value: bson.A{"$monsterType", subject.GetMonsterType()}}},
+						1,
+						0,
+					}},
+				}},
+			}},
+		},
+		{
+			{Key: "$addFields", Value: bson.D{
+				{Key: "finalScore", Value: bson.D{
+					{Key: "$add", Value: bson.A{
+						"$cosineSimilarity",
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedType", 0.03}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedAttribute", 0.05}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedMonsterType", 0.08}}},
+					}},
+				}},
+			}},
+		},
+		{
+			{Key: "$sort", Value: bson.D{
+				{Key: "finalScore", Value: -1},
+			}},
+		},
+		{
+			{Key: "$limit", Value: limit},
 		},
 		{
 			{Key: "$project", Value: bson.D{
 				{Key: "_id", Value: 0},
 				{Key: "id", Value: 1},
 				{Key: "text", Value: 1},
+				{Key: "cosineSimilarity", Value: 1},
+				{Key: "sharedAttribute", Value: 1},
+				{Key: "sharedMonsterType", Value: 1},
+				{Key: "finalScore", Value: 1},
 			}},
 		},
 	}

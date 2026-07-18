@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"net/http"
 	"slices"
-	"sort"
 	"strings"
 	"sync"
 
@@ -14,6 +13,7 @@ import (
 	"github.com/ygo-skc/skc-go/common/v2/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
+	"github.com/ygo-skc/skc-suggestion-engine/suggest"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
 )
 
@@ -100,8 +100,14 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, ccIDs.GetValues())
+		ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, reqBody.CardIDs, skcSuggestionEngineDBInterface)
+		if err != nil {
+			logger.Error("Failed to retrieve suggestion metadata", "err", err)
+			err.HandleServerResponse(res)
+			return
+		}
+
+		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, relevantArchetypes, ccIDs.GetValues())
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
@@ -111,8 +117,9 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs], ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
-	suggestionByCardName := generateBatchSuggestionData(ctx, subjects)
+func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs], relevantArchetypes []string,
+	ccIDs map[string]uint32) model.BatchCardSuggestions[cModel.CardIDs] {
+	suggestionByCardName := generateBatchSuggestionData(ctx, subjects, relevantArchetypes)
 
 	uniqueNamedMaterialsByCardID, uniqueNamedReferencesByCardIDs := make(map[string]*model.CardReference, 5), make(map[string]*model.CardReference, 5)
 	uniqueMaterialArchetypes, uniqueReferencedArchetypes := make(map[string]struct{}, 5), make(map[string]struct{}, 5)
@@ -133,20 +140,24 @@ func getBatchSuggestions(ctx context.Context, subjects cModel.BatchCardData[cMod
 		groupArchetypes(s.ReferencedArchetypes, uniqueReferencedArchetypes, &suggestions.ReferencedArchetypes)
 	}
 
+	suggestions.RelevantArchetypes = relevantArchetypes // this is all archetypes the card belongs to
+
 	suggestions.NamedMaterials = getUniqueReferences(uniqueNamedMaterialsByCardID)
 	suggestions.NamedReferences = getUniqueReferences(uniqueNamedReferencesByCardIDs)
 
-	sort.SliceStable(suggestions.NamedMaterials, sortCardReferences(suggestions.NamedMaterials, ccIDs))
-	sort.SliceStable(suggestions.NamedReferences, sortCardReferences(suggestions.NamedReferences, ccIDs))
-	sort.Strings(suggestions.MaterialArchetypes)
-	sort.Strings(suggestions.ReferencedArchetypes)
-	sort.Strings(suggestions.IntersectingResources)
-	sort.Strings(suggestions.UnknownResources)
+	slices.SortStableFunc(suggestions.NamedMaterials, suggest.SortCardReferences(ccIDs))
+	slices.SortStableFunc(suggestions.NamedReferences, suggest.SortCardReferences(ccIDs))
+	slices.Sort(suggestions.RelevantArchetypes)
+	slices.Sort(suggestions.MaterialArchetypes)
+	slices.Sort(suggestions.ReferencedArchetypes)
+	slices.Sort(suggestions.IntersectingResources)
+	slices.Sort(suggestions.UnknownResources)
 
 	return suggestions
 }
 
-func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardData[cModel.CardIDs]) map[string]model.CardSuggestions {
+func generateBatchSuggestionData(ctx context.Context,
+	subjects cModel.BatchCardData[cModel.CardIDs], relevantArchetypes []string) map[string]model.CardSuggestions {
 	numSubjects := len(subjects.CardInfo)
 	materialTextByCardName, effectTextByCardName := make(map[string]string, numSubjects), make(map[string]string, numSubjects)
 	var fullText4AllCards strings.Builder
@@ -158,11 +169,12 @@ func generateBatchSuggestionData(ctx context.Context, subjects cModel.BatchCardD
 		fullText4AllCards.WriteByte('\n')
 	}
 
-	usd := generateUnparsedSuggestionData(ctx, quotedStringRegex.FindAllString(fullText4AllCards.String(), -1))
+	usd := suggest.GenerateUnparsedSuggestionData(ctx,
+		suggest.QuotedStringRegex.FindAllString(fullText4AllCards.String(), -1), relevantArchetypes)
 
 	suggestionByCardName := make(map[string]model.CardSuggestions, numSubjects)
 	for cardName := range materialTextByCardName {
-		suggestionByCardName[cardName] = parseSuggestionData(materialTextByCardName[cardName], effectTextByCardName[cardName], usd)
+		suggestionByCardName[cardName] = suggest.ParseSuggestionData(cardName, materialTextByCardName[cardName], effectTextByCardName[cardName], usd)
 	}
 
 	return suggestionByCardName
@@ -186,18 +198,24 @@ func parseSuggestionReferences(
 ) {
 	for _, suggestion := range referencesToParse {
 		suggestionID := suggestion.Card.GetID()
-		if _, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]; refPreviouslyAdded {
+		_, refPreviouslyAdded := uniqueReferencesByCardID[suggestionID]
+		_, isIntersecting := subjects[suggestionID]
+
+		switch {
+		case refPreviouslyAdded:
 			uniqueReferencesByCardID[suggestionID].Occurrences += suggestion.Occurrences
-		} else if _, isIntersecting := subjects[suggestionID]; isIntersecting && !slices.Contains(*intersectingResources, suggestionID) {
-			*intersectingResources = append(*intersectingResources, suggestionID)
-		} else if !refPreviouslyAdded && !isIntersecting {
+		case isIntersecting:
+			if !slices.Contains(*intersectingResources, suggestionID) {
+				*intersectingResources = append(*intersectingResources, suggestionID)
+			}
+		default:
 			uniqueReferencesByCardID[suggestionID] = &model.CardReference{Card: suggestion.Card, Occurrences: suggestion.Occurrences}
 		}
 	}
 }
 
 func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []model.CardReference {
-	references := []model.CardReference{}
+	references := make([]model.CardReference, 0, len(uniqueReferences))
 	for _, ref := range uniqueReferences {
 		references = append(references, *ref)
 	}
@@ -227,20 +245,23 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		res.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData)); err != nil {
+		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData, nil)); err != nil {
 			logger.Error("Could not encode batch card support response", "err", err)
 		}
 		return
 	}
 }
 
-func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs]) model.BatchCardSupport[cModel.CardIDs] {
-	var wg sync.WaitGroup
-	awg := cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
-	go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
-		ccIDs, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
-		awg.Store(ccIDs)                                               // TODO: handle error
-	}(awg)
+func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs], ccIDs map[string]uint32) model.BatchCardSupport[cModel.CardIDs] {
+	var ccIDsAWG *cUtil.AtomicWaitGroup[ygo.CardColors]
+	if ccIDs == nil {
+		var wg sync.WaitGroup
+		ccIDsAWG = cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
+		go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
+			cc, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
+			awg.Store(cc)                                               // TODO: handle error
+		}(ccIDsAWG)
+	}
 
 	support := model.BatchCardSupport[cModel.CardIDs]{
 		IntersectingResources: make(cModel.CardIDs, 0, 5),
@@ -271,11 +292,13 @@ func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cM
 		support.ReferencedBy = getUniqueReferences(uniqueReferenceByCardID)
 		support.MaterialFor = getUniqueReferences(uniqueMaterialByCardIDs)
 
-		sort.Strings(support.IntersectingResources)
-		sort.Strings(support.UnknownResources)
-		ccIDs := awg.Load()
-		sort.SliceStable(support.ReferencedBy, sortCardReferences(support.ReferencedBy, ccIDs.GetValues()))
-		sort.SliceStable(support.MaterialFor, sortCardReferences(support.MaterialFor, ccIDs.GetValues()))
+		slices.Sort(support.IntersectingResources)
+		slices.Sort(support.UnknownResources)
+		if ccIDsAWG != nil {
+			ccIDs = ccIDsAWG.Load().GetValues()
+		}
+		slices.SortStableFunc(support.ReferencedBy, suggest.SortCardReferences(ccIDs))
+		slices.SortStableFunc(support.MaterialFor, suggest.SortCardReferences(ccIDs))
 	}
 	return support
 }

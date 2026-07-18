@@ -14,6 +14,7 @@ type CardSuggestions struct {
 	HasSelfReference     bool            `json:"hasSelfReference"`
 	NamedMaterials       []CardReference `json:"namedMaterials"`
 	NamedReferences      []CardReference `json:"namedReferences"`
+	RelevantArchetypes   []string        `json:"relevantArchetypes"`
 	MaterialArchetypes   []string        `json:"materialArchetypes"`
 	ReferencedArchetypes []string        `json:"referencedArchetypes"`
 }
@@ -21,6 +22,7 @@ type CardSuggestions struct {
 type BatchCardSuggestions[RK cModel.YGOResourceKey] struct {
 	NamedMaterials        []CardReference `json:"namedMaterials"`
 	NamedReferences       []CardReference `json:"namedReferences"`
+	RelevantArchetypes    []string        `json:"relevantArchetypes"`
 	MaterialArchetypes    []string        `json:"materialArchetypes"`
 	ReferencedArchetypes  []string        `json:"referencedArchetypes"`
 	UnknownResources      RK              `json:"unknownResources"`
@@ -50,6 +52,13 @@ type ArchetypalSuggestions struct {
 	UsingName  []cModel.YGOCard `json:"usingName"`
 	UsingText  []cModel.YGOCard `json:"usingText"`
 	Exclusions []cModel.YGOCard `json:"exclusions"`
+}
+
+type ArchetypeMembers struct {
+	Archetype        string           `bson:"archetype" json:"archetype"`
+	InheritMembers   []cModel.YGOCard `bson:"inheritMembers" json:"inheritMembers"`
+	QualifiedMembers []cModel.YGOCard `bson:"qualifiedMembers" json:"qualifiedMembers"`
+	ExcludedMembers  []cModel.YGOCard `bson:"excludedMembers" json:"excludedMembers"`
 }
 
 // looks for a self reference, if a self reference is found it is removed from original slice

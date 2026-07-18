@@ -28,6 +28,7 @@ var (
 	blackListCollection       *mongo.Collection
 	trafficAnalysisCollection *mongo.Collection
 	cardOfTheDayCollection    *mongo.Collection
+	archetypeCollection       *mongo.Collection
 
 	vectorSearchDB          *mongo.Database
 	cardEmbeddingCollection *mongo.Collection
@@ -59,6 +60,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 	blackListCollection = skcSuggestionDB.Collection("blackList")
 	trafficAnalysisCollection = skcSuggestionDB.Collection("trafficAnalysis")
 	cardOfTheDayCollection = skcSuggestionDB.Collection("cardOfTheDay")
+	archetypeCollection = skcSuggestionDB.Collection("archetype")
 
 	// vector search connection - $vectorSearch aggregation stage requires ReadConcern local
 	vectorSearchClient := connect(uri, credential, readconcern.Local())

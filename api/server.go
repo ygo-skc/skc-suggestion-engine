@@ -23,9 +23,10 @@ import (
 )
 
 const (
-	apiContext = "/api/v1/suggestions"
-	apiName    = "skc-suggestion-engine"
-	apiPort    = 9000
+	v1Context = "/api/v1/suggestions"
+	v2Context = "/api/v2/suggestions"
+	apiName   = "skc-suggestion-engine"
+	apiPort   = 9000
 )
 
 var (
@@ -142,7 +143,7 @@ func RunHttpServer() {
 	// common middleware
 	router.Use(commonResponseMiddleware)
 
-	router.Route(apiContext, func(r chi.Router) {
+	router.Route(v1Context, func(r chi.Router) {
 		// configure non-admin routes
 		r.Group(func(r chi.Router) {
 			r.Get("/status", getAPIStatusHandler)
@@ -169,6 +170,13 @@ func RunHttpServer() {
 		r.Group(func(r chi.Router) {
 			r.Use(verifyAPIKeyMiddleware)
 			r.Post("/traffic-analysis", submitNewTrafficDataHandler)
+		})
+	})
+
+	router.Route(v2Context, func(r chi.Router) {
+		// configure non-admin routes
+		r.Group(func(r chi.Router) {
+			r.Get("/archetype/{archetypeName}", getArchetypeSupportV2Handler)
 		})
 	})
 

@@ -1,11 +1,13 @@
 package api
 
 import (
+	"cmp"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
+	"slices"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -17,7 +19,8 @@ import (
 )
 
 const (
-	archetypeSupportOp = "Archetype Support"
+	archetypeSupportOp   = "Archetype Support"
+	archetypeSupportV2Op = "Archetype Support v2"
 )
 
 type archetypeResults struct {
@@ -142,4 +145,72 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	}
 
 	archetypalSuggestions.UsingName = newList
+}
+
+func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
+	archetypeName := chi.URLParam(req, "archetypeName")
+
+	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportV2Op, slog.String("archetype_name", archetypeName))
+	logger.Info("Getting cards within archetype")
+
+	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
+		logger.Error("Failed archetype validation", "err", err)
+		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
+		validationErr.HandleServerResponse(res)
+		return
+	}
+
+	inherit, qualified, excluded, err := skcSuggestionEngineDBInterface.GetArchetypeMembers(ctx, archetypeName)
+	if err != nil {
+		logger.Error("Failed to retrieve archetype data", "err", err)
+		err.HandleServerResponse(res)
+		return
+	}
+
+	m := make(cModel.CardIDs, 0, len(inherit)+len(qualified)+len(excluded))
+	m = append(m, inherit...)
+	m = append(m, qualified...)
+	m = append(m, excluded...)
+
+	batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, m)
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+
+	archetypeMembers := model.ArchetypeMembers{
+		Archetype:        archetypeName,
+		InheritMembers:   make([]cModel.YGOCard, len(inherit)),
+		QualifiedMembers: make([]cModel.YGOCard, len(qualified)),
+		ExcludedMembers:  make([]cModel.YGOCard, len(excluded)),
+	}
+
+	for i, member := range inherit {
+		archetypeMembers.InheritMembers[i] = batchCardInfo.CardInfo[member]
+	}
+	for i, member := range qualified {
+		archetypeMembers.QualifiedMembers[i] = batchCardInfo.CardInfo[member]
+	}
+	for i, member := range excluded {
+		archetypeMembers.ExcludedMembers[i] = batchCardInfo.CardInfo[member]
+	}
+
+	slices.SortFunc(archetypeMembers.InheritMembers, archetypeSort)
+	slices.SortFunc(archetypeMembers.QualifiedMembers, archetypeSort)
+	slices.SortFunc(archetypeMembers.ExcludedMembers, archetypeSort)
+
+	logger.Info("Returning archetypal suggestions",
+		"archetype_name", archetypeName,
+		"inherit_members", len(archetypeMembers.InheritMembers),
+		"qualified_members", len(archetypeMembers.QualifiedMembers),
+		"excluded_members", len(archetypeMembers.ExcludedMembers))
+
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(archetypeMembers); err != nil {
+		logger.Error("Could not encode archetypal suggestions v2 response", "err", err, "archetype_name", archetypeName)
+	}
+}
+
+func archetypeSort(a, b cModel.YGOCard) int {
+	return cmp.Compare(a.GetName(), b.GetName())
 }
