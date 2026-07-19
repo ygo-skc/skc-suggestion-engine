@@ -123,7 +123,7 @@ func createIndexes() error {
 			},
 		},
 	}
-´˝
+
 	for collection, indexes := range indexesByCollection {
 		_, err := collection.Indexes().CreateMany(ctx, indexes)
 		if err != nil {
