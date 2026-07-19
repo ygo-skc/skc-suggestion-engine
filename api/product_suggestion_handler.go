@@ -23,7 +23,7 @@ const (
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	productID := chi.URLParam(req, "productID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, productCardSuggestionOp,
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 

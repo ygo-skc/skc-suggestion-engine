@@ -17,7 +17,7 @@ const (
 )
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardOfTheDayOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
 	logger.Info("Fetching card of the day", "date", cardOfTheDay.Date)

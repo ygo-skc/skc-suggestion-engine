@@ -1,7 +1,6 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
@@ -22,7 +21,7 @@ const (
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := chi.URLParam(req, "cardID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
 	subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)

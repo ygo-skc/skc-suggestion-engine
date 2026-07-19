@@ -25,7 +25,7 @@ const (
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := chi.URLParam(req, "cardID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
 	cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)

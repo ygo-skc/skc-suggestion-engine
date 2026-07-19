@@ -24,7 +24,7 @@ const (
 )
 
 func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardInfoOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, batchCardInfoOp)
 	logger.Info("Getting batch card info")
 
 	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
@@ -78,7 +78,7 @@ func parseBatchRequestBody(ctx context.Context, res http.ResponseWriter, req *ht
 }
 
 func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSuggestionsOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, batchCardSuggestionsOp)
 	logger.Info("Batch card suggestions requested")
 
 	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {
@@ -224,7 +224,7 @@ func getUniqueReferences(uniqueReferences map[string]*model.CardReference) []mod
 }
 
 func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, batchCardSupportOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, batchCardSupportOp)
 	logger.Info("Batch card support requested")
 
 	if reqBody := parseBatchRequestBody(ctx, res, req); reqBody == nil {

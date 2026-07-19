@@ -23,7 +23,7 @@ const (
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trafficDataSubmissionOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -95,7 +95,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 func trending(res http.ResponseWriter, req *http.Request) {
 	resourceName := model.ResourceName(chi.URLParam(req, "resource"))
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}

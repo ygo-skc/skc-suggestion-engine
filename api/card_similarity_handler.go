@@ -20,7 +20,7 @@ const (
 func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := chi.URLParam(req, "cardID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, similarCardsOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, similarCardsOp, slog.String("card_id", cardID))
 	logger.Info("Finding similar cards")
 
 	subject, embeddedQuery, err := retrieveAndEmbedCardEffect(ctx, cardID)
