@@ -11,9 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
-	"github.com/ygo-skc/skc-go/common/v2/ygo"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"

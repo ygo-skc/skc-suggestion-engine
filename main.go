@@ -4,7 +4,7 @@ import (
 	"os"
 	"strings"
 
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/api"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"

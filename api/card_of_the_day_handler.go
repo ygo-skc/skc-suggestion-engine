@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )

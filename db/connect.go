@@ -8,7 +8,7 @@ import (
 	"os"
 	"time"
 
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -98,7 +98,7 @@ func connect(uri string, credential options.Credential, rc *readconcern.ReadConc
 }
 
 func createIndexes() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 
 	indexesByCollection := map[*mongo.Collection][]mongo.IndexModel{
