@@ -46,17 +46,18 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGOCard, []float32, *cModel.APIError) {
-	subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
+	if err != nil {
+		return nil, nil, err
+	}
+	subject := cModel.YGOCardRESTFromProto(cardProto)
+
+	voyageRes, err := downstream.EmbedText(ctx, []string{(subject).GetEffect()}, model.VoyageQueryInput)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	voyageRes, err := downstream.EmbedText(ctx, []string{(*subject).GetEffect()}, model.VoyageQueryInput)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return subject, voyageRes.Data[0].Embedding, nil
+	return &subject, voyageRes.Data[0].Embedding, nil
 }
 
 func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery []float32) ([]cModel.YGOCard, *cModel.APIError) {
@@ -78,11 +79,12 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 		similarCardIDs = append(similarCardIDs, vectorSearchResult.ID)
 	}
 
-	similarCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, similarCardIDs)
+	cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, similarCardIDs)
 	if err != nil {
 		logger.Error("Could not retrieve information about cards from search results", "err", err)
 		return nil, err
 	}
+	similarCardData := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 
 	if len(similarCardData.UnknownResources) > 0 {
 		logger.Warn("Some vector search IDs had no matching metadata", "unknown_card_ids", similarCardData.UnknownResources)

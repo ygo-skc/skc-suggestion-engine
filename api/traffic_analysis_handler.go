@@ -43,7 +43,7 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := downstream.YGO.CardService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
+		if _, err := downstream.YGO.CardService.GetCardByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
 			logger.Error("Card resource not valid", "resource_id", trafficData.ResourceUtilized.Value, "err", err)
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
@@ -143,18 +143,35 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName,
 	switch r {
 	case model.CardResource:
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, awg)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, cardResourceWrapper, awg)
 		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, awg)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm,
+			productResourceWrapper, awg)
 		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
 	}
 	return nil, nil
+}
+
+func cardResourceWrapper(ctx context.Context, ids cModel.CardIDs) (*cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
+	d, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, ids)
+	if err == nil {
+		return cModel.BatchCardDataFromProto[cModel.CardIDs](d, cModel.CardIDAsKey), err
+	}
+	return nil, err
+}
+
+func productResourceWrapper(ctx context.Context, ids cModel.ProductIDs) (*cModel.BatchProductSummaryData[cModel.ProductIDs], *cModel.APIError) {
+	d, err := downstream.YGO.ProductService.GetProductsSummaryByIDProto(ctx, ids)
+	if err == nil {
+		return cModel.BatchProductSummaryFromProductsProto(d, cModel.ProductIDAsKey), err
+	}
+	return nil, err
 }
 
 func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {

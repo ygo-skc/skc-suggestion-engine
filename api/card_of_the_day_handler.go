@@ -34,12 +34,12 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := downstream.YGO.CardService.GetCardByID(ctx, cardOfTheDay.CardID); err != nil {
+	if cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardOfTheDay.CardID); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
 	} else {
-		cardOfTheDay.Card = *card
+		cardOfTheDay.Card = cModel.YGOCardRESTFromProto(cardProto)
 	}
 
 	res.WriteHeader(http.StatusOK)

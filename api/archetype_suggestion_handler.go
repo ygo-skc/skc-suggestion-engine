@@ -13,6 +13,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	cModel "github.com/ygo-skc/skc-go/common/v2/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	"github.com/ygo-skc/skc-go/common/v2/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
@@ -55,11 +56,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		make(chan archetypeResults, 1), make(chan archetypeResults, 1)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
-		downstream.YGO.CardService.GetArchetypalCardsUsingCardName)
+		downstream.YGO.CardService.GetArchetypalCardsUsingCardNameProto)
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingTextChannel,
-		downstream.YGO.CardService.GetExplicitArchetypalInclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalInclusionsProto)
 	go getArchetypeSuggestion(ctx, archetypeName, exclusionsChannel,
-		downstream.YGO.CardService.GetExplicitArchetypalExclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalExclusionsProto)
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
 	for range 3 {
@@ -114,11 +115,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,
-	fetchSuggestions func(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)) {
+	fetchSuggestions func(context.Context, string) (*ygo.CardList, *cModel.APIError)) {
 	if dbData, err := fetchSuggestions(ctx, archetypeName); err != nil {
 		c <- archetypeResults{cards: nil, err: err}
 	} else if dbData != nil {
-		c <- archetypeResults{cards: dbData, err: nil}
+		c <- archetypeResults{cards: cModel.YGOCardListRESTFromProto(dbData), err: nil}
 	} else {
 		c <- archetypeResults{cards: make([]cModel.YGOCard, 0), err: nil}
 	}
@@ -172,11 +173,12 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 	m = append(m, qualified...)
 	m = append(m, excluded...)
 
-	batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, m)
+	cardProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, m)
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	batchCardInfo := cModel.BatchCardDataFromProto[cModel.CardIDs](cardProto, cModel.CardIDAsKey)
 
 	archetypeMembers := model.ArchetypeMembers{
 		Archetype:        archetypeName,

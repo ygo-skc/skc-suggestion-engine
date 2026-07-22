@@ -38,16 +38,17 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 			logger.Error("Could not encode empty batch card info response", "err", err)
 		}
 		return
-	} else if batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
-		if len(batchCardInfo.UnknownResources) > 0 {
-			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknown_resources", batchCardInfo.UnknownResources)
+		if len(cardsProto.UnknownResources) > 0 {
+			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknown_resources", cardsProto.UnknownResources)
 		}
 
+		batchCardData := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 		res.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(res).Encode(batchCardInfo); err != nil {
+		if err := json.NewEncoder(res).Encode(batchCardData); err != nil {
 			logger.Error("Could not encode batch card info response", "err", err)
 		}
 		return
@@ -96,7 +97,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 			logger.Error("Could not encode empty batch card suggestions response", "err", err)
 		}
 		return
-	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -107,7 +108,8 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 			return
 		}
 
-		suggestions := getBatchSuggestions(ctx, *suggestionSubjectsCardData, relevantArchetypes, ccIDs.GetValues())
+		subjects := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
+		suggestions := getBatchSuggestions(ctx, *subjects, relevantArchetypes, ccIDs.GetValues())
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
@@ -240,12 +242,13 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 			logger.Error("Could not encode empty batch card support response", "err", err)
 		}
 		return
-	} else if suggestionSubjectsCardData, err := downstream.YGO.CardService.GetCardsByID(ctx, reqBody.CardIDs); err != nil {
+	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
 		err.HandleServerResponse(res)
 		return
 	} else {
+		subjects := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 		res.WriteHeader(http.StatusOK)
-		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *suggestionSubjectsCardData, nil)); err != nil {
+		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *subjects, nil)); err != nil {
 			logger.Error("Could not encode batch card support response", "err", err)
 		}
 		return
@@ -275,12 +278,12 @@ func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cM
 		ind++
 	}
 
-	if cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, cardNames); err != nil {
+	if cardRefsProto, err := downstream.YGO.CardService.GetCardsReferencingNameInEffectProto(ctx, cardNames); err != nil {
 		// TODO: error handling
 	} else {
 		uniqueReferenceByCardID, uniqueMaterialByCardIDs := make(map[string]*model.CardReference), make(map[string]*model.CardReference)
 		for _, card := range requestedCards.CardInfo {
-			referencedBy, materialFor := determineSupportCards(card, cardRefs)
+			referencedBy, materialFor := determineSupportCards(card, cModel.YGOCardListRESTFromProto(cardRefsProto))
 			if len(referencedBy) > 0 {
 				parseSuggestionReferences(referencedBy, uniqueReferenceByCardID, requestedCards.CardInfo, &support.IntersectingResources)
 			}

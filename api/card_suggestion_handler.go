@@ -28,11 +28,12 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	cardToGetSuggestionsFor := cModel.YGOCardRESTFromProto(cardProto)
 
 	ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, []string{cardID}, skcSuggestionEngineDBInterface)
 	if err != nil {
@@ -42,10 +43,10 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	// TODO: include exclusions?
 
-	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
+	suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
 
 	logger.Info("Card suggestions generated",
-		"card_name", (*cardToGetSuggestionsFor).GetName(),
+		"card_name", (cardToGetSuggestionsFor).GetName(),
 		"named_materials", len(suggestions.NamedMaterials),
 		"named_references", len(suggestions.NamedReferences))
 

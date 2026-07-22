@@ -131,7 +131,11 @@ func GenerateUnparsedSuggestionData(ctx context.Context, tokens []string, releva
 			parser.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
+		cardsProto, _ := downstream.YGO.CardService.GetCardsByNameProto(ctx, tokens) // TODO: handle error
+		var batchCardData *cModel.BatchCardData[cModel.CardNames]
+		if cardsProto != nil {
+			batchCardData = cModel.BatchCardDataFromProto[cModel.CardNames](cardsProto, cModel.CardNameAsKey)
+		}
 
 		for _, token := range tokens {
 			if card, isPresent := batchCardData.CardInfo[token]; isPresent {
