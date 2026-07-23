@@ -1,16 +1,15 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"log/slog"
 	"net/http"
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	"github.com/ygo-skc/skc-go/common/v2/parser"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	"github.com/ygo-skc/skc-go/common/v3/parser"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
@@ -22,25 +21,27 @@ const (
 func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := chi.URLParam(req, "cardID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSupportOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardSupportOp, slog.String("card_id", cardID))
 	logger.Info("Getting support cards")
 
-	subject, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	subject := cModel.YGOCardRESTFromProto(cardProto)
 
-	cardName := (*subject).GetName()
-	support := model.CardSupport{Card: *subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
+	cardName := (subject).GetName()
+	support := model.CardSupport{Card: subject, ReferencedBy: make([]model.CardReference, 0), MaterialFor: make([]model.CardReference, 0)}
 
-	cardRefs, err := downstream.YGO.CardService.GetCardsReferencingNameInEffect(ctx, []string{cardName})
+	cr, err := downstream.YGO.CardService.GetCardsReferencingNameInEffectProto(ctx, []string{cardName})
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	cardRefsProto := cModel.YGOCardListRESTFromProto(cr)
 
-	support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefs)
+	support.ReferencedBy, support.MaterialFor = determineSupportCards(support.Card, cardRefsProto)
 	numNamedReferences, numMaterialReferences := len(support.ReferencedBy), len(support.MaterialFor)
 	if numNamedReferences == 0 && numMaterialReferences == 0 {
 		logger.Warn("Card has no support")

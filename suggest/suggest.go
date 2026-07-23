@@ -5,10 +5,10 @@ import (
 	"regexp"
 	"sync"
 
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	"github.com/ygo-skc/skc-go/common/v2/parser"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
-	"github.com/ygo-skc/skc-go/common/v2/ygo"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	"github.com/ygo-skc/skc-go/common/v3/parser"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -131,7 +131,11 @@ func GenerateUnparsedSuggestionData(ctx context.Context, tokens []string, releva
 			parser.CleanupToken(&tokens[i])
 		}
 
-		batchCardData, _ := downstream.YGO.CardService.GetCardsByName(ctx, tokens)
+		cardsProto, _ := downstream.YGO.CardService.GetCardsByNameProto(ctx, tokens) // TODO: handle error
+		var batchCardData *cModel.BatchCardData[cModel.CardNames]
+		if cardsProto != nil {
+			batchCardData = cModel.BatchCardDataFromProto[cModel.CardNames](cardsProto, cModel.CardNameAsKey)
+		}
 
 		for _, token := range tokens {
 			if card, isPresent := batchCardData.CardInfo[token]; isPresent {

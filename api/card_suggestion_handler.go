@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/suggest"
@@ -25,14 +25,15 @@ const (
 func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	cardID := chi.URLParam(req, "cardID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardSuggestionsOp, slog.String("card_id", cardID))
 	logger.Info("Card suggestions requested")
 
-	cardToGetSuggestionsFor, err := downstream.YGO.CardService.GetCardByID(ctx, cardID)
+	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	cardToGetSuggestionsFor := cModel.YGOCardRESTFromProto(cardProto)
 
 	ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, []string{cardID}, skcSuggestionEngineDBInterface)
 	if err != nil {
@@ -42,10 +43,10 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	// TODO: include exclusions?
 
-	suggestions := getCardSuggestions(ctx, *cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
+	suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
 
 	logger.Info("Card suggestions generated",
-		"card_name", (*cardToGetSuggestionsFor).GetName(),
+		"card_name", (cardToGetSuggestionsFor).GetName(),
 		"named_materials", len(suggestions.NamedMaterials),
 		"named_references", len(suggestions.NamedReferences))
 

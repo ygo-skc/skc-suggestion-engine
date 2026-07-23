@@ -1,13 +1,12 @@
 package api
 
 import (
-	"context"
 	"encoding/json"
 	"net/http"
 	"sync"
 
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 )
 
@@ -18,7 +17,7 @@ const (
 // Handler for status/health check endpoint of the api.
 // Will get status of downstream services as well to help isolate problems.
 func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, statusOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, statusOp)
 
 	downstreamHealth := make([]cModel.DownstreamItem, 2)
 
@@ -52,7 +51,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	wg.Wait()
 
-	status := cModel.APIHealth{Version: "3.1.0", Downstream: downstreamHealth}
+	status := cModel.APIHealth{Version: "3.1.1", Downstream: downstreamHealth}
 
 	logger.Info("API Status",
 		"ygo_service_status", downstreamHealth[0].Status, "ygo_service_version", ygoServiceVersion,

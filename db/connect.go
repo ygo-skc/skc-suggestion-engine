@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
 	"time"
 
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
 	"go.mongodb.org/mongo-driver/v2/mongo/readconcern"
@@ -67,6 +69,11 @@ func EstablishSKCSuggestionEngineDBConn() {
 	vectorSearchDB = vectorSearchClient.Database("suggestionDB")
 	cardEmbeddingCollection = vectorSearchDB.Collection("cardEmbedding")
 
+	if err := createIndexes(); err != nil {
+		slog.Error("Error creating indexes for skc-deck-api-db", "err", err)
+		os.Exit(1)
+	}
+
 	slog.Info("Connected to suggestion engine DB")
 }
 
@@ -88,4 +95,40 @@ func connect(uri string, credential options.Credential, rc *readconcern.ReadConc
 	}
 
 	return client
+}
+
+func createIndexes() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	indexesByCollection := map[*mongo.Collection][]mongo.IndexModel{
+		blackListCollection: {
+			{
+				Keys:    bson.D{{Key: "type", Value: 1}, {Key: "phrase", Value: 1}},
+				Options: options.Index().SetName("blacklist_type_and_phrase").SetUnique(true),
+			},
+		},
+		archetypeCollection: {
+			{
+				Keys:    bson.D{{Key: "archetype", Value: 1}},
+				Options: options.Index().SetName("archetype_name").SetUnique(true),
+			},
+			{
+				Keys:    bson.D{{Key: "inheritMembers", Value: 1}},
+				Options: options.Index().SetName("archetype_inherit_members"),
+			},
+			{
+				Keys:    bson.D{{Key: "qualifiedMembers", Value: 1}},
+				Options: options.Index().SetName("archetype_qualified_members"),
+			},
+		},
+	}
+
+	for collection, indexes := range indexesByCollection {
+		_, err := collection.Indexes().CreateMany(ctx, indexes)
+		if err != nil {
+			return fmt.Errorf("error creating indexes for collection %s: %w", collection.Name(), err)
+		}
+	}
+	return nil
 }

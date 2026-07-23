@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
@@ -17,7 +17,7 @@ const (
 )
 
 func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, cardOfTheDayOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
 	logger.Info("Fetching card of the day", "date", cardOfTheDay.Date)
@@ -34,12 +34,12 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 		cardOfTheDay.CardID = *cardID
 	}
 
-	if card, err := downstream.YGO.CardService.GetCardByID(ctx, cardOfTheDay.CardID); err != nil {
+	if cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardOfTheDay.CardID); err != nil {
 		e := &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "An error occurred fetching card of the day details."}
 		e.HandleServerResponse(res)
 		return
 	} else {
-		cardOfTheDay.Card = *card
+		cardOfTheDay.Card = cModel.YGOCardRESTFromProto(cardProto)
 	}
 
 	res.WriteHeader(http.StatusOK)

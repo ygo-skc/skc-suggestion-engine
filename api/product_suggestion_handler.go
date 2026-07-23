@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/go-chi/chi/v5"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
-	"github.com/ygo-skc/skc-go/common/v2/ygo"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/suggest"
@@ -23,7 +23,7 @@ const (
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	productID := chi.URLParam(req, "productID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, productCardSuggestionOp,
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 

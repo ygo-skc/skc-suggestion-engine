@@ -6,10 +6,10 @@ import (
 	"log"
 	"net/http"
 
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
 
-	"github.com/ygo-skc/skc-go/common/v2/client"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	"github.com/ygo-skc/skc-go/common/v3/client"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 )
 
 var (

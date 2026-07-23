@@ -1,7 +1,7 @@
 package testing
 
 import (
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
 )
 
 var (
