@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"time"
@@ -53,7 +54,7 @@ func newVoyageRequest(ctx context.Context, method string, path string, body io.R
 
 	req, err := http.NewRequestWithContext(ctx, method, voyageBaseURL.JoinPath(path).String(), body)
 	if err != nil {
-		logger.Error("Error building Voyage request", "err", err, "path", path)
+		logger.Error("Error building Voyage request", slog.Any("err", err), slog.String("path", path))
 		return nil, &cModel.APIError{Message: "Error calling downstream service", StatusCode: http.StatusInternalServerError}
 	}
 
@@ -67,7 +68,7 @@ func doVoyageRequest[T any](ctx context.Context, path string, reqBody any, newEr
 
 	payload, err := json.Marshal(reqBody)
 	if err != nil {
-		logger.Error("Error marshalling Voyage request", "err", err, "path", path)
+		logger.Error("Error marshalling Voyage request", slog.Any("err", err), slog.String("path", path))
 		return nil, newErr()
 	}
 
@@ -78,7 +79,7 @@ func doVoyageRequest[T any](ctx context.Context, path string, reqBody any, newEr
 
 	voyageRes, err := voyageHTTPClient.Do(req)
 	if err != nil {
-		logger.Error("Error calling Voyage API", "err", err, "path", path)
+		logger.Error("Error calling Voyage API", slog.Any("err", err), slog.String("path", path))
 		return nil, newErr()
 	}
 
@@ -89,7 +90,7 @@ func doVoyageRequest[T any](ctx context.Context, path string, reqBody any, newEr
 
 	var result T
 	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Error("Error unmarshalling Voyage response", "err", err, "path", path)
+		logger.Error("Error unmarshalling Voyage response", slog.Any("err", err), slog.String("path", path))
 		return nil, newErr()
 	}
 
@@ -113,7 +114,7 @@ func EmbedText(ctx context.Context, input []string, inputType model.VoyageInputT
 	}
 
 	if len(result.Data) != len(input) {
-		logger.Error("Voyage API returned incorrect number of embeddings", "num_input", len(input), "num_embeddings", len(result.Data))
+		logger.Error("Voyage API returned incorrect number of embeddings", slog.Int("num_input", len(input)), slog.Int("num_embeddings", len(result.Data)))
 		return nil, newVoyageEmbeddingErr()
 	}
 
@@ -137,7 +138,7 @@ func RerankVectorResults(ctx context.Context, input []string, query string, topK
 	}
 
 	if expectedSize := min(int(topK), len(input)); len(result.Data) != expectedSize {
-		logger.Error("Voyage API returned incorrect number of re-ranked elements", "expected_size", topK, "actual", len(result.Data))
+		logger.Error("Voyage API returned incorrect number of re-ranked elements", slog.Int("expected_size", int(topK)), slog.Int("actual", len(result.Data)))
 		return nil, newVoyageRerankErr()
 	}
 

@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"sync"
 
@@ -54,10 +55,12 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 	status := cModel.APIHealth{Version: "3.1.1", Downstream: downstreamHealth}
 
 	logger.Info("API Status",
-		"ygo_service_status", downstreamHealth[0].Status, "ygo_service_version", ygoServiceVersion,
-		"skc_suggestion_db_status", downstreamHealth[1].Status, "skc_suggestion_db_version", skcSuggestionDBVersion)
+		slog.String("ygo_service_status", string(downstreamHealth[0].Status)),
+		slog.String("ygo_service_version", ygoServiceVersion),
+		slog.String("skc_suggestion_db_status", string(downstreamHealth[1].Status)),
+		slog.String("skc_suggestion_db_version", skcSuggestionDBVersion))
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(status); err != nil {
-		logger.Error("Could not encode API status response", "err", err)
+		logger.Error("Could not encode API status response", slog.Any("err", err))
 	}
 }

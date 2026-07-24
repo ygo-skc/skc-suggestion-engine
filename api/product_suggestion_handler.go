@@ -29,7 +29,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	cards, ccIDs, relevantArchetypes, err := loadPSData(ctx, productID)
 	if err != nil {
-		logger.Error("Failed to retrieve product data", "err", err)
+		logger.Error("Failed to retrieve product data", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
@@ -49,7 +49,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Successfully retrieved product card suggestions")
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support}); err != nil {
-		logger.Error("Could not encode product suggestions response", "err", err, "product_id", productID)
+		logger.Error("Could not encode product suggestions response", slog.Any("err", err), slog.String("product_id", productID))
 	}
 }
 

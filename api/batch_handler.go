@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"slices"
 	"strings"
@@ -35,7 +36,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 				UnknownResources: make(cModel.CardIDs, 0),
 			},
 		); err != nil {
-			logger.Error("Could not encode empty batch card info response", "err", err)
+			logger.Error("Could not encode empty batch card info response", slog.Any("err", err))
 		}
 		return
 	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
@@ -43,13 +44,14 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		if len(cardsProto.UnknownResources) > 0 {
-			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", "unknown_resources", cardsProto.UnknownResources)
+			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", 
+				slog.Any("unknown_resources", cardsProto.UnknownResources))
 		}
 
 		batchCardData := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(batchCardData); err != nil {
-			logger.Error("Could not encode batch card info response", "err", err)
+			logger.Error("Could not encode batch card info response", slog.Any("err", err))
 		}
 		return
 	}
@@ -59,7 +61,7 @@ func parseBatchRequestBody(ctx context.Context, res http.ResponseWriter, req *ht
 	logger := cUtil.RetrieveLogger(ctx)
 	var reqBody cModel.BatchCardIDs
 	if err := json.NewDecoder(req.Body).Decode(&reqBody); err != nil {
-		logger.Error("Error occurred while reading batch request body", "err", err)
+		logger.Error("Error occurred while reading batch request body", slog.Any("err", err))
 		cModel.HandleServerResponse(cModel.APIError{Message: "Body could not be deserialized", StatusCode: http.StatusBadRequest}, res)
 		return nil
 	}
@@ -94,7 +96,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 				IntersectingResources: make(cModel.CardIDs, 0),
 			},
 		); err != nil {
-			logger.Error("Could not encode empty batch card suggestions response", "err", err)
+			logger.Error("Could not encode empty batch card suggestions response", slog.Any("err", err))
 		}
 		return
 	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
@@ -103,7 +105,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	} else {
 		ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, reqBody.CardIDs, skcSuggestionEngineDBInterface)
 		if err != nil {
-			logger.Error("Failed to retrieve suggestion metadata", "err", err)
+			logger.Error("Failed to retrieve suggestion metadata", slog.Any("err", err))
 			err.HandleServerResponse(res)
 			return
 		}
@@ -113,7 +115,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
-			logger.Error("Could not encode batch card suggestions response", "err", err, "card_id_count", len(reqBody.CardIDs))
+			logger.Error("Could not encode batch card suggestions response", slog.Any("err", err), slog.Int("card_id_count", len(reqBody.CardIDs)))
 		}
 		return
 	}
@@ -239,7 +241,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 				IntersectingResources: make(cModel.CardIDs, 0),
 			},
 		); err != nil {
-			logger.Error("Could not encode empty batch card support response", "err", err)
+			logger.Error("Could not encode empty batch card support response", slog.Any("err", err))
 		}
 		return
 	} else if cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, reqBody.CardIDs); err != nil {
@@ -249,7 +251,7 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 		subjects := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(getBatchSupport(ctx, *subjects, nil)); err != nil {
-			logger.Error("Could not encode batch card support response", "err", err)
+			logger.Error("Could not encode batch card support response", slog.Any("err", err))
 		}
 		return
 	}

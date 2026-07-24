@@ -70,7 +70,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 	cardEmbeddingCollection = vectorSearchDB.Collection("cardEmbedding")
 
 	if err := createIndexes(); err != nil {
-		slog.Error("Error creating indexes for skc-deck-api-db", "err", err)
+		slog.Error("Error creating indexes for skc-deck-api-db", slog.Any("err", err))
 		os.Exit(1)
 	}
 

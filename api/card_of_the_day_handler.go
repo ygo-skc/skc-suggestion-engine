@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -20,7 +21,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(req.Context(), apiName, cardOfTheDayOp)
 
 	cardOfTheDay := model.CardOfTheDay{Date: time.Now().In(chicagoLocation).Format("2006-01-02"), Version: 1}
-	logger.Info("Fetching card of the day", "date", cardOfTheDay.Date)
+	logger.Info("Fetching card of the day", slog.String("date", cardOfTheDay.Date))
 
 	if cardID, err := skcSuggestionEngineDBInterface.GetCardOfTheDay(ctx, cardOfTheDay.Date, cardOfTheDay.Version); cardID == nil {
 		if err := fetchNewCardOfTheDayAndPersist(ctx, &cardOfTheDay); err != nil {
@@ -30,7 +31,7 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 	} else if err != nil {
 		err.HandleServerResponse(res)
 	} else {
-		logger.Warn("Existing card of the day exists", "cotd", *cardID)
+		logger.Warn("Existing card of the day exists", slog.String("cotd", *cardID))
 		cardOfTheDay.CardID = *cardID
 	}
 
@@ -44,7 +45,10 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(cardOfTheDay); err != nil {
-		logger.Error("Could not encode card of the day response", "err", err, "card_of_the_day_id", cardOfTheDay.CardID, "date", cardOfTheDay.Date)
+		logger.Error("Could not encode card of the day response", 
+			slog.Any("err", err), 
+			slog.String("card_of_the_day_id", cardOfTheDay.CardID), 
+			slog.String("date", cardOfTheDay.Date))
 	}
 }
 
@@ -59,7 +63,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 		return e
 	}
 
-	logger.Warn("Ignoring cards that were previously COTD", "total_ignored", len(previousCOTDData))
+	logger.Warn("Ignoring cards that were previously COTD", slog.Int("total_ignored", len(previousCOTDData)))
 
 	if randomCard, err := downstream.YGO.CardService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e

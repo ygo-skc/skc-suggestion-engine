@@ -4,6 +4,7 @@ import (
 	"context"
 	"io"
 	"log"
+	"log/slog"
 	"net/http"
 
 	cModel "github.com/ygo-skc/skc-go/common/v3/model"
@@ -30,12 +31,12 @@ func parseResponseBody(ctx context.Context, resp *http.Response) ([]byte, *cMode
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		logger.Error("Error reading downstream response body", "err", err, "url", resp.Request.URL)
+		logger.Error("Error reading downstream response body", slog.Any("err", err), slog.Any("url", resp.Request.URL))
 		return nil, &cModel.APIError{Message: "Error reading response from downstream service", StatusCode: http.StatusInternalServerError}
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		logger.Error("Downstream service returned non-200 response", "status", resp.StatusCode, "url", resp.Request.URL, "body", string(body))
+		logger.Error("Downstream service returned non-200 response", slog.Int("status", resp.StatusCode), slog.Any("url", resp.Request.URL), slog.String("body", string(body)))
 		return nil, &cModel.APIError{Message: "Downstream service returned an unexpected response", StatusCode: http.StatusInternalServerError}
 	}
 

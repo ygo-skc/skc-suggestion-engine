@@ -13,7 +13,7 @@ func Validate(tai model.TrafficData) *ValidationErrors {
 		if ve, ok := err.(validator.ValidationErrors); ok {
 			return HandleValidationErrors(ve)
 		}
-		slog.Error("Unexpected error while validating input", "err", err)
+		slog.Error("Unexpected error while validating input", slog.Any("err", err))
 		return nil
 	}
 	return nil
@@ -24,7 +24,7 @@ func ValidateBatchCardIDs(bci cModel.BatchCardIDs) *ValidationErrors {
 		if ve, ok := err.(validator.ValidationErrors); ok {
 			return HandleValidationErrors(ve)
 		}
-		slog.Error("Unexpected error while validating input", "err", err)
+		slog.Error("Unexpected error while validating input", slog.Any("err", err))
 		return nil
 	}
 	return nil

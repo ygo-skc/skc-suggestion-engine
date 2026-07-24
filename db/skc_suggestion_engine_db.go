@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strings"
 	"time"
@@ -54,7 +55,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx c
 	defer cancel()
 
 	if err := skcSuggestionDB.RunCommand(ctx, command).Decode(&commandResult); err != nil {
-		cUtil.RetrieveLogger(ctx).Error("Error getting SKC Suggestion DB version", "err", err)
+		cUtil.RetrieveLogger(ctx).Error("Error getting SKC Suggestion DB version", slog.Any("err", err))
 		return "", err
 	} else {
 		return fmt.Sprintf("%v", commandResult["version"]), nil
@@ -64,16 +65,16 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx c
 // Will update the database with a new traffic record.
 func (impl SKCSuggestionEngineDAOImplementation) InsertTrafficData(ctx context.Context, ta model.TrafficAnalysis) *cModel.APIError {
 	logger := cUtil.RetrieveLogger(ctx)
-	logger.Info("Inserting traffic data", "resource", ta.ResourceUtilized, "system", ta.Source)
+	logger.Info("Inserting traffic data", slog.Any("resource", ta.ResourceUtilized), slog.Any("system", ta.Source))
 
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
 	if res, err := trafficAnalysisCollection.InsertOne(ctx, ta); err != nil {
-		logger.Error("Error inserting traffic data into DB", "err", err)
+		logger.Error("Error inserting traffic data into DB", slog.Any("err", err))
 		return &cModel.APIError{Message: "Error occurred while attempting to insert new traffic data.", StatusCode: http.StatusInternalServerError}
 	} else {
-		logger.Info("Successfully inserted traffic data into DB", "id", res.InsertedID)
+		logger.Info("Successfully inserted traffic data into DB", slog.Any("id", res.InsertedID))
 		return nil
 	}
 }
@@ -116,13 +117,13 @@ func (impl SKCSuggestionEngineDAOImplementation) GetTrafficData(
 
 	if cursor, err := trafficAnalysisCollection.Aggregate(ctx, pipeline); err != nil {
 		logger.Error("Error retrieving traffic data",
-			"resource", resourceName, "from", from.Format(intervalFormat), "to", to.Format(intervalFormat), "err", err)
+			slog.String("resource", string(resourceName)), slog.String("from", from.Format(intervalFormat)), slog.String("to", to.Format(intervalFormat)), slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 	} else {
 		td := []model.TrafficResourceUtilizationMetric{}
 		if err := cursor.All(ctx, &td); err != nil {
 			logger.Error("Error retrieving traffic data",
-				"resource", resourceName, "from", from.Format(intervalFormat), "to", to.Format(intervalFormat), "err", err)
+				slog.String("resource", string(resourceName)), slog.String("from", from.Format(intervalFormat)), slog.String("to", to.Format(intervalFormat)), slog.Any("err", err))
 			return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get traffic data."}
 		}
 
@@ -137,7 +138,7 @@ func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Conte
 
 	blackListPhrase = sanitizeQueryInput(blackListPhrase)
 	if blackListPhrase == "" || len(blackListPhrase) > maxBlackListPhraseLength {
-		logger.Error("Rejecting black list check for invalid phrase", "type", blackListType, "phrase_length", len(blackListPhrase))
+		logger.Error("Rejecting black list check for invalid phrase", slog.String("type", blackListType), slog.Int("phrase_length", len(blackListPhrase)))
 		return false, &cModel.APIError{Message: "Internal server error", StatusCode: http.StatusInternalServerError}
 	}
 
@@ -147,7 +148,7 @@ func (impl SKCSuggestionEngineDAOImplementation) IsBlackListed(ctx context.Conte
 		message := fmt.Sprintf("Black list query failed using type %s and phrase %s.", blackListType, blackListPhrase)
 		return false, &cModel.APIError{Message: message, StatusCode: http.StatusInternalServerError}
 	} else if count > 0 {
-		logger.Info("Phrase is blacklisted", "phrase", blackListPhrase)
+		logger.Info("Phrase is blacklisted", slog.String("phrase", blackListPhrase))
 		return true, nil
 	} else {
 		return false, nil
@@ -182,7 +183,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetCardOfTheDay(ctx context.Con
 		if errors.Is(err, mongo.ErrNoDocuments) { // no card of the day present in db for specified date
 			return nil, nil
 		}
-		logger.Error("Error retrieving card of the day", "date", date, "err", err)
+		logger.Error("Error retrieving card of the day", slog.String("date", date), slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get card of the day."}
 	}
 
@@ -203,7 +204,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 
 	cursor, err := cardOfTheDayCollection.Find(ctx, query, opts)
 	if err != nil {
-		logger.Error("Error retrieving card of the day history", "version", version, "err", err)
+		logger.Error("Error retrieving card of the day history", slog.Int("version", version), slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 	}
 	defer cursor.Close(ctx)
@@ -212,14 +213,14 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 	for cursor.Next(ctx) {
 		var cotd model.CardOfTheDay
 		if err := cursor.Decode(&cotd); err != nil {
-			logger.Error("Error transforming DB data to COTD struct", "version", version, "err", err)
+			logger.Error("Error transforming DB data to COTD struct", slog.Int("version", version), slog.Any("err", err))
 		}
 		historicalCOTD = append(historicalCOTD, cotd.CardID)
 	}
 
 	// check if there was an error using cursor
 	if err := cursor.Err(); err != nil {
-		logger.Error("Error iterating card of the day history", "version", version, "err", err)
+		logger.Error("Error iterating card of the day history", slog.Int("version", version), slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving card of the day history"}
 	}
 	return historicalCOTD, nil
@@ -230,10 +231,10 @@ func (impl SKCSuggestionEngineDAOImplementation) InsertCardOfTheDay(ctx context.
 	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
 	defer cancel()
 
-	logger.Info("Inserting new COTD", "id", cotd.CardID, "version", cotd.Version)
+	logger.Info("Inserting new COTD", slog.String("id", cotd.CardID), slog.Int("version", cotd.Version))
 
 	if _, err := cardOfTheDayCollection.InsertOne(ctx, cotd); err != nil {
-		logger.Error("Could not insert card of the day", "err", err)
+		logger.Error("Could not insert card of the day", slog.Any("err", err))
 		return &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error saving card of the day."}
 	}
 
@@ -260,10 +261,10 @@ func (impl SKCSuggestionEngineDAOImplementation) GetArchetypeMembers(ctx context
 	var members archetypeMembers
 	if err := archetypeCollection.FindOne(ctx, query).Decode(&members); err != nil {
 		if errors.Is(err, mongo.ErrNoDocuments) {
-			logger.Error("Could not find archetype in DB", "err", err)
+			logger.Error("Could not find archetype in DB", slog.Any("err", err))
 			return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusNotFound, Message: "Archetype does not exist"}
 		}
-		logger.Error("Error retrieving archetype data", "err", err)
+		logger.Error("Error retrieving archetype data", slog.Any("err", err))
 		return nil, nil, nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get archetype data"}
 	}
 
@@ -291,7 +292,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx conte
 
 	cursor, err := archetypeCollection.Find(ctx, query, opts)
 	if err != nil {
-		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		logger.Error("Error retrieving relevant archetypes from DB", slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
 	}
 	defer cursor.Close(ctx)
@@ -302,12 +303,12 @@ func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx conte
 
 	var ra []relevantArchetypes
 	if err := cursor.All(ctx, &ra); err != nil {
-		logger.Error("Error retrieving relevant archetypes from DB", "err", err)
+		logger.Error("Error retrieving relevant archetypes from DB", slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
 	}
 
 	if err := cursor.Err(); err != nil {
-		logger.Error("Error iterating relevant archetype DB data", "err", err)
+		logger.Error("Error iterating relevant archetype DB data", slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving archetype data"}
 	}
 
@@ -408,7 +409,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
-		logger.Error("Error while searching card embedding", "err", err)
+		logger.Error("Error while searching card embedding", slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
@@ -418,14 +419,14 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 	for cursor.Next(ctx) {
 		var r model.VectorSearchResult
 		if err := cursor.Decode(&r); err != nil {
-			logger.Error("Error transforming DB data to Vector Search struct", "err", err)
+			logger.Error("Error transforming DB data to Vector Search struct", slog.Any("err", err))
 		}
 		results = append(results, r)
 	}
 
 	// check if there was an error using cursor
 	if err := cursor.Err(); err != nil {
-		logger.Error("There was an error parsing db results", "err", err)
+		logger.Error("There was an error parsing db results", slog.Any("err", err))
 		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
 	}
 
