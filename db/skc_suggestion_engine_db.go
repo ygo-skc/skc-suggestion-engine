@@ -322,7 +322,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx conte
 func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
 	subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
-	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
 	logger.Info("Performing vector search on card text")
