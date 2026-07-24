@@ -341,7 +341,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 						}},
 					}},
 					{Key: "queryVector", Value: queryVector},
-					{Key: "limit", Value: limit * 3},
+					{Key: "limit", Value: limit * 2},
 				},
 			},
 		},
