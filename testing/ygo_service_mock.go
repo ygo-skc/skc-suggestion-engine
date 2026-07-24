@@ -13,7 +13,7 @@ const (
 
 type YGOCardClientMock struct{}
 
-func (svc YGOCardClientMock) GetCardColorsProto(ctx context.Context) (*ygo.CardColors, *model.APIError) {
+func (svc YGOCardClientMock) GetCardColorsProto(ctx context.Context) (*ygo.GetCardColorsResponse, *model.APIError) {
 	ids := map[string]uint32{
 		"Normal":           1,
 		"Effect":           2,
@@ -33,7 +33,7 @@ func (svc YGOCardClientMock) GetCardColorsProto(ctx context.Context) (*ygo.CardC
 		"Token":            16,
 	}
 
-	return &ygo.CardColors{Values: ids}, nil
+	return &ygo.GetCardColorsResponse{Values: ids}, nil
 }
 
 func (svc YGOCardClientMock) GetCardByIDProto(ctx context.Context, cardID string) (*ygo.Card, *model.APIError) {

@@ -8,7 +8,6 @@ import (
 	cModel "github.com/ygo-skc/skc-go/common/v3/model"
 	"github.com/ygo-skc/skc-go/common/v3/parser"
 	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
-	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/db"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
@@ -23,13 +22,13 @@ type UnparsedSuggestionData struct {
 	archetypeSet           map[string]struct{}
 }
 
-func FetchMetadata(ctx context.Context, subjects []string, dbInterface db.SKCSuggestionEngineDAO) (*ygo.CardColors, []string, *cModel.APIError) {
+func FetchMetadata(ctx context.Context, subjects []string, dbInterface db.SKCSuggestionEngineDAO) (map[string]uint32, []string, *cModel.APIError) {
 	type archetypeRes struct {
 		archetypes []string
 		err        *cModel.APIError
 	}
 	type cardColorRes struct {
-		ccIDs *ygo.CardColors
+		ccIDs map[string]uint32
 		err   *cModel.APIError
 	}
 	var wg sync.WaitGroup
@@ -48,9 +47,9 @@ func FetchMetadata(ctx context.Context, subjects []string, dbInterface db.SKCSug
 	// card color routine
 	cardColorAWG := cUtil.NewAtomicWaitGroup[cardColorRes](&wg)
 	go func(awg *cUtil.AtomicWaitGroup[cardColorRes]) {
-		ccIDs, err := downstream.YGO.CardService.GetCardColorsProto(ctx)
+		colors, err := downstream.YGO.CardService.GetCardColorsProto(ctx)
 		res := cardColorRes{
-			ccIDs: ccIDs,
+			ccIDs: colors.Values,
 			err:   err,
 		}
 		awg.Store(&res)

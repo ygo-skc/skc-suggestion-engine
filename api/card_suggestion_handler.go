@@ -43,7 +43,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 	// TODO: include exclusions?
 
-	suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
+	suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs, relevantArchetypes)
 
 	logger.Info("Card suggestions generated",
 		slog.String("card_name", (cardToGetSuggestionsFor).GetName()),

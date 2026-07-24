@@ -10,7 +10,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	cModel "github.com/ygo-skc/skc-go/common/v3/model"
 	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
-	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/suggest"
@@ -41,9 +40,9 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	wg.Add(2)
 	go func() {
 		defer wg.Done()
-		suggestions = getBatchSuggestions(ctx, *cards, relevantArchetypes, ccIDs.Values)
+		suggestions = getBatchSuggestions(ctx, *cards, relevantArchetypes, ccIDs)
 	}()
-	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards, ccIDs.Values) }()
+	go func() { defer wg.Done(); support = getBatchSupport(ctx, *cards, ccIDs) }()
 	wg.Wait()
 
 	logger.Info("Successfully retrieved product card suggestions")
@@ -55,7 +54,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 // load data needed to form product suggestions
 func loadPSData(ctx context.Context,
-	productID string) (*cModel.BatchCardData[cModel.CardIDs], *ygo.CardColors, []string, *cModel.APIError) {
+	productID string) (*cModel.BatchCardData[cModel.CardIDs], map[string]uint32, []string, *cModel.APIError) {
 	productContents, err := downstream.YGO.ProductService.GetCardsByProductIDProto(ctx, productID)
 	if err != nil {
 		return nil, nil, nil, err

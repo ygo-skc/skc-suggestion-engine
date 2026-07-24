@@ -44,7 +44,7 @@ func getBatchCardInfo(res http.ResponseWriter, req *http.Request) {
 		return
 	} else {
 		if len(cardsProto.UnknownResources) > 0 {
-			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)", 
+			logger.Warn("Some card IDs in batch request are not valid (no card data found in DB)",
 				slog.Any("unknown_resources", cardsProto.UnknownResources))
 		}
 
@@ -111,7 +111,7 @@ func getBatchSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 		}
 
 		subjects := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
-		suggestions := getBatchSuggestions(ctx, *subjects, relevantArchetypes, ccIDs.GetValues())
+		suggestions := getBatchSuggestions(ctx, *subjects, relevantArchetypes, ccIDs)
 
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(suggestions); err != nil {
@@ -258,11 +258,11 @@ func getBatchSupportHandler(res http.ResponseWriter, req *http.Request) {
 }
 
 func getBatchSupport(ctx context.Context, requestedCards cModel.BatchCardData[cModel.CardIDs], ccIDs map[string]uint32) model.BatchCardSupport[cModel.CardIDs] {
-	var ccIDsAWG *cUtil.AtomicWaitGroup[ygo.CardColors]
+	var ccIDsAWG *cUtil.AtomicWaitGroup[ygo.GetCardColorsResponse]
 	if ccIDs == nil {
 		var wg sync.WaitGroup
-		ccIDsAWG = cUtil.NewAtomicWaitGroup[ygo.CardColors](&wg)
-		go func(awg *cUtil.AtomicWaitGroup[ygo.CardColors]) {
+		ccIDsAWG = cUtil.NewAtomicWaitGroup[ygo.GetCardColorsResponse](&wg)
+		go func(awg *cUtil.AtomicWaitGroup[ygo.GetCardColorsResponse]) {
 			cc, _ := downstream.YGO.CardService.GetCardColorsProto(ctx) // retrieve card color IDs
 			awg.Store(cc)                                               // TODO: handle error
 		}(ccIDsAWG)
