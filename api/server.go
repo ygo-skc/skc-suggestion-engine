@@ -78,9 +78,7 @@ func (w gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-// chi matches routes against the escaped path by default, so URL params come back
-// percent-encoded (eg %20). Routing on the decoded path instead means chi.URLParam
-// always returns the actual characters. Must be registered before any routes.
+// ensure path vars are not entities and encoded correctly
 func decodedPathRoutingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(res http.ResponseWriter, req *http.Request) {
 		if rctx := chi.RouteContext(req.Context()); rctx != nil {
