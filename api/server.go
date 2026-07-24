@@ -51,7 +51,7 @@ func init() {
 	if isCICD != "true" && !strings.HasSuffix(os.Args[0], ".test") {
 		slog.Debug("Loading IP DB...")
 		if ip, err := ip2location.OpenDB("./data/IPv4-DB11.BIN"); err != nil {
-			slog.Error("Could not load IP DB file", "err", err)
+			slog.Error("Could not load IP DB file", slog.Any("err", err))
 			os.Exit(1)
 		} else {
 			ipDB = ip
@@ -62,7 +62,7 @@ func init() {
 
 	// init Location
 	if location, err := time.LoadLocation("America/Chicago"); err != nil {
-		slog.Error("Could not load Chicago location", "err", err)
+		slog.Error("Could not load Chicago location", slog.Any("err", err))
 		os.Exit(1)
 	} else {
 		chicagoLocation = location
@@ -95,7 +95,7 @@ func verifyAPIKeyMiddleware(next http.Handler) http.Handler {
 			res.Header().Set("Content-Type", "application/json")
 			res.WriteHeader(http.StatusUnauthorized)
 			if encodingErr := json.NewEncoder(res).Encode(err); encodingErr != nil {
-				slog.Error("Could not encode API key error response", "err", encodingErr, "path", req.URL.Path)
+				slog.Error("Could not encode API key error response", slog.Any("err", encodingErr), slog.String("path", req.URL.Path))
 			}
 		} else {
 			next.ServeHTTP(res, req)
@@ -237,14 +237,14 @@ func serveTLS(router *chi.Mux, corsOpts *cors.Cors) {
 		MaxUploadBufferPerConnection: 20 << 10,
 		MaxUploadBufferPerStream:     4 << 10,
 	}); err != nil {
-		slog.Error("Failed to configure HTTP/2", "err", err)
+		slog.Error("Failed to configure HTTP/2", slog.Any("err", err))
 		os.Exit(1)
 	}
 
-	slog.Info("API starting", "port", apiPort)
+	slog.Info("API starting", slog.Int("port", apiPort))
 
 	if err := server.ListenAndServeTLS("certs/concatenated.crt", "certs/private.key"); err != nil {
-		slog.Error("There was an error starting api server", "err", err)
+		slog.Error("There was an error starting api server", slog.Any("err", err))
 		os.Exit(1)
 	}
 }

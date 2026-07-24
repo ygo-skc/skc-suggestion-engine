@@ -37,7 +37,7 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 
 	ccIDs, relevantArchetypes, err := suggest.FetchMetadata(ctx, []string{cardID}, skcSuggestionEngineDBInterface)
 	if err != nil {
-		logger.Error("Failed to retrieve suggestion metadata", "err", err)
+		logger.Error("Failed to retrieve suggestion metadata", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
@@ -46,12 +46,12 @@ func getCardSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	suggestions := getCardSuggestions(ctx, cardToGetSuggestionsFor, ccIDs.GetValues(), relevantArchetypes)
 
 	logger.Info("Card suggestions generated",
-		"card_name", (cardToGetSuggestionsFor).GetName(),
-		"named_materials", len(suggestions.NamedMaterials),
-		"named_references", len(suggestions.NamedReferences))
+		slog.String("card_name", (cardToGetSuggestionsFor).GetName()),
+		slog.Int("named_materials", len(suggestions.NamedMaterials)),
+		slog.Int("named_references", len(suggestions.NamedReferences)))
 
 	if err := json.NewEncoder(res).Encode(suggestions); err != nil {
-		logger.Error("Could not encode card suggestions response", "err", err, "card_id", cardID)
+		logger.Error("Could not encode card suggestions response", slog.Any("err", err), slog.String("card_id", cardID))
 	}
 }
 

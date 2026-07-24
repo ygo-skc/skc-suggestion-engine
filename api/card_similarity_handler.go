@@ -25,14 +25,14 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 
 	subject, embeddedQuery, err := retrieveAndEmbedCardEffect(ctx, cardID)
 	if err != nil {
-		logger.Error("Could not embed card text", "err", err)
+		logger.Error("Could not embed card text", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
 
 	similarCards := model.SimilarCards{Card: *subject}
 	if matches, err := getSimilarCards(ctx, *subject, embeddedQuery); err != nil {
-		logger.Error("Could not retrieve similar cards", "err", err)
+		logger.Error("Could not retrieve similar cards", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	} else {
@@ -41,7 +41,7 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(similarCards); err != nil {
-		logger.Error("Could not encode card similarity response", "err", err, "card_id", cardID)
+		logger.Error("Could not encode card similarity response", slog.Any("err", err), slog.String("card_id", cardID))
 	}
 }
 
@@ -70,7 +70,7 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 
 	vectorSearchResults, err = rerank(ctx, vectorSearchResults, subject.GetEffect(), 20)
 	if err != nil {
-		logger.Error("Error during re-ranking", "err", err)
+		logger.Error("Error during re-ranking", slog.Any("err", err))
 		return nil, err
 	}
 
@@ -81,13 +81,13 @@ func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery 
 
 	cardsProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, similarCardIDs)
 	if err != nil {
-		logger.Error("Could not retrieve information about cards from search results", "err", err)
+		logger.Error("Could not retrieve information about cards from search results", slog.Any("err", err))
 		return nil, err
 	}
 	similarCardData := cModel.BatchCardDataFromProto[cModel.CardIDs](cardsProto, cModel.CardIDAsKey)
 
 	if len(similarCardData.UnknownResources) > 0 {
-		logger.Warn("Some vector search IDs had no matching metadata", "unknown_card_ids", similarCardData.UnknownResources)
+		logger.Warn("Some vector search IDs had no matching metadata", slog.Any("unknown_card_ids", similarCardData.UnknownResources))
 	}
 
 	similarCards := make([]cModel.YGOCard, 0, len(similarCardIDs))
