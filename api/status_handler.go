@@ -52,7 +52,7 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 
 	wg.Wait()
 
-	status := cModel.APIHealth{Version: "3.1.1", Downstream: downstreamHealth}
+	status := cModel.APIHealth{Version: "3.1.2", Downstream: downstreamHealth}
 
 	logger.Info("API Status",
 		slog.String("ygo_service_status", string(downstreamHealth[0].Status)),
