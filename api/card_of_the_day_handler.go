@@ -68,7 +68,7 @@ func fetchNewCardOfTheDayAndPersist(ctx context.Context, cotd *model.CardOfTheDa
 	if randomCard, err := downstream.YGO.CardService.GetRandomCardProto(ctx, previousCOTDData); err != nil {
 		return e
 	} else {
-		cotd.CardID = randomCard.ID
+		cotd.CardID = randomCard.Id
 	}
 
 	if err := skcSuggestionEngineDBInterface.InsertCardOfTheDay(ctx, *cotd); err != nil {
