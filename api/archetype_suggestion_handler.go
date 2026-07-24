@@ -11,8 +11,9 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
@@ -31,11 +32,11 @@ type archetypeResults struct {
 func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	archetypeName := chi.URLParam(req, "archetypeName")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportOp, slog.String("archetype_name", archetypeName))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, archetypeSupportOp, slog.String("archetype_name", archetypeName))
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
-		logger.Error("Failed archetype validation", "err", err)
+		logger.Error("Failed archetype validation", slog.Any("err", err))
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
 		validationErr.HandleServerResponse(res)
 		return
@@ -55,11 +56,11 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 		make(chan archetypeResults, 1), make(chan archetypeResults, 1)
 
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingCardNameChannel,
-		downstream.YGO.CardService.GetArchetypalCardsUsingCardName)
+		downstream.YGO.CardService.GetArchetypalCardsUsingCardNameProto)
 	go getArchetypeSuggestion(ctx, archetypeName, supportUsingTextChannel,
-		downstream.YGO.CardService.GetExplicitArchetypalInclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalInclusionsProto)
 	go getArchetypeSuggestion(ctx, archetypeName, exclusionsChannel,
-		downstream.YGO.CardService.GetExplicitArchetypalExclusions)
+		downstream.YGO.CardService.GetExplicitArchetypalExclusionsProto)
 
 	archetypalSuggestions := model.ArchetypalSuggestions{}
 	for range 3 {
@@ -75,7 +76,7 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 				res.WriteHeader(notAnArchetypeErr.StatusCode)
 				if err := json.NewEncoder(res).Encode(notAnArchetypeErr); err != nil {
-					logger.Error("Could not encode archetype error response", "err", err, "archetype_name", archetypeName)
+					logger.Error("Could not encode archetype error response", slog.Any("err", err), slog.String("archetype_name", archetypeName))
 				}
 				return
 			} else {
@@ -102,23 +103,26 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 	archetypalSuggestions.Total = len(archetypalSuggestions.UsingName) + len(archetypalSuggestions.UsingText)
 
 	logger.Info("Returning archetypal suggestions",
-		"archetype_name", archetypeName,
-		"cards_found_using_name", len(archetypalSuggestions.UsingName),
-		"cards_found_using_text", len(archetypalSuggestions.UsingText),
-		"excluded_cards", len(archetypalSuggestions.Exclusions))
+		slog.String("archetype_name", archetypeName),
+		slog.Int("cards_found_using_name", len(archetypalSuggestions.UsingName)),
+		slog.Int("cards_found_using_text", len(archetypalSuggestions.UsingText)),
+		slog.Int("excluded_cards", len(archetypalSuggestions.Exclusions)))
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
-		logger.Error("Could not encode archetypal suggestions response", "err", err, "archetype_name", archetypeName, "total_cards", archetypalSuggestions.Total)
+		logger.Error("Could not encode archetypal suggestions response", 
+			slog.Any("err", err), 
+			slog.String("archetype_name", archetypeName), 
+			slog.Int("total_cards", archetypalSuggestions.Total))
 	}
 }
 
 func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,
-	fetchSuggestions func(context.Context, string) ([]cModel.YGOCard, *cModel.APIError)) {
+	fetchSuggestions func(context.Context, string) (*ygo.CardList, *cModel.APIError)) {
 	if dbData, err := fetchSuggestions(ctx, archetypeName); err != nil {
 		c <- archetypeResults{cards: nil, err: err}
 	} else if dbData != nil {
-		c <- archetypeResults{cards: dbData, err: nil}
+		c <- archetypeResults{cards: cModel.YGOCardListRESTFromProto(dbData), err: nil}
 	} else {
 		c <- archetypeResults{cards: make([]cModel.YGOCard, 0), err: nil}
 	}
@@ -134,7 +138,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 	uniqueExclusions := make(map[string]struct{})
 	for _, uniqueExclusion := range archetypalSuggestions.Exclusions {
 		uniqueExclusions[uniqueExclusion.GetName()] = struct{}{}
-		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", "card_name", uniqueExclusion.GetName())
+		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", slog.String("card_name", uniqueExclusion.GetName()))
 	}
 
 	newList := []cModel.YGOCard{}
@@ -150,11 +154,11 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 	archetypeName := chi.URLParam(req, "archetypeName")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, archetypeSupportV2Op, slog.String("archetype_name", archetypeName))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, archetypeSupportV2Op, slog.String("archetype_name", archetypeName))
 	logger.Info("Getting cards within archetype")
 
 	if err := validation.V.Var(archetypeName, validation.ArchetypeValidator); err != nil {
-		logger.Error("Failed archetype validation", "err", err)
+		logger.Error("Failed archetype validation", slog.Any("err", err))
 		validationErr := validation.HandleValidationErrors(err.(validator.ValidationErrors))
 		validationErr.HandleServerResponse(res)
 		return
@@ -162,7 +166,7 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 
 	inherit, qualified, excluded, err := skcSuggestionEngineDBInterface.GetArchetypeMembers(ctx, archetypeName)
 	if err != nil {
-		logger.Error("Failed to retrieve archetype data", "err", err)
+		logger.Error("Failed to retrieve archetype data", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
@@ -172,11 +176,12 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 	m = append(m, qualified...)
 	m = append(m, excluded...)
 
-	batchCardInfo, err := downstream.YGO.CardService.GetCardsByID(ctx, m)
+	cardProto, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, m)
 	if err != nil {
 		err.HandleServerResponse(res)
 		return
 	}
+	batchCardInfo := cModel.BatchCardDataFromProto[cModel.CardIDs](cardProto, cModel.CardIDAsKey)
 
 	archetypeMembers := model.ArchetypeMembers{
 		Archetype:        archetypeName,
@@ -200,14 +205,14 @@ func getArchetypeSupportV2Handler(res http.ResponseWriter, req *http.Request) {
 	slices.SortFunc(archetypeMembers.ExcludedMembers, archetypeSort)
 
 	logger.Info("Returning archetypal suggestions",
-		"archetype_name", archetypeName,
-		"inherit_members", len(archetypeMembers.InheritMembers),
-		"qualified_members", len(archetypeMembers.QualifiedMembers),
-		"excluded_members", len(archetypeMembers.ExcludedMembers))
+		slog.String("archetype_name", archetypeName),
+		slog.Int("inherit_members", len(archetypeMembers.InheritMembers)),
+		slog.Int("qualified_members", len(archetypeMembers.QualifiedMembers)),
+		slog.Int("excluded_members", len(archetypeMembers.ExcludedMembers)))
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypeMembers); err != nil {
-		logger.Error("Could not encode archetypal suggestions v2 response", "err", err, "archetype_name", archetypeName)
+		logger.Error("Could not encode archetypal suggestions v2 response", slog.Any("err", err), slog.String("archetype_name", archetypeName))
 	}
 }
 

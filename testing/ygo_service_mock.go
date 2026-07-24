@@ -3,8 +3,8 @@ package testing
 import (
 	"context"
 
-	"github.com/ygo-skc/skc-go/common/v2/model"
-	"github.com/ygo-skc/skc-go/common/v2/ygo"
+	"github.com/ygo-skc/skc-go/common/v3/model"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 )
 
 const (
@@ -53,7 +53,16 @@ func (svc YGOCardClientMock) GetCardsByID(ctx context.Context, cardIDs model.Car
 }
 
 func (svc YGOCardClientMock) GetCardsByNameProto(ctx context.Context, cardNames model.CardNames) (*ygo.Cards, *model.APIError) {
-	panic(ni)
+	found, notFound := make(map[string]*ygo.Card, 0), make(model.CardNames, 0)
+	for _, cardName := range cardNames {
+		if card, isPresent := CardMocks[cardName]; isPresent {
+			found[card.Name] = card.ToProto()
+		} else {
+			notFound = append(notFound, cardName)
+		}
+	}
+
+	return &ygo.Cards{CardInfo: found, UnknownResources: notFound}, nil
 }
 
 func (svc YGOCardClientMock) GetCardsByName(ctx context.Context, cardNames model.CardNames) (*model.BatchCardData[model.CardNames], *model.APIError) {

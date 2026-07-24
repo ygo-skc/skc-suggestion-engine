@@ -9,8 +9,8 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/validation"
@@ -23,7 +23,7 @@ const (
 
 // Endpoint will allow clients to submit traffic data to be saved in a MongoDB instance.
 func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trafficDataSubmissionOp)
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, trafficDataSubmissionOp)
 	logger.Info("Adding new traffic record")
 
 	// deserialize body
@@ -43,20 +43,20 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// ensure resource is valid before storing it
 	switch trafficData.ResourceUtilized.Name {
 	case model.CardResource:
-		if _, err := downstream.YGO.CardService.GetCardByID(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error("Card resource not valid", "resource_id", trafficData.ResourceUtilized.Value, "err", err)
+		if _, err := downstream.YGO.CardService.GetCardByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
+			logger.Error("Card resource not valid", slog.String("resource_id", trafficData.ResourceUtilized.Value), slog.Any("err", err))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
-				logger.Error("Could not encode API error response", "err", err, "resource_type", "card", "resource_id", trafficData.ResourceUtilized.Value)
+				logger.Error("Could not encode API error response", slog.Any("err", err), slog.String("resource_type", "card"), slog.String("resource_id", trafficData.ResourceUtilized.Value))
 			}
 			return
 		}
 	case model.ProductResource:
 		if _, err := downstream.YGO.ProductService.GetProductSummaryByIDProto(ctx, trafficData.ResourceUtilized.Value); err != nil {
-			logger.Error("Product resource not valid", "resource_id", trafficData.ResourceUtilized.Value, "err", err)
+			logger.Error("Product resource not valid", slog.String("resource_id", trafficData.ResourceUtilized.Value), slog.Any("err", err))
 			res.WriteHeader(http.StatusUnprocessableEntity)
 			if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "Resource is not valid"}); err != nil {
-				logger.Error("Could not encode API error response", "err", err, "resource_type", "product", "resource_id", trafficData.ResourceUtilized.Value)
+				logger.Error("Could not encode API error response", slog.Any("err", err), slog.String("resource_type", "product"), slog.String("resource_id", trafficData.ResourceUtilized.Value))
 			}
 			return
 		}
@@ -65,11 +65,11 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 	// get IP number info
 	var location model.Location
 	if ipData, err := ipDB.Get_all(trafficData.IP); err != nil {
-		logger.Error("Error getting info for IP address", "ip", trafficData.IP, "err", err)
+		logger.Error("Error getting info for IP address", slog.String("ip", trafficData.IP), slog.Any("err", err))
 
 		res.WriteHeader(http.StatusUnprocessableEntity)
 		if err := json.NewEncoder(res).Encode(cModel.APIError{Message: "The IP provided was not found in the IP Database. Therefore, not storing traffic pattern."}); err != nil {
-			logger.Error("Could not encode API error response", "err", err, "ip", trafficData.IP)
+			logger.Error("Could not encode API error response", slog.Any("err", err), slog.String("ip", trafficData.IP))
 		}
 		return
 	} else {
@@ -88,14 +88,14 @@ func submitNewTrafficDataHandler(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(cModel.Success{Message: "Successfully inserted new traffic data."}); err != nil {
-		logger.Error("Could not encode success response", "err", err, "resource_type", trafficData.ResourceUtilized.Name, "resource_id", trafficData.ResourceUtilized.Value)
+		logger.Error("Could not encode success response", slog.Any("err", err), slog.String("resource_type", string(trafficData.ResourceUtilized.Name)), slog.String("resource_id", trafficData.ResourceUtilized.Value))
 	}
 }
 
 func trending(res http.ResponseWriter, req *http.Request) {
 	resourceName := model.ResourceName(chi.URLParam(req, "resource"))
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, trendingDataOp, slog.String("resource", string(resourceName)))
 	logger.Info("Getting trending data")
 
 	metricsForCurrentPeriod, metricsForLastPeriod := []model.TrafficResourceUtilizationMetric{}, []model.TrafficResourceUtilizationMetric{}
@@ -132,7 +132,7 @@ func trending(res http.ResponseWriter, req *http.Request) {
 		addResourceInfoToTrendingMetric(tm)
 		res.WriteHeader(http.StatusOK)
 		if err := json.NewEncoder(res).Encode(trending); err != nil {
-			logger.Error("Could not encode trending response", "err", err, "resource_name", resourceName, "total_metrics", len(tm))
+			logger.Error("Could not encode trending response", slog.Any("err", err), slog.String("resource_name", string(resourceName)), slog.Int("total_metrics", len(tm)))
 		}
 	}
 }
@@ -143,18 +143,35 @@ func fetchResourceInfoAsync(ctx context.Context, r model.ResourceName,
 	switch r {
 	case model.CardResource:
 		cdm := &cModel.BatchCardData[cModel.CardIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, downstream.YGO.CardService.GetCardsByID, awg)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &cdm, cardResourceWrapper, awg)
 		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, cdm.CardInfo)
 		}
 	case model.ProductResource:
 		pdm := &cModel.BatchProductSummaryData[cModel.ProductIDs]{}
-		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm, downstream.YGO.ProductService.GetProductsSummaryByID, awg)
+		go fetchResourceInfo(ctx, metricsForCurrentPeriod, &pdm,
+			productResourceWrapper, awg)
 		return awg, func(tm []model.TrendingMetric) {
 			updateTrendingMetric(tm, metricsForCurrentPeriod, pdm.ProductInfo)
 		}
 	}
 	return nil, nil
+}
+
+func cardResourceWrapper(ctx context.Context, ids cModel.CardIDs) (*cModel.BatchCardData[cModel.CardIDs], *cModel.APIError) {
+	d, err := downstream.YGO.CardService.GetCardsByIDProto(ctx, ids)
+	if err == nil {
+		return cModel.BatchCardDataFromProto[cModel.CardIDs](d, cModel.CardIDAsKey), err
+	}
+	return nil, err
+}
+
+func productResourceWrapper(ctx context.Context, ids cModel.ProductIDs) (*cModel.BatchProductSummaryData[cModel.ProductIDs], *cModel.APIError) {
+	d, err := downstream.YGO.ProductService.GetProductsSummaryByIDProto(ctx, ids)
+	if err == nil {
+		return cModel.BatchProductSummaryFromProductsProto(d, cModel.ProductIDAsKey), err
+	}
+	return nil, err
 }
 
 func updateTrendingMetric[T cModel.YGOResource](tm []model.TrendingMetric, metricsForCurrentPeriod []model.TrafficResourceUtilizationMetric, dataMap map[string]T) {

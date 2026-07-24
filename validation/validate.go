@@ -4,7 +4,7 @@ import (
 	"log/slog"
 
 	"github.com/go-playground/validator/v10"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 )
 
@@ -13,7 +13,7 @@ func Validate(tai model.TrafficData) *ValidationErrors {
 		if ve, ok := err.(validator.ValidationErrors); ok {
 			return HandleValidationErrors(ve)
 		}
-		slog.Error("Unexpected error while validating input", "err", err)
+		slog.Error("Unexpected error while validating input", slog.Any("err", err))
 		return nil
 	}
 	return nil
@@ -24,7 +24,7 @@ func ValidateBatchCardIDs(bci cModel.BatchCardIDs) *ValidationErrors {
 		if ve, ok := err.(validator.ValidationErrors); ok {
 			return HandleValidationErrors(ve)
 		}
-		slog.Error("Unexpected error while validating input", "err", err)
+		slog.Error("Unexpected error while validating input", slog.Any("err", err))
 		return nil
 	}
 	return nil

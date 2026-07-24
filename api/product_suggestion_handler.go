@@ -8,9 +8,9 @@ import (
 	"sync"
 
 	"github.com/go-chi/chi/v5"
-	cModel "github.com/ygo-skc/skc-go/common/v2/model"
-	cUtil "github.com/ygo-skc/skc-go/common/v2/util"
-	"github.com/ygo-skc/skc-go/common/v2/ygo"
+	cModel "github.com/ygo-skc/skc-go/common/v3/model"
+	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
+	"github.com/ygo-skc/skc-go/common/v3/ygo"
 	"github.com/ygo-skc/skc-suggestion-engine/downstream"
 	"github.com/ygo-skc/skc-suggestion-engine/model"
 	"github.com/ygo-skc/skc-suggestion-engine/suggest"
@@ -23,13 +23,13 @@ const (
 func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	productID := chi.URLParam(req, "productID")
 
-	logger, ctx := cUtil.InitRequest(context.Background(), apiName, productCardSuggestionOp,
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, productCardSuggestionOp,
 		slog.String("product_id", productID))
 	logger.Info("Getting product card suggestions")
 
 	cards, ccIDs, relevantArchetypes, err := loadPSData(ctx, productID)
 	if err != nil {
-		logger.Error("Failed to retrieve product data", "err", err)
+		logger.Error("Failed to retrieve product data", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
@@ -49,7 +49,7 @@ func getProductSuggestionsHandler(res http.ResponseWriter, req *http.Request) {
 	logger.Info("Successfully retrieved product card suggestions")
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(model.ProductSuggestions[cModel.CardIDs]{Suggestions: suggestions, Support: support}); err != nil {
-		logger.Error("Could not encode product suggestions response", "err", err, "product_id", productID)
+		logger.Error("Could not encode product suggestions response", slog.Any("err", err), slog.String("product_id", productID))
 	}
 }
 
