@@ -110,15 +110,15 @@ func getArchetypeSupportHandler(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(archetypalSuggestions); err != nil {
-		logger.Error("Could not encode archetypal suggestions response", 
-			slog.Any("err", err), 
-			slog.String("archetype_name", archetypeName), 
+		logger.Error("Could not encode archetypal suggestions response",
+			slog.Any("err", err),
+			slog.String("archetype_name", archetypeName),
 			slog.Int("total_cards", archetypalSuggestions.Total))
 	}
 }
 
 func getArchetypeSuggestion(ctx context.Context, archetypeName string, c chan<- archetypeResults,
-	fetchSuggestions func(context.Context, string) (*ygo.CardList, *cModel.APIError)) {
+	fetchSuggestions func(context.Context, string) ([]*ygo.Card, *cModel.APIError)) {
 	if dbData, err := fetchSuggestions(ctx, archetypeName); err != nil {
 		c <- archetypeResults{cards: nil, err: err}
 	} else if dbData != nil {
