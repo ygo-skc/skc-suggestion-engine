@@ -140,12 +140,13 @@ func createIndexes() error {
 }
 
 func createSearchIndexes() error {
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	searchIndexesByCollection := map[*mongo.Collection][]mongo.SearchIndexModel{
 		cardEmbeddingCollection: {
 			{
+				// full-text (Lucene/BM25) index backing the textPipeline in $rankFusion
 				Definition: bson.D{
 					{Key: "mappings", Value: bson.D{
 						{Key: "dynamic", Value: false},
@@ -157,6 +158,28 @@ func createSearchIndexes() error {
 					}},
 				},
 				Options: options.SearchIndexes().SetName("text_search").SetType("search"),
+			},
+			{
+				// vector search
+				Definition: bson.D{
+					{Key: "fields", Value: bson.A{
+						bson.D{
+							{Key: "type", Value: "vector"},
+							{Key: "path", Value: "textEmbedding"},
+							{Key: "numDimensions", Value: 512},
+							{Key: "similarity", Value: "dotProduct"},
+							{Key: "hnswOptions", Value: bson.D{
+								{Key: "maxEdges", Value: 25},
+								{Key: "numEdgeCandidates", Value: 200},
+							}},
+						},
+						bson.D{
+							{Key: "type", Value: "filter"},
+							{Key: "path", Value: "id"},
+						},
+					}},
+				},
+				Options: options.SearchIndexes().SetName("text_embedding").SetType("vectorSearch"),
 			},
 		},
 	}
