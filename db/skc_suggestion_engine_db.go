@@ -22,6 +22,31 @@ const (
 	intervalFormat = "2006-01-02"
 
 	maxBlackListPhraseLength = 40
+
+	// MongoDB's $rankFusion merges each input pipeline via Reciprocal Rank Fusion:
+	// score = Σ weightᵢ · 1/(rrfRankConstant + rankᵢ). The rank constant is fixed by
+	// MongoDB (not configurable) but is needed here to reason about the score's scale.
+	//
+	// It also governs a dominance-vs-consensus tradeoff. Because it sits inside the
+	// reciprocal, it reshapes the gap between adjacent ranks (it is NOT a flat offset):
+	// a small constant makes the curve steep, so the #1 result of a single pipeline can
+	// out-score a card that ranks well in BOTH pipelines (dominance) — a large constant
+	// flattens the curve, so agreement across pipelines can overtake a lone top hit
+	// (consensus). Since fusion is an additive sum, a steep curve lets one pipeline's top
+	// result swamp the sum, while too flat a curve makes rank position meaningless. 60 is
+	// the well-worn middle ground: consensus can win, but position still carries weight.
+	rrfRankConstant = 60.0
+
+	vectorPipelineWeight = 0.65
+	textPipelineWeight   = 0.35
+
+	// Largest fusion score a document can reach (ranked #1 in every input pipeline).
+	maxFusionScore = (vectorPipelineWeight + textPipelineWeight) / (rrfRankConstant + 1)
+
+	// Metadata boosts using fusion score so boosts aren't ingored or boosting too heavily
+	sharedTypeBoost        = 0.03 * maxFusionScore
+	sharedAttributeBoost   = 0.05 * maxFusionScore
+	sharedMonsterTypeBoost = 0.08 * maxFusionScore
 )
 
 // interface
@@ -329,47 +354,81 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 
 	limit := 30
 
+	vectorPipeline := bson.A{
+		bson.D{
+			{Key: "$vectorSearch", Value: bson.D{
+				{Key: "index", Value: "text_embedding"},
+				{Key: "path", Value: "textEmbedding"},
+				{Key: "exact", Value: false},
+				{Key: "numCandidates", Value: limit * 2 * 10},
+				{Key: "filter", Value: bson.D{
+					{Key: "id", Value: bson.D{
+						{Key: "$ne", Value: subject.GetID()},
+					}},
+				}},
+				{Key: "queryVector", Value: queryVector},
+				{Key: "limit", Value: limit * 2},
+			}},
+		},
+	}
+
+	textPipeline := bson.A{
+		bson.D{
+			{Key: "$search", Value: bson.D{
+				{Key: "index", Value: "text_search"},
+				{Key: "text", Value: bson.D{
+					{Key: "query", Value: subject.GetEffect()},
+					{Key: "path", Value: "text"},
+					// {Key: "fuzzy", Value: bson.D{}},
+				}},
+			}},
+		},
+		bson.D{
+			{Key: "$match", Value: bson.D{
+				{Key: "id", Value: bson.D{
+					{Key: "$ne", Value: subject.GetID()},
+				}},
+			}},
+		},
+		bson.D{{Key: "$limit", Value: limit * 2}},
+	}
+
 	pipeline := mongo.Pipeline{
 		{
-			{
-				Key: "$vectorSearch", Value: bson.D{
-					{Key: "index", Value: "text_embedding"},
-					{Key: "path", Value: "textEmbedding"},
-					{Key: "exact", Value: true}, // true = ENN search https://www.mongodb.com/docs/vector-search/query/aggregation-stages/vector-search-stage/?deployment-type=atlas&embedding=auto&interface=driver&language=go#enn-search
-					{Key: "filter", Value: bson.D{
-						{Key: "id", Value: bson.D{
-							{Key: "$ne", Value: subject.GetID()},
-						}},
+			{Key: "$rankFusion", Value: bson.D{
+				{Key: "input", Value: bson.D{
+					{Key: "pipelines", Value: bson.D{
+						{Key: "vectorPipeline", Value: vectorPipeline},
+						{Key: "textPipeline", Value: textPipeline},
 					}},
-					{Key: "queryVector", Value: queryVector},
-					{Key: "limit", Value: limit * 2},
-				},
-			},
+				}},
+				{Key: "combination", Value: bson.D{
+					{Key: "weights", Value: bson.D{
+						{Key: "vectorPipeline", Value: vectorPipelineWeight},
+						{Key: "textPipeline", Value: textPipelineWeight},
+					}},
+				}},
+			}},
 		},
 		{
 			{Key: "$addFields", Value: bson.D{
-				{Key: "cosineSimilarity", Value: bson.D{
-					{Key: "$meta", Value: "vectorSearchScore"},
-				}},
+				{Key: "fusionScore", Value: bson.D{{Key: "$meta", Value: "score"}}},
 				{Key: "sharedType", Value: bson.D{
 					{Key: "$cond", Value: bson.A{
-						bson.D{{Key: "$eq", Value: bson.A{"$type", subject.GetMonsterType()}}},
-						1,
-						0,
+						bson.D{{Key: "$eq", Value: bson.A{"$type", subject.GetColor()}}},
+						1, 0,
 					}},
 				}},
 				{Key: "sharedAttribute", Value: bson.D{
 					{Key: "$cond", Value: bson.A{
 						bson.D{{Key: "$eq", Value: bson.A{"$attribute", subject.GetAttribute()}}},
-						1,
-						0,
+						1, 0,
 					}},
 				}},
 				{Key: "sharedMonsterType", Value: bson.D{
 					{Key: "$cond", Value: bson.A{
 						bson.D{{Key: "$eq", Value: bson.A{"$monsterType", subject.GetMonsterType()}}},
-						1,
-						0,
+						1, 0,
 					}},
 				}},
 			}},
@@ -378,18 +437,16 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 			{Key: "$addFields", Value: bson.D{
 				{Key: "finalScore", Value: bson.D{
 					{Key: "$add", Value: bson.A{
-						"$cosineSimilarity",
-						bson.D{{Key: "$multiply", Value: bson.A{"$sharedType", 0.03}}},
-						bson.D{{Key: "$multiply", Value: bson.A{"$sharedAttribute", 0.05}}},
-						bson.D{{Key: "$multiply", Value: bson.A{"$sharedMonsterType", 0.08}}},
+						"$fusionScore",
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedType", sharedTypeBoost}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedAttribute", sharedAttributeBoost}}},
+						bson.D{{Key: "$multiply", Value: bson.A{"$sharedMonsterType", sharedMonsterTypeBoost}}},
 					}},
 				}},
 			}},
 		},
 		{
-			{Key: "$sort", Value: bson.D{
-				{Key: "finalScore", Value: -1},
-			}},
+			{Key: "$sort", Value: bson.D{{Key: "finalScore", Value: -1}}},
 		},
 		{
 			{Key: "$limit", Value: limit},
@@ -399,7 +456,7 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 				{Key: "_id", Value: 0},
 				{Key: "id", Value: 1},
 				{Key: "text", Value: 1},
-				{Key: "cosineSimilarity", Value: 1},
+				{Key: "fusionScore", Value: 1},
 				{Key: "sharedAttribute", Value: 1},
 				{Key: "sharedMonsterType", Value: 1},
 				{Key: "finalScore", Value: 1},

@@ -179,7 +179,8 @@ sequenceDiagram
     YGO-->>API: subject card
     API->>Voyage: EmbedText(subject effect, input_type=query)
     Voyage-->>API: query embedding
-    API->>DB: VectorSearchOnCardEmbedding(subject, embedding) - $vectorSearch (ENN, limit 30)
+    API->>DB: VectorSearchOnCardEmbedding(subject, embedding)
+    Note over API,DB: $rankFusion — Reciprocal Rank Fusion (k=60):<br/>vectorPipeline: $vectorSearch (ANN, numCandidates 600, limit 60)<br/>textPipeline: $search (BM25 on effect text, limit 60)<br/>weighted 0.65 / 0.35, then metadata boosts<br/>(shared type/attribute/monster type), sorted, top 30
     DB-->>API: candidate results (id + text)
     API->>Voyage: RerankVectorResults(candidate texts, subject effect, topK=20)
     Voyage-->>API: reranked results
