@@ -74,6 +74,11 @@ func EstablishSKCSuggestionEngineDBConn() {
 		os.Exit(1)
 	}
 
+	if err := createSearchIndexes(); err != nil {
+		slog.Error("Error creating search indexes for skc-deck-api-db", slog.Any("err", err))
+		os.Exit(1)
+	}
+
 	slog.Info("Connected to suggestion engine DB")
 }
 
@@ -130,5 +135,38 @@ func createIndexes() error {
 			return fmt.Errorf("error creating indexes for collection %s: %w", collection.Name(), err)
 		}
 	}
+
+	return nil
+}
+
+func createSearchIndexes() error {
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+
+	searchIndexesByCollection := map[*mongo.Collection][]mongo.SearchIndexModel{
+		cardEmbeddingCollection: {
+			{
+				Definition: bson.D{
+					{Key: "mappings", Value: bson.D{
+						{Key: "dynamic", Value: false},
+						{Key: "fields", Value: bson.D{
+							{Key: "text", Value: bson.D{
+								{Key: "type", Value: "string"},
+							}},
+						}},
+					}},
+				},
+				Options: options.SearchIndexes().SetName("text_search").SetType("search"),
+			},
+		},
+	}
+
+	for collection, indexes := range searchIndexesByCollection {
+		_, err := collection.SearchIndexes().CreateMany(ctx, indexes)
+		if err != nil {
+			return fmt.Errorf("error creating search indexes for collection %s: %w", collection.Name(), err)
+		}
+	}
+
 	return nil
 }
