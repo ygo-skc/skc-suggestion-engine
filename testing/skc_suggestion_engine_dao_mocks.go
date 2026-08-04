@@ -60,3 +60,8 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 	log.Fatalln("SearchSimilarCards() not mocked")
 	return nil, nil
 }
+
+func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx context.Context, query string, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
+	log.Fatalln("SemanticKeywordSearch() not mocked")
+	return nil, nil
+}
