@@ -65,7 +65,8 @@ type SKCSuggestionEngineDAO interface {
 	GetArchetypeMembers(context.Context, string) ([]string, []string, []string, *cModel.APIError)
 	GetRelevantArchetypes(context.Context, cModel.CardIDs) ([]string, *cModel.APIError)
 
-	VectorSearchOnCardEmbedding(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
+	SearchSimilarCards(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
+	SemanticKeywordSearch(context.Context, string, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 }
 
 // impl
@@ -344,72 +345,18 @@ func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx conte
 	return f, nil
 }
 
-func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context,
+func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.Context,
 	subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 
-	logger.Info("Performing vector search on card text")
+	logger.Info("Finding similar cards using card text")
 
 	limit := 30
 
-	vectorPipeline := bson.A{
-		bson.D{
-			{Key: "$vectorSearch", Value: bson.D{
-				{Key: "index", Value: "text_embedding"},
-				{Key: "path", Value: "textEmbedding"},
-				{Key: "exact", Value: false},
-				{Key: "numCandidates", Value: limit * 2 * 10},
-				{Key: "filter", Value: bson.D{
-					{Key: "id", Value: bson.D{
-						{Key: "$ne", Value: subject.GetID()},
-					}},
-				}},
-				{Key: "queryVector", Value: queryVector},
-				{Key: "limit", Value: limit * 2},
-			}},
-		},
-	}
-
-	textPipeline := bson.A{
-		bson.D{
-			{Key: "$search", Value: bson.D{
-				{Key: "index", Value: "text_search"},
-				{Key: "text", Value: bson.D{
-					{Key: "query", Value: subject.GetEffect()},
-					{Key: "path", Value: "text"},
-					// {Key: "fuzzy", Value: bson.D{}},
-				}},
-			}},
-		},
-		bson.D{
-			{Key: "$match", Value: bson.D{
-				{Key: "id", Value: bson.D{
-					{Key: "$ne", Value: subject.GetID()},
-				}},
-			}},
-		},
-		bson.D{{Key: "$limit", Value: limit * 2}},
-	}
-
 	pipeline := mongo.Pipeline{
-		{
-			{Key: "$rankFusion", Value: bson.D{
-				{Key: "input", Value: bson.D{
-					{Key: "pipelines", Value: bson.D{
-						{Key: "vectorPipeline", Value: vectorPipeline},
-						{Key: "textPipeline", Value: textPipeline},
-					}},
-				}},
-				{Key: "combination", Value: bson.D{
-					{Key: "weights", Value: bson.D{
-						{Key: "vectorPipeline", Value: vectorPipelineWeight},
-						{Key: "textPipeline", Value: textPipelineWeight},
-					}},
-				}},
-			}},
-		},
+		cardtRankFusionDocument(subject.GetEffect(), queryVector, limit, subject.GetID()),
 		{
 			{Key: "$addFields", Value: bson.D{
 				{Key: "fusionScore", Value: bson.D{{Key: "$meta", Value: "score"}}},
@@ -448,6 +395,60 @@ func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx
 		{
 			{Key: "$sort", Value: bson.D{{Key: "finalScore", Value: -1}}},
 		},
+		{
+			{Key: "$limit", Value: limit},
+		},
+		{
+			{Key: "$project", Value: bson.D{
+				{Key: "_id", Value: 0},
+				{Key: "id", Value: 1},
+				{Key: "text", Value: 1},
+				{Key: "fusionScore", Value: 1},
+				{Key: "sharedAttribute", Value: 1},
+				{Key: "sharedMonsterType", Value: 1},
+				{Key: "finalScore", Value: 1},
+			}},
+		},
+	}
+
+	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
+	if err != nil {
+		logger.Error("Error while searching card embedding", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+	}
+
+	defer cursor.Close(ctx)
+
+	results := make([]model.VectorSearchResult, 0, limit)
+	for cursor.Next(ctx) {
+		var r model.VectorSearchResult
+		if err := cursor.Decode(&r); err != nil {
+			logger.Error("Error transforming DB data to Vector Search struct", slog.Any("err", err))
+		}
+		results = append(results, r)
+	}
+
+	// check if there was an error using cursor
+	if err := cursor.Err(); err != nil {
+		logger.Error("There was an error parsing db results", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+	}
+
+	return results, nil
+}
+
+func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx context.Context,
+	query string, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	logger.Info("Performing semantic keyword search")
+
+	limit := 10
+
+	pipeline := mongo.Pipeline{
+		cardtRankFusionDocument(query, queryVector, limit, ""),
 		{
 			{Key: "$limit", Value: limit},
 		},

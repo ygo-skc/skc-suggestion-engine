@@ -56,7 +56,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetRelevantArchetypes(ctx conte
 	return nil, nil
 }
 
-func (impl SKCSuggestionEngineDAOImplementation) VectorSearchOnCardEmbedding(ctx context.Context, subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
-	log.Fatalln("VectorSearchOnCardEmbedding() not mocked")
+func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.Context, subject cModel.YGOCard, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
+	log.Fatalln("SearchSimilarCards() not mocked")
 	return nil, nil
 }

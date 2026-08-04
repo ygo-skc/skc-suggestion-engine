@@ -63,7 +63,7 @@ func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGO
 func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery []float32) ([]cModel.YGOCard, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
 
-	vectorSearchResults, err := skcSuggestionEngineDBInterface.VectorSearchOnCardEmbedding(ctx, subject, embeddedQuery)
+	vectorSearchResults, err := skcSuggestionEngineDBInterface.SearchSimilarCards(ctx, subject, embeddedQuery)
 	if err != nil {
 		return nil, err
 	}
