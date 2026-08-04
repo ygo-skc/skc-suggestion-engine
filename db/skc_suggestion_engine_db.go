@@ -48,9 +48,6 @@ const (
 	sharedAttributeBoost   = 0.05 * maxFusionScore
 	sharedMonsterTypeBoost = 0.08 * maxFusionScore
 
-	// Candidate pool each hybrid ($rankFusion) search returns for the API layer to rerank
-	// down (see similarCardsRerankTopK / semanticSearchRerankTopK in the api package). Must
-	// stay larger than those topK values so the reranker has something to prune.
 	vectorSearchCandidateLimit = 30
 )
 
@@ -358,7 +355,7 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 
 	logger.Info("Finding similar cards using card text")
 
-	limit := 30
+	limit := vectorSearchCandidateLimit
 
 	pipeline := mongo.Pipeline{
 		rankFusionStage(subject.GetEffect(), queryVector, limit, subject.GetID()),
@@ -450,7 +447,7 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 
 	logger.Info("Performing semantic keyword search")
 
-	limit := 30
+	limit := vectorSearchCandidateLimit
 
 	pipeline := mongo.Pipeline{
 		rankFusionStage(query, queryVector, limit, ""),

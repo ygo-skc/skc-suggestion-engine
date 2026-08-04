@@ -17,6 +17,9 @@ import (
 const (
 	similarCardsOp   = "Similar Cards"
 	semanticSearchOp = "Semantic Card Search"
+
+	similarCardsRerankTopK   uint8 = 20
+	semanticSearchRerankTopK uint8 = 10
 )
 
 func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
@@ -43,7 +46,7 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 	fetchResults := func() ([]model.VectorSearchResult, *cModel.APIError) {
 		return skcSuggestionEngineDBInterface.SearchSimilarCards(ctx, subject, embeddedQuery)
 	}
-	if matches, err := rerankAndHydrateCards(ctx, subject.GetEffect(), 20, fetchResults); err != nil {
+	if matches, err := rerankAndHydrateCards(ctx, subject.GetEffect(), similarCardsRerankTopK, fetchResults); err != nil {
 		logger.Error("Could not retrieve similar cards", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
@@ -81,7 +84,7 @@ func getSemanticCardResultsHandler(res http.ResponseWriter, req *http.Request) {
 	fetchResults := func() ([]model.VectorSearchResult, *cModel.APIError) {
 		return skcSuggestionEngineDBInterface.SemanticKeywordSearch(ctx, query, embeddedQuery)
 	}
-	if matches, err := rerankAndHydrateCards(ctx, query, 10, fetchResults); err != nil {
+	if matches, err := rerankAndHydrateCards(ctx, query, semanticSearchRerankTopK, fetchResults); err != nil {
 		logger.Error("Could not retrieve semantic search results", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
@@ -156,7 +159,7 @@ func rerank(ctx context.Context, vectorSearchResults []model.VectorSearchResult,
 		return nil, err
 	}
 
-	rankedResults := make([]model.VectorSearchResult, 0, topK)
+	rankedResults := make([]model.VectorSearchResult, 0, len(voyageRes.Data))
 	for _, rerankResult := range voyageRes.Data {
 		rankedResults = append(rankedResults, vectorSearchResults[rerankResult.Index])
 	}
