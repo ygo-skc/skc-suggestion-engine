@@ -2,7 +2,7 @@ package db
 
 import "go.mongodb.org/mongo-driver/v2/bson"
 
-func cardtRankFusionDocument(query string, queryVector []float32, limit int, excludeID string) bson.D {
+func rankFusionStage(query string, queryVector []float32, limit int, excludeID string) bson.D {
 	vectorSearch := bson.D{
 		{Key: "index", Value: "text_embedding"},
 		{Key: "path", Value: "textEmbedding"},

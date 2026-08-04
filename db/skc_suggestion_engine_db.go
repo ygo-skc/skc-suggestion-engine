@@ -356,7 +356,7 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 	limit := 30
 
 	pipeline := mongo.Pipeline{
-		cardtRankFusionDocument(subject.GetEffect(), queryVector, limit, subject.GetID()),
+		rankFusionStage(subject.GetEffect(), queryVector, limit, subject.GetID()),
 		{
 			{Key: "$addFields", Value: bson.D{
 				{Key: "fusionScore", Value: bson.D{{Key: "$meta", Value: "score"}}},
@@ -413,8 +413,8 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
-		logger.Error("Error while searching card embedding", slog.Any("err", err))
-		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		logger.Error("Error while searching for similar cards", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar cards"}
 	}
 
 	defer cursor.Close(ctx)
@@ -430,8 +430,8 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 
 	// check if there was an error using cursor
 	if err := cursor.Err(); err != nil {
-		logger.Error("There was an error parsing db results", slog.Any("err", err))
-		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		logger.Error("Error parsing similar card search results", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar cards"}
 	}
 
 	return results, nil
@@ -448,7 +448,12 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 	limit := 10
 
 	pipeline := mongo.Pipeline{
-		cardtRankFusionDocument(query, queryVector, limit, ""),
+		rankFusionStage(query, queryVector, limit, ""),
+		{
+			{Key: "$addFields", Value: bson.D{
+				{Key: "fusionScore", Value: bson.D{{Key: "$meta", Value: "score"}}},
+			}},
+		},
 		{
 			{Key: "$limit", Value: limit},
 		},
@@ -458,17 +463,14 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 				{Key: "id", Value: 1},
 				{Key: "text", Value: 1},
 				{Key: "fusionScore", Value: 1},
-				{Key: "sharedAttribute", Value: 1},
-				{Key: "sharedMonsterType", Value: 1},
-				{Key: "finalScore", Value: 1},
 			}},
 		},
 	}
 
 	cursor, err := cardEmbeddingCollection.Aggregate(ctx, pipeline)
 	if err != nil {
-		logger.Error("Error while searching card embedding", slog.Any("err", err))
-		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		logger.Error("Error while performing semantic keyword search", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error performing semantic keyword search"}
 	}
 
 	defer cursor.Close(ctx)
@@ -484,8 +486,8 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 
 	// check if there was an error using cursor
 	if err := cursor.Err(); err != nil {
-		logger.Error("There was an error parsing db results", slog.Any("err", err))
-		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error retrieving similar card"}
+		logger.Error("Error parsing semantic keyword search results", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Error performing semantic keyword search"}
 	}
 
 	return results, nil
