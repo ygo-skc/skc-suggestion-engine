@@ -34,3 +34,7 @@ coverage.*
 
 /**__debug**
 skc-suggestion-engine
+
+# Claude Code (team settings committed; personal overrides stay local)
+!.claude/settings.json
+.claude/settings.local.json
