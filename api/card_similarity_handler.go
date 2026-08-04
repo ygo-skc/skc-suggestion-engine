@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	cModel "github.com/ygo-skc/skc-go/common/v3/model"
@@ -14,7 +15,8 @@ import (
 )
 
 const (
-	similarCardsOp = "Similar Cards"
+	similarCardsOp   = "Similar Cards"
+	semanticSearchOp = "Semantic Card Search"
 )
 
 func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
@@ -23,15 +25,25 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 	logger, ctx := cUtil.InitRequest(req.Context(), apiName, similarCardsOp, slog.String("card_id", cardID))
 	logger.Info("Finding similar cards")
 
-	subject, embeddedQuery, err := retrieveAndEmbedCardEffect(ctx, cardID)
+	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
+	if err != nil {
+		err.HandleServerResponse(res)
+		return
+	}
+	subject := cModel.YGOCardRESTFromProto(cardProto)
+
+	embeddedQuery, err := embedQuery(ctx, subject.GetEffect())
 	if err != nil {
 		logger.Error("Could not embed card text", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
 	}
 
-	similarCards := model.SimilarCards{Card: *subject}
-	if matches, err := getSimilarCards(ctx, *subject, embeddedQuery); err != nil {
+	similarCards := model.SimilarCards{Card: subject}
+	fetchResults := func() ([]model.VectorSearchResult, *cModel.APIError) {
+		return skcSuggestionEngineDBInterface.SearchSimilarCards(ctx, subject, embeddedQuery)
+	}
+	if matches, err := getSimilarCards(ctx, subject.GetEffect(), fetchResults); err != nil {
 		logger.Error("Could not retrieve similar cards", slog.Any("err", err))
 		err.HandleServerResponse(res)
 		return
@@ -45,30 +57,63 @@ func getSimilarCardsHandler(res http.ResponseWriter, req *http.Request) {
 	}
 }
 
-func retrieveAndEmbedCardEffect(ctx context.Context, cardID string) (*cModel.YGOCard, []float32, *cModel.APIError) {
-	cardProto, err := downstream.YGO.CardService.GetCardByIDProto(ctx, cardID)
-	if err != nil {
-		return nil, nil, err
-	}
-	subject := cModel.YGOCardRESTFromProto(cardProto)
+func getSemanticCardResultsHandler(res http.ResponseWriter, req *http.Request) {
+	query := strings.TrimSpace(req.URL.Query().Get("q"))
 
-	voyageRes, err := downstream.EmbedText(ctx, []string{(subject).GetEffect()}, model.VoyageQueryInput)
-	if err != nil {
-		return nil, nil, err
+	logger, ctx := cUtil.InitRequest(req.Context(), apiName, semanticSearchOp, slog.String("query", query))
+	logger.Info("Performing semantic keyword search")
+
+	if query == "" {
+		logger.Error("Rejecting semantic search with empty query")
+		badRequest := &cModel.APIError{Message: "Query parameter 'q' is required.", StatusCode: http.StatusBadRequest}
+		badRequest.HandleServerResponse(res)
+		return
 	}
 
-	return &subject, voyageRes.Data[0].Embedding, nil
+	embeddedQuery, err := embedQuery(ctx, query)
+	if err != nil {
+		logger.Error("Could not embed search query", slog.Any("err", err))
+		err.HandleServerResponse(res)
+		return
+	}
+
+	searchResults := model.SemanticSearchResults{Query: query}
+	fetchResults := func() ([]model.VectorSearchResult, *cModel.APIError) {
+		return skcSuggestionEngineDBInterface.SemanticKeywordSearch(ctx, query, embeddedQuery)
+	}
+	if matches, err := getSimilarCards(ctx, query, fetchResults); err != nil {
+		logger.Error("Could not retrieve semantic search results", slog.Any("err", err))
+		err.HandleServerResponse(res)
+		return
+	} else {
+		searchResults.Matches = matches
+	}
+
+	res.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(res).Encode(searchResults); err != nil {
+		logger.Error("Could not encode semantic search response", slog.Any("err", err))
+	}
 }
 
-func getSimilarCards(ctx context.Context, subject cModel.YGOCard, embeddedQuery []float32) ([]cModel.YGOCard, *cModel.APIError) {
-	logger := cUtil.RetrieveLogger(ctx)
-
-	vectorSearchResults, err := skcSuggestionEngineDBInterface.SearchSimilarCards(ctx, subject, embeddedQuery)
+func embedQuery(ctx context.Context, query string) ([]float32, *cModel.APIError) {
+	voyageRes, err := downstream.EmbedText(ctx, []string{query}, model.VoyageQueryInput)
 	if err != nil {
 		return nil, err
 	}
 
-	vectorSearchResults, err = rerank(ctx, vectorSearchResults, subject.GetEffect(), 20)
+	return voyageRes.Data[0].Embedding, nil
+}
+
+func getSimilarCards(ctx context.Context, query string,
+	fetchSearchResults func() ([]model.VectorSearchResult, *cModel.APIError)) ([]cModel.YGOCard, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+
+	vectorSearchResults, err := fetchSearchResults()
+	if err != nil {
+		return nil, err
+	}
+
+	vectorSearchResults, err = rerank(ctx, vectorSearchResults, query, 20)
 	if err != nil {
 		logger.Error("Error during re-ranking", slog.Any("err", err))
 		return nil, err

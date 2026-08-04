@@ -189,6 +189,36 @@ sequenceDiagram
     API-->>Client: 200 SimilarCards{Card, Matches[]}
 ```
 
+### `GET /api/v1/suggestions/card/search?q={query}`
+
+Free-text search over the card collection. Unlike `/card/{cardID}/similar` (anchored on a subject card), this is anchored on the caller's query string — so there is no subject card fetch and no metadata boosts (there is no card to share type/attribute/monster type with).
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API as skc-suggestion-engine
+    participant Voyage as Voyage AI
+    participant DB as Suggestion DB (MongoDB)
+    participant YGO as ygo-service (gRPC)
+
+    Client->>API: GET /api/v1/suggestions/card/search?q={query}
+    API->>API: trim q
+    alt q empty
+        API-->>Client: 400 "Query parameter 'q' is required."
+    else
+        API->>Voyage: EmbedText(q, input_type=query)
+        Voyage-->>API: query embedding
+        API->>DB: SemanticKeywordSearch(q, embedding)
+        Note over API,DB: $rankFusion — Reciprocal Rank Fusion (k=60):<br/>vectorPipeline: $vectorSearch (ANN, numCandidates 200, limit 20)<br/>textPipeline: $search (BM25 on card text, limit 20)<br/>weighted 0.65 / 0.35, no metadata boosts, top 10
+        DB-->>API: candidate results (id + text)
+        API->>Voyage: RerankVectorResults(candidate texts, q, topK=20)
+        Voyage-->>API: reranked results
+        API->>YGO: CardService.GetCardsByID(reranked card IDs)
+        YGO-->>API: CardDataMap
+        API-->>Client: 200 SemanticSearchResults{Query, Matches[]}
+    end
+```
+
 ### `GET /api/v1/suggestions/product/{productID}`
 
 ```mermaid

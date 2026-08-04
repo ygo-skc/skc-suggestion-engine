@@ -93,3 +93,8 @@ type SimilarCards struct {
 	Card    cModel.YGOCard   `json:"card"`
 	Matches []cModel.YGOCard `json:"matches"`
 }
+
+type SemanticSearchResults struct {
+	Query   string           `json:"query"`
+	Matches []cModel.YGOCard `json:"matches"`
+}
