@@ -23,10 +23,11 @@ import (
 )
 
 const (
-	v1Context = "/api/v1/suggestions"
-	v2Context = "/api/v2/suggestions"
-	apiName   = "skc-suggestion-engine"
-	apiPort   = 9000
+	v1Context         = "/api/v1/suggestions"
+	v2Context         = "/api/v2/suggestions"
+	v1AnalysisContext = "/api/v1/card-analysis"
+	apiName           = "skc-suggestion-engine"
+	apiPort           = 9000
 )
 
 var (
@@ -191,6 +192,10 @@ func RunHttpServer() {
 		r.Group(func(r chi.Router) {
 			r.Get("/archetype/{archetypeName}", getArchetypeSupportV2Handler)
 		})
+	})
+
+	router.Route(v1AnalysisContext, func(r chi.Router) {
+		r.Get(`/card/{cardID:\d{8}}/mechanics`, getCardMechanicsHandler)
 	})
 
 	// Cors

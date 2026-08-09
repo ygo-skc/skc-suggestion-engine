@@ -31,6 +31,7 @@ var (
 	trafficAnalysisCollection *mongo.Collection
 	cardOfTheDayCollection    *mongo.Collection
 	archetypeCollection       *mongo.Collection
+	cardMechanicCollection    *mongo.Collection
 
 	vectorSearchDB          *mongo.Database
 	cardEmbeddingCollection *mongo.Collection
@@ -63,6 +64,7 @@ func EstablishSKCSuggestionEngineDBConn() {
 	trafficAnalysisCollection = skcSuggestionDB.Collection("trafficAnalysis")
 	cardOfTheDayCollection = skcSuggestionDB.Collection("cardOfTheDay")
 	archetypeCollection = skcSuggestionDB.Collection("archetype")
+	cardMechanicCollection = skcSuggestionDB.Collection("cardMechanic")
 
 	// vector search connection - $vectorSearch aggregation stage requires ReadConcern local
 	vectorSearchClient := connect(uri, credential, readconcern.Local())
@@ -125,6 +127,12 @@ func createIndexes() error {
 			{
 				Keys:    bson.D{{Key: "qualifiedMembers", Value: 1}},
 				Options: options.Index().SetName("archetype_qualified_members"),
+			},
+		},
+		cardMechanicCollection: {
+			{
+				Keys:    bson.D{{Key: "id", Value: 1}},
+				Options: options.Index().SetName("card_mechanic_id").SetUnique(true),
 			},
 		},
 	}

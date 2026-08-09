@@ -31,7 +31,7 @@ part of the contract this doc pins down.
                      (cards/products/     (embeddings +   suggestionDB:
                       colors/archetypes)   rerank)         blackList, trafficAnalysis,
                                │                           cardOfTheDay, archetype,
-                               ▼                           cardEmbedding
+                               ▼                           cardEmbedding, cardMechanic
                         local IP DB file
                         (ip2location, traffic only)
 ```
@@ -96,13 +96,14 @@ One MongoDB Atlas cluster, authenticated with **MONGODB-X509** (`certs/skc-sugge
 pool 15–30, but **two logical client connections** because `$vectorSearch` requires `ReadConcern:
 local`:
 - **general connection** — `ReadConcern: Available` (eventually consistent). Backs collections
-  `blackList`, `trafficAnalysis`, `cardOfTheDay`, `archetype`.
+  `blackList`, `trafficAnalysis`, `cardOfTheDay`, `archetype`, `cardMechanic`.
 - **vector-search connection** — `ReadConcern: local`. Backs `cardEmbedding`.
 
 Writes use `WriteConcern: majority`; reads/writes retry. Indexes and Atlas **Search** indexes are
 created idempotently at boot:
 - `blackList`: unique `(type, phrase)`.
 - `archetype`: unique `archetype`; secondary indexes on `inheritMembers`, `qualifiedMembers`.
+- `cardMechanic`: unique `id` (`card_mechanic_id`) — the collection is only ever read by card ID.
 - `cardEmbedding`: a BM25 `search` index (`text_search`, on field `text`) and a `vectorSearch` index
   (`text_embedding`, on `textEmbedding`, 512-dim, `dotProduct`, HNSW maxEdges 25 / numEdgeCandidates 200).
 
@@ -684,3 +685,43 @@ sequenceDiagram
 - The three membership lists are hydrated from a single `GetCardsByID` call and each sorted
   alphabetically by name. There is no blacklist check and no "< 2 cards" heuristic — membership is
   authoritative from the DB document.
+
+---
+
+## 8. Endpoints — `/api/v1/card-analysis`
+
+A separate router context from `/suggestions`. Everything under `/suggestions` *computes* something
+per request — parsing text, fanning out to `ygo-service`, embedding, ranking. This context serves
+data that was parsed **offline** and persisted, so a request is a single indexed point read with no
+fan-out and no downstream dependency. The prefix keeps that distinction visible in the URL.
+
+### `GET /card/{cardID:\d{8}}/mechanics` — parsed card mechanics
+
+Returns a card's text decomposed into distinct fields: summon conditions, per-effect breakdowns
+(zone, frequency, counters, modes, choice), and card-level tag rollups.
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant DB as Suggestion DB
+
+    Client->>API: GET /api/v1/card-analysis/card/{cardID}/mechanics
+    Note over API: cardID shape enforced by the route regex (\d{8})
+    API->>DB: GetCardMechanics(cardID)
+    Note over DB: cardMechanic.findOne({id}) — IXSCAN on card_mechanic_id,<br/>projects away _id, 1s timeout
+    alt document not found
+        DB-->>API: 404 "Card mechanics data not found"
+    else
+        DB-->>API: CardMechanic
+        API-->>Client: 200 CardMechanic{id, name, type, summonConditions, effects, …}
+    end
+```
+
+- **No `ygo-service` call.** `name` and `type` are stored denormalized on the document, so the
+  endpoint answers from Mongo alone. The tradeoff is that those two fields can drift from
+  `ygo-service` if a card is errata'd.
+- **`MetaTags`, `Flags`, `DoesAll`, `DoesAny`, `Counters` and `Gates` on `CardMechanic` are
+  card-level rollups of the same fields on `Effects`.** The duplication is deliberate — they are
+  precomputed so clients don't aggregate `Effects` themselves.
+- `SummonConditions` and `Effect.Modes` share the `model.TaggedText` type (`{text, tags}`).

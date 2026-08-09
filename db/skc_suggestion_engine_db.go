@@ -69,6 +69,8 @@ type SKCSuggestionEngineDAO interface {
 
 	SearchSimilarCards(context.Context, cModel.YGOCard, []float32) ([]model.VectorSearchResult, *cModel.APIError)
 	SemanticKeywordSearch(context.Context, string, []float32) ([]model.VectorSearchResult, *cModel.APIError)
+
+	GetCardMechanics(context.Context, string) (*model.CardMechanic, *cModel.APIError)
 }
 
 // impl
@@ -493,4 +495,29 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 	}
 
 	return results, nil
+}
+
+func (impl SKCSuggestionEngineDAOImplementation) GetCardMechanics(ctx context.Context, cardID string) (*model.CardMechanic, *cModel.APIError) {
+	logger := cUtil.RetrieveLogger(ctx)
+	ctx, cancel := context.WithTimeout(ctx, 1*time.Second)
+	defer cancel()
+
+	query := bson.M{"id": cardID}
+	opts := options.FindOne().SetProjection( // _id is never used, don't pull it over the wire
+		bson.D{
+			{Key: "_id", Value: 0},
+		},
+	)
+
+	var cardMechanics model.CardMechanic
+	if err := cardMechanicCollection.FindOne(ctx, query, opts).Decode(&cardMechanics); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) { // no mechanics parsed for the requested card
+			logger.Warn("Could not find card mechanics in DB")
+			return nil, &cModel.APIError{StatusCode: http.StatusNotFound, Message: "Card mechanics data not found"}
+		}
+		logger.Error("Error retrieving card mechanics data", slog.Any("err", err))
+		return nil, &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get card mechanics data"}
+	}
+
+	return &cardMechanics, nil
 }

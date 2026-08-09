@@ -11,6 +11,7 @@ Go API that extends functionality of [SKC API](https://github.com/ygo-skc/skc-ap
 * Suggest related cards for a product or batch of product
 * Suggest cards belonging to an archetype
 * Card of the Day - a card is chosen and cached daily
+* Card mechanics - a card's text parsed into distinct fields (summon conditions, per-effect breakdowns, tags)
 * Track and report trending cards/products based on submitted traffic data
 * Clients can send browsing/traffic data to build the suggestion and trending database.
 * Status endpoint that reports health of the API and its downstream dependencies (SKC DB, Suggestion DB)

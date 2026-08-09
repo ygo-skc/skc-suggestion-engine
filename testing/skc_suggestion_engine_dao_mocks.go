@@ -65,3 +65,8 @@ func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx conte
 	log.Fatalln("SemanticKeywordSearch() not mocked")
 	return nil, nil
 }
+
+func (impl SKCSuggestionEngineDAOImplementation) GetCardMechanics(ctx context.Context, cardID string) (*model.CardMechanic, *cModel.APIError) {
+	log.Fatalln("GetCardMechanics() not mocked")
+	return nil, nil
+}
