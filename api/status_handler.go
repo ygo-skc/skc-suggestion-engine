@@ -26,29 +26,26 @@ func getAPIStatusHandler(res http.ResponseWriter, req *http.Request) {
 	var skcSuggestionDBVersion string
 
 	var wg sync.WaitGroup
-	wg.Add(2)
 
 	// get status on SKC DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if ygoServiceStatus, err := downstream.YGO.HealthService.GetAPIStatus(ctx); err != nil {
 			downstreamHealth[0] = cModel.DownstreamItem{ServiceName: "YGO Service", Status: cModel.Down}
 		} else {
 			downstreamHealth[0] = cModel.DownstreamItem{ServiceName: "YGO Service", Status: cModel.Up, Version: ygoServiceStatus.Version}
 			ygoServiceVersion = ygoServiceStatus.Version
 		}
-	}()
+	})
 
 	// get status on SKC Suggestion DB by checking the version number. If this operation fails, its save to assume the DB is down.
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		if dbVersion, err := skcSuggestionEngineDBInterface.GetSKCSuggestionDBVersion(ctx); err != nil {
 			downstreamHealth[1] = cModel.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: cModel.Down}
 		} else {
 			downstreamHealth[1] = cModel.DownstreamItem{ServiceName: "SKC Suggestion Engine DB", Status: cModel.Up}
 			skcSuggestionDBVersion = dbVersion
 		}
-	}()
+	})
 
 	wg.Wait()
 
