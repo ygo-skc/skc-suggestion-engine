@@ -115,6 +115,23 @@ func createIndexes() error {
 				Options: options.Index().SetName("blacklist_type_and_phrase").SetUnique(true),
 			},
 		},
+		trafficAnalysisCollection: {
+			{
+				Keys:    bson.D{{Key: "resourceUtilized.name", Value: 1}, {Key: "timestamp", Value: 1}},
+				Options: options.Index().SetName("traffic_analysis_resource_and_timestamp"),
+			},
+		},
+		cardOfTheDayCollection: {
+			{
+				Keys:    bson.D{{Key: "version", Value: 1}, {Key: "cardID", Value: 1}},
+				Options: options.Index().SetName("unique_card_index").SetUnique(true),
+			},
+			{
+				// version leads so this single index serves both GetHistoricalCardOfTheDayData (version alone) and GetCardOfTheDay (version + date)
+				Keys:    bson.D{{Key: "version", Value: 1}, {Key: "date", Value: 1}},
+				Options: options.Index().SetName("card_of_the_day_version_and_date").SetUnique(true),
+			},
+		},
 		archetypeCollection: {
 			{
 				Keys:    bson.D{{Key: "archetype", Value: 1}},
