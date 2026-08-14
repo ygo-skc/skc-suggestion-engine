@@ -2,6 +2,7 @@ package validation
 
 import (
 	"log/slog"
+	"reflect"
 
 	"github.com/go-playground/validator/v10"
 	cModel "github.com/ygo-skc/skc-go/common/v3/model"
@@ -23,7 +24,10 @@ func configureCustomValidators() {
 	})
 
 	V.RegisterValidation(ygoCardIDsValidator, func(fl validator.FieldLevel) bool {
-		cardIDs := fl.Field().Interface().(cModel.CardIDs)
+		cardIDs, ok := reflect.TypeAssert[cModel.CardIDs](fl.Field())
+		if !ok {
+			return false
+		}
 
 		for _, cardID := range cardIDs {
 			if !cardIDRegex.MatchString(cardID) {
