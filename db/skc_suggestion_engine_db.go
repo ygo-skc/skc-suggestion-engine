@@ -53,7 +53,7 @@ const (
 
 // interface
 type SKCSuggestionEngineDAO interface {
-	GetSKCSuggestionDBVersion(context.Context) (string, error)
+	GetSKCSuggestionDBVersion(context.Context) (string, *cModel.APIError)
 
 	InsertTrafficData(context.Context, model.TrafficAnalysis) *cModel.APIError
 	GetTrafficData(context.Context, model.ResourceName, time.Time, time.Time) ([]model.TrafficResourceUtilizationMetric, *cModel.APIError)
@@ -77,7 +77,7 @@ type SKCSuggestionEngineDAO interface {
 type SKCSuggestionEngineDAOImplementation struct{}
 
 // Retrieves the version number of the SKC Suggestion DB or throws an error if an exception occurs.
-func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, error) {
+func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, *cModel.APIError) {
 	var commandResult bson.M
 	command := bson.D{{Key: "serverStatus", Value: 1}}
 
@@ -86,7 +86,7 @@ func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx c
 
 	if err := skcSuggestionDB.RunCommand(ctx, command).Decode(&commandResult); err != nil {
 		cUtil.RetrieveLogger(ctx).Error("Error getting SKC Suggestion DB version", slog.Any("err", err))
-		return "", err
+		return "", &cModel.APIError{StatusCode: http.StatusInternalServerError, Message: "Could not get SKC Suggestion DB version."}
 	} else {
 		return fmt.Sprintf("%v", commandResult["version"]), nil
 	}

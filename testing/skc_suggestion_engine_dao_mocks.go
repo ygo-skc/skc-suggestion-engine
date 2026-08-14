@@ -11,7 +11,7 @@ import (
 
 type SKCSuggestionEngineDAOImplementation struct{}
 
-func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, error) {
+func (impl SKCSuggestionEngineDAOImplementation) GetSKCSuggestionDBVersion(ctx context.Context) (string, *cModel.APIError) {
 	return "1.0.0", nil
 }
 
