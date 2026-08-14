@@ -8,7 +8,8 @@ func rankFusionStage(query string, queryVector []float32, limit int, excludeID s
 		{Key: "path", Value: "textEmbedding"},
 		{Key: "exact", Value: false},
 		{Key: "numCandidates", Value: limit * 2 * 10},
-		{Key: "queryVector", Value: queryVector},
+		// BSON binary subtype 9 (packed float32) rather than an array of 512 doubles - ~3x less on the wire per query
+		{Key: "queryVector", Value: bson.NewVector(queryVector).Binary()},
 		{Key: "limit", Value: limit * 2},
 	}
 	if excludeID != "" {
