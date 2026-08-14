@@ -688,7 +688,7 @@ sequenceDiagram
 
 ---
 
-## 8. Endpoints — `/api/v1/card-analysis`
+## 8. Endpoints — `/api/v1/analysis`
 
 A separate router context from `/suggestions`. Everything under `/suggestions` *computes* something
 per request — parsing text, fanning out to `ygo-service`, embedding, ranking. This context serves
@@ -706,7 +706,7 @@ sequenceDiagram
     participant API
     participant DB as Suggestion DB
 
-    Client->>API: GET /api/v1/card-analysis/card/{cardID}/mechanics
+    Client->>API: GET /api/v1/analysis/card/{cardID}/mechanics
     Note over API: cardID shape enforced by the route regex (\d{8})
     API->>DB: GetCardMechanics(cardID)
     Note over DB: cardMechanic.findOne({id}) — IXSCAN on card_mechanic_id,<br/>projects away _id, 1s timeout
