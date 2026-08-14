@@ -141,7 +141,7 @@ func removeExclusions(ctx context.Context, archetypalSuggestions *model.Archetyp
 		cUtil.RetrieveLogger(ctx).Warn("Card explicitly excluded from archetype", slog.String("card_name", uniqueExclusion.GetName()))
 	}
 
-	newList := []cModel.YGOCard{}
+	newList := make([]cModel.YGOCard, 0, len(archetypalSuggestions.UsingName))
 	for _, suggestion := range archetypalSuggestions.UsingName {
 		if _, isKey := uniqueExclusions[suggestion.GetName()]; !isKey {
 			newList = append(newList, suggestion)
