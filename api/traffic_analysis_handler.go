@@ -188,13 +188,14 @@ func fetchResourceInfo[RK cModel.YGOResourceKey, BD cModel.BatchCardData[RK] | c
 		rv[ind] = value.ResourceValue
 	}
 
-	if bri, err := fetchResourceFromDB(ctx, rv); err != nil {
-		cUtil.RetrieveLogger(ctx).Info("Could not fetch data for trending resources")
-		awg.Store(err)
-	} else {
-		*batchData = bri
+	bri, err := fetchResourceFromDB(ctx, rv)
+	if err != nil {
+		cUtil.RetrieveLogger(ctx).Error("Could not fetch data for trending resources", slog.Any("err", err))
+		awg.Store(err) // must return - a second Store would overwrite this with nil and surface the failure as a 200
+		return
 	}
 
+	*batchData = bri
 	awg.Store(nil)
 }
 
