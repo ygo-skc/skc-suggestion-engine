@@ -58,8 +58,10 @@ func getCardSupportHandler(res http.ResponseWriter, req *http.Request) {
 // Iterates over a list of support cards and attempts to determine if subject is found in material clause or within the body of the reference.
 // If the name is found in the material clause, we can assume the subject is a required or optional summoning material - otherwise its a support card.
 func determineSupportCards(subject cModel.YGOCard, references []cModel.YGOCard) ([]model.CardReference, []model.CardReference) {
-	referencedBy := []model.CardReference{}
-	materialFor := []model.CardReference{}
+	// small hint rather than len(references): getBatchSupport calls this once per requested card against the
+	// full reference list, so sizing to len(references) would allocate the whole list N times over
+	referencedBy := make([]model.CardReference, 0, 5)
+	materialFor := make([]model.CardReference, 0, 5)
 
 	for _, reference := range references {
 		if reference.GetName() == subject.GetName() {
