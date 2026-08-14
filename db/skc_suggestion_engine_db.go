@@ -226,8 +226,9 @@ func (impl SKCSuggestionEngineDAOImplementation) GetHistoricalCardOfTheDayData(c
 	defer cancel()
 
 	query := bson.M{"version": version}
-	opts := options.Find().SetProjection( // select only these fields from collection
+	opts := options.Find().SetProjection(
 		bson.D{
+			{Key: "_id", Value: 0},
 			{Key: "cardID", Value: 1},
 		},
 	)
