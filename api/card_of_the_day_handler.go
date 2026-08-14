@@ -45,9 +45,9 @@ func getCardOfTheDay(res http.ResponseWriter, req *http.Request) {
 
 	res.WriteHeader(http.StatusOK)
 	if err := json.NewEncoder(res).Encode(cardOfTheDay); err != nil {
-		logger.Error("Could not encode card of the day response", 
-			slog.Any("err", err), 
-			slog.String("card_of_the_day_id", cardOfTheDay.CardID), 
+		logger.Error("Could not encode card of the day response",
+			slog.Any("err", err),
+			slog.String("card_of_the_day_id", cardOfTheDay.CardID),
 			slog.String("date", cardOfTheDay.Date))
 	}
 }
