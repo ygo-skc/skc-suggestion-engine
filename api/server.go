@@ -25,7 +25,7 @@ import (
 const (
 	v1Context         = "/api/v1/suggestions"
 	v2Context         = "/api/v2/suggestions"
-	v1AnalysisContext = "/api/v1/card-analysis"
+	v1AnalysisContext = "/api/v1/analysis"
 	apiName           = "skc-suggestion-engine"
 	apiPort           = 9000
 )
