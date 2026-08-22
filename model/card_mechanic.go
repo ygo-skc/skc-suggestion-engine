@@ -30,7 +30,7 @@ type CardMechanic struct {
 	Effects          []Effect     `bson:"effects" json:"effects"`
 	MetaTags         []string     `bson:"metaTags" json:"metaTags"`
 	Flags            []string     `bson:"flags" json:"flags"`
-	Flavor           bool         `bson:"flavor,omitempty" json:"flavor,omitempty"`
+	Flavor           bool         `bson:"flavor" json:"flavor"`
 	DoesAll          []string     `bson:"doesAll" json:"doesAll"`
 	DoesAny          []string     `bson:"doesAny" json:"doesAny"`
 	Counters         []string     `bson:"counters" json:"counters"`
