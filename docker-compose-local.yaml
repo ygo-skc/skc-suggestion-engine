@@ -20,6 +20,7 @@ services:
       - skc
     environment:
       - SKC_SUGGESTION_ENGINE_DOT_ENV_FILE=.env_docker_local
+      - GOMEMLIMIT=60MiB
 
 networks:
   skc:
