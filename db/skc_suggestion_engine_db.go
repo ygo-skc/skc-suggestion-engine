@@ -445,7 +445,7 @@ func (impl SKCSuggestionEngineDAOImplementation) SearchSimilarCards(ctx context.
 func (impl SKCSuggestionEngineDAOImplementation) SemanticKeywordSearch(ctx context.Context,
 	query string, queryVector []float32) ([]model.VectorSearchResult, *cModel.APIError) {
 	logger := cUtil.RetrieveLogger(ctx)
-	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 	defer cancel()
 
 	logger.Info("Performing semantic keyword search")
