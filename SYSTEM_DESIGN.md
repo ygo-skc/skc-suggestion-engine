@@ -38,7 +38,9 @@ part of the contract this doc pins down.
 
 Process startup (`main.go`): `downstream.ConnectToYGOService()` → `db.EstablishSKCSuggestionEngineDBConn()`
 → `go api.RunHttpServer()` → `select {}` (block forever). Env is loaded in `init()` unless
-`IS_CICD=true` or the binary name ends in `.test`.
+`IS_CICD=true` or the binary name ends in `.test`. The container pins **`GOMEMLIMIT=60MiB`** (both
+compose files), making the GC work against a soft heap cap instead of growing to fill the host —
+context for the allocation-avoidance choices noted below (pooled gzip writers, Mongo projections).
 
 ---
 
@@ -88,7 +90,8 @@ the logger from context in request paths** rather than using the global `slog`.
 Fan-out work uses one of three patterns:
 - `cUtil.AtomicWaitGroup[T]` — a generic wait-group wrapper storing one typed result; used by
   `suggest.FetchMetadata`, `trending`, and batch-support color fetching.
-- Raw `sync.WaitGroup` + goroutines — status handler, product handler.
+- `sync.WaitGroup` — status handler (the two dependency probes) and product handler
+  (suggestions ‖ support), both via `wg.Go(func(){…})`.
 - Buffered channels + `select` fan-in — archetype v1 handler (three concurrent `ygo-service` calls).
 
 ### 2.8 Persistence topology (`db/connect.go`)
@@ -102,12 +105,21 @@ local`:
 Writes use `WriteConcern: majority`; reads/writes retry. Indexes and Atlas **Search** indexes are
 created idempotently at boot:
 - `blackList`: unique `(type, phrase)`.
+- `trafficAnalysis`: `(resourceUtilized.name, timestamp)` — matches the `$match` in `GetTrafficData`,
+  which filters on resource name **and** a timestamp window, so the compound prefix is fully used.
+- `cardOfTheDay`: unique `(version, cardID)` (one feature per card per version) and unique
+  `(version, date)`. `version` leads the second index deliberately so it serves both
+  `GetHistoricalCardOfTheDayData` (version alone) and `GetCardOfTheDay` (version + date).
 - `archetype`: unique `archetype`; secondary indexes on `inheritMembers`, `qualifiedMembers`.
 - `cardMechanic`: unique `id` (`card_mechanic_id`) — the collection is only ever read by card ID.
 - `cardEmbedding`: a BM25 `search` index (`text_search`, on field `text`) and a `vectorSearch` index
   (`text_embedding`, on `textEmbedding`, 512-dim, `dotProduct`, HNSW maxEdges 25 / numEdgeCandidates 200).
+  The vector index also declares `id` as a **filter** field — that is what lets `/similar` exclude the
+  subject card inside `$vectorSearch` rather than after retrieval.
 
-Most DAO operations run under a **1s** context timeout; vector/similar searches use **2s**.
+Most DAO operations run under a **1s** context timeout; `SearchSimilarCards` uses **2s** and
+`SemanticKeywordSearch` **3s**. Both searches retrieve the same candidate volume (§6.1) — the
+difference is purely the headroom each is allowed.
 
 ---
 
@@ -151,7 +163,7 @@ Route-level regex guards (in the router) reject malformed IDs before the handler
 
 ### `GET /status`
 
-Health of the API and its two hard dependencies. Version string is currently hard-coded (`3.1.4`).
+Health of the API and its two hard dependencies. Version string is currently hard-coded (`3.2.1`).
 
 ```mermaid
 sequenceDiagram
@@ -168,7 +180,7 @@ sequenceDiagram
         API->>DB: GetSKCSuggestionDBVersion()  (serverStatus cmd)
         DB-->>API: version (err ⇒ Down)
     end
-    API-->>Client: 200 APIHealth{version:"3.1.4", downstream:[YGO Service, SKC Suggestion Engine DB]}
+    API-->>Client: 200 APIHealth{version:"3.2.1", downstream:[YGO Service, SKC Suggestion Engine DB]}
 ```
 
 - Each dependency is probed independently; one being `Down` does **not** fail the request — the
@@ -430,7 +442,7 @@ sequenceDiagram
     else
         API->>Voyage: EmbedText(q, input_type=query)  [voyage-4, 512-dim]
         Voyage-->>API: query embedding
-        API->>DB: SemanticKeywordSearch(q, embedding)   (2s timeout)
+        API->>DB: SemanticKeywordSearch(q, embedding)   (3s timeout)
         Note over API,DB: $rankFusion (RRF k=60): $vectorSearch (numCandidates 600, limit 60)<br/>⊕ $search (BM25, limit 60); weights 0.65 / 0.35;<br/>NO metadata boosts, NO subject exclusion; $limit 30.
         DB-->>API: ≤30 candidates {id, text}
         API->>Voyage: RerankVectorResults(candidate texts, q, topK=10)  [rerank-2.5]
@@ -618,7 +630,7 @@ Two input pipelines are fused by **Reciprocal Rank Fusion**:
 
 | Pipeline | Source | Params |
 | --- | --- | --- |
-| `vectorPipeline` | `$vectorSearch` (ANN over `textEmbedding`) | `numCandidates = limit·2·10 = 600`, `limit = limit·2 = 60`, `exact:false`; optional `filter id ≠ excludeID` |
+| `vectorPipeline` | `$vectorSearch` (ANN over `textEmbedding`) | `numCandidates = limit·2·10 = 600`, `limit = limit·2 = 60`, `exact:false`; optional `filter id ≠ excludeID`. The query vector is sent as BSON binary subtype 9 (packed `float32`, `bson.NewVector`) — ~3x less on the wire than 512 doubles |
 | `textPipeline` | `$search` (BM25 over `text`) | `$limit = 60`; optional `$match id ≠ excludeID` |
 
 Fusion weights: **vector 0.65 / text 0.35** (`vectorPipelineWeight` / `textPipelineWeight`).
