@@ -60,14 +60,33 @@ API surface** — the `/api/v1/suggestions` and `/api/v2/suggestions` namespaces
 
 **Body**, in this order:
 
-1. `## Changes`
-2. One `*` bullet per user-visible change; two-space-indented sub-bullets for detail
-3. On dependency-heavy releases, the renovate lines: `* <title> by @renovate[bot] in <PR url>`
-4. Blank line, then
+1. `## Changes` — one `*` bullet per code, config, or docs change; two-space-indented sub-bullets
+   for detail
+2. Blank line, then `## Dependencies` — every version bump: the renovate lines
+   (`* <title> by @renovate[bot] in <PR url>`), plus a hand-written `*` bullet for any bump that has
+   no renovate PR (e.g. skc-go commons or the Go toolchain bumped by hand)
+3. Blank line, then
    `**Full Changelog**: https://github.com/ygo-skc/skc-suggestion-engine/compare/<PREV>...<NEW>`
+
+The split is by what changed: a version in `go.mod`, the Go toolchain, or a GitHub Action goes
+under `## Dependencies`; everything else goes under `## Changes`. Code edited to adapt to a new
+dependency version is a `## Changes` bullet — only the bump itself is a dependency. Don't summarize
+the renovate lines as a `## Changes` bullet ("Bumped mongo-driver to v2.9.1, …"); that repeats the
+dependency section. Leave out a section with nothing in it.
 
 Use `*` for bullets, not `-`. The heading is `## Changes`; `## What's Changed` is GitHub's
 auto-generated default and appears only on releases nobody hand-wrote.
+
+Blank lines go only before `## Dependencies` and before the footer — never between two `*` items. A
+heading ends a list; a blank line doesn't. GitHub keeps both sides as one list and renders the whole
+thing "loose", wrapping every item in a `<p>` with paragraph margins. Check the file before
+publishing:
+
+```bash
+awk '/^[ ]*\* /{i=1; if (g) {print "LOOSE"; exit}; next} /^$/{if (i) g=1; next} {i=g=0}' notes.md
+```
+
+No output means the list is tight.
 
 ## Sequence
 
@@ -105,3 +124,11 @@ push, a wrong version is corrected with another release, not an edit.
   hand; borrow only the renovate lines and the Full Changelog footer.
 - **Dropping the Full Changelog footer.** `v3.1.0` is missing it. It is the last line of every
   release.
+- **A blank line between `*` items.** It turns the entire list loose, so every item gets paragraph
+  spacing. `v3.1.1`, `v3.1.4`, and `v3.2.0`–`v3.2.2` were published with a blank line before the
+  renovate lines (edited afterward); `v3.1.2` is what a tight list looks like. Copying a previous
+  release's body is how the blank line spreads — run the `awk` check on `notes.md` whatever its
+  origin.
+- **Following older releases' layout.** Releases through `v3.2.2` put renovate lines and bump
+  bullets ("Moved the module … to Go 1.27", "Bumped mongo-driver …") in one list under
+  `## Changes`. Newer releases split them into `## Changes` and `## Dependencies`.
