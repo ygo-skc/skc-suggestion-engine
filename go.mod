@@ -6,7 +6,7 @@ require (
 	github.com/go-chi/chi/v5 v5.3.2
 	github.com/go-playground/locales v0.14.1
 	github.com/go-playground/universal-translator v0.18.2
-	github.com/go-playground/validator/v10 v10.30.4
+	github.com/go-playground/validator/v10 v10.30.5
 	github.com/ip2location/ip2location-go/v9 v9.8.0
 	github.com/rs/cors v1.11.1
 	github.com/stretchr/testify v1.12.1
