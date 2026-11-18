@@ -13,8 +13,13 @@ services:
     volumes:
       - "./skc-suggestion-engine:/app/skc-suggestion-engine:ro"
       - "./data/:/app/data/:ro"
-      - "./certs/:/app/certs/:ro"
+      - "./certs/certificate.crt:/app/certs/certificate.crt:ro"
+      - "./certs/ca_bundle.crt:/app/certs/ca_bundle.crt:ro"
+      - "./certs/private.key:/app/certs/private.key:ro"
+      - "./certs/skc-suggestion-engine-db.pem:/app/certs/skc-suggestion-engine-db.pem:ro"
       - "./.env_docker_local:/app/.env_docker_local:ro"
+    tmpfs:
+      - /app/certs:size=64k,mode=0700,uid=1000,gid=1000 # app writes concatenated.crt here at startup
     restart: unless-stopped
     healthcheck:
       # TCP check only - /status fans out to ygo-service + Mongo on every call
