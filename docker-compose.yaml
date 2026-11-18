@@ -55,6 +55,10 @@ services:
             "type": "exclude_at_match",
             "name": "exclude_health_check",
             "pattern" : "\"app.flow\":\"Status\""
+          }, {
+            "type": "exclude_at_match",
+            "name": "exclude_healthcheck_tls_eof",
+            "pattern" : "TLS handshake error from 127.0.0.1"
           }]
         }]
       com.datadoghq.tags.env: "prod"
