@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"strings"
+	_ "time/tzdata" // embed tz database - container image has none
 
 	cUtil "github.com/ygo-skc/skc-go/common/v3/util"
 	"github.com/ygo-skc/skc-suggestion-engine/api"

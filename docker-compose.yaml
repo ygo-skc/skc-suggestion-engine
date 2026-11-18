@@ -3,19 +3,37 @@ services:
     image: alpine:latest
     command: ./skc-suggestion-engine
     working_dir: /app
+    user: "1000:1000"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
     ports:
       - "9000:9000"
     volumes:
-      - "./skc-suggestion-engine:/app/skc-suggestion-engine"
-      - "./data/:/app/data/"
-      - "./certs/:/app/certs/"
-      - "./.env_prod:/app/.env_prod"
-      - "/usr/share/zoneinfo/:/usr/share/zoneinfo/"
-    restart: always
+      - "./skc-suggestion-engine:/app/skc-suggestion-engine:ro"
+      - "./data/:/app/data/:ro"
+      - "./certs/:/app/certs/:ro"
+      - "./.env_prod:/app/.env_prod:ro"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nc", "-z", "127.0.0.1", "9000"] # checks tcp only
+      interval: 30s
+      timeout: 3s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    memswap_limit: 75m # go's GC doesn't utilze swap well
     deploy:
       resources:
         limits:
           memory: 75m
+          cpus: "1.0" # Go 1.25+ derives GOMAXPROCS from this
+          pids: 128
     networks:
       - skc
     environment:
